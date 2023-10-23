@@ -110,7 +110,7 @@ todo,正在施工中
 
 | API                      | 功能                   |
 | ------------------------ | ---------------------- |
-| /send_private_msg        | [发送私聊消息]         |
+| /send_private_msg√        | [发送私聊消息]         |
 | /send_group_msg√         | [发送群消息]           |
 | /send_guild_channel_msg√ | [发送频道消息]         |
 | /send_msg                | [发送消息]             |

@@ -87,7 +87,9 @@ func main() {
 
 	// 获取 websocket 信息 这里用哪一个api获取就是用哪一个api去连接ws
 	// 测试群时候用api2 并且要注释掉api.me
-	wsInfo, err := api.WS(ctx, nil, "")
+	//似乎正式场景都可以用apiv2(群)的方式获取ws连接,包括频道的机器人
+	//疑问: 为什么无法用apiv2的方式调用频道的getme接口,会报错
+	wsInfo, err := apiV2.WS(ctx, nil, "")
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -310,5 +312,29 @@ func getIDHandler(c *gin.Context) {
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"id": id})
+
+	case 3:
+		// 存储
+		section := c.Query("id")
+		subtype := c.Query("subtype")
+		value := c.Query("value")
+		err := idmap.WriteConfig(section, subtype, value)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"status": "success"})
+
+	case 4:
+		// 获取值
+		section := c.Query("id")
+		subtype := c.Query("subtype")
+		value, err := idmap.ReadConfig(section, subtype)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"value": value})
 	}
+
 }

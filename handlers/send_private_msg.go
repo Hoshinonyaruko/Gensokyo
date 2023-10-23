@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
@@ -13,15 +15,15 @@ import (
 )
 
 func init() {
-	callapi.RegisterHandler("send_group_msg", handleSendGroupMsg)
+	callapi.RegisterHandler("send_private_msg", handleSendPrivateMsg)
 }
 
-func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
+func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
 	// 使用 message.Echo 作为key来获取消息类型
 	msgType := echo.GetMsgTypeByKey(message.Echo)
 
 	switch msgType {
-	case "group":
+	case "group_private":
 		// 解析消息内容
 		messageText, foundItems := parseMessageContent(message.Params)
 
@@ -44,7 +46,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 
 		// 优先发送文本信息
 		if messageText != "" {
-			groupReply := generateGroupMessage(messageID, nil, messageText)
+			groupReply := generatePrivateMessage(messageID, nil, messageText)
 
 			// 进行类型断言
 			groupMessage, ok := groupReply.(*dto.MessageToCreate)
@@ -65,7 +67,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			var singleItem = make(map[string][]string)
 			singleItem[key] = urls
 
-			groupReply := generateGroupMessage(messageID, singleItem, "")
+			groupReply := generatePrivateMessage(messageID, singleItem, "")
 
 			// 进行类型断言
 			richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
@@ -80,23 +82,15 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				log.Printf("发送 %s 信息失败: %v", key, err)
 			}
 		}
-	case "guild":
-		//用GroupID给ChannelID赋值,因为我们是把频道虚拟成了群
-		message.Params.ChannelID = message.Params.GroupID.(string)
-		//读取ini 通过ChannelID取回之前储存的guild_id
-		value, err := idmap.ReadConfig(message.Params.ChannelID, "guild_id")
-		if err != nil {
-			log.Printf("Error reading config: %v", err)
-			return
-		}
-		message.Params.GroupID = value
-		handleSendGuildChannelMsg(client, api, apiv2, message)
+	case "guild_private":
+		//当收到发私信调用 并且来源是频道
+		handleSendGuildChannelPrivateMsg(client, api, apiv2, message)
 	default:
 		log.Printf("Unknown message type: %s", msgType)
 	}
 }
 
-func generateGroupMessage(id string, foundItems map[string][]string, messageText string) interface{} {
+func generatePrivateMessage(id string, foundItems map[string][]string, messageText string) interface{} {
 	if imageURLs, ok := foundItems["local_image"]; ok && len(imageURLs) > 0 {
 		// 本地发图逻辑 todo 适配base64图片
 		return &dto.RichMediaMessage{
@@ -126,4 +120,85 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 		}
 	}
 	return nil
+}
+
+func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
+	params := message.Params
+	messageText, foundItems := parseMessageContent(params)
+
+	guildID, channelID, err := getGuildIDFromMessage(message)
+	if err != nil {
+		log.Printf("Error getting guild_id and channel_id: %v", err)
+		return
+	}
+
+	// 获取 echo 的值
+	echostr := message.Echo
+	messageID := echo.GetMsgIDByKey(echostr)
+	log.Println("私聊信息对应的message_id:", messageID)
+	log.Println("私聊信息messageText:", messageText)
+	log.Println("foundItems:", foundItems)
+
+	timestamp := time.Now().Unix()
+	timestampStr := fmt.Sprintf("%d", timestamp)
+
+	// 构造 dm (dms 私信事件)
+	dm := &dto.DirectMessage{
+		GuildID:    guildID,
+		ChannelID:  channelID,
+		CreateTime: timestampStr,
+	}
+
+	// 优先发送文本信息
+	if messageText != "" {
+		textMsg := generateReplyMessage(messageID, nil, messageText)
+		if _, err := apiv2.PostDirectMessage(context.TODO(), dm, textMsg); err != nil {
+			log.Printf("发送文本信息失败: %v", err)
+		}
+	}
+
+	// 遍历foundItems并发送每种信息
+	for key, urls := range foundItems {
+		var singleItem = make(map[string][]string)
+		singleItem[key] = urls
+
+		reply := generateReplyMessage(messageID, singleItem, "")
+		if _, err := apiv2.PostDirectMessage(context.TODO(), dm, reply); err != nil {
+			log.Printf("发送 %s 信息失败: %v", key, err)
+		}
+	}
+}
+
+// 这个函数可以通过int类型的虚拟userid反推真实的guild_id和channel_id
+func getGuildIDFromMessage(message callapi.ActionMessage) (string, string, error) {
+	var userID string
+
+	// 判断UserID的类型，并将其转换为string
+	switch v := message.Params.UserID.(type) {
+	case int:
+		userID = strconv.Itoa(v)
+	case string:
+		userID = v
+	default:
+		return "", "", fmt.Errorf("unexpected type for UserID")
+	}
+
+	// 使用RetrieveRowByID还原真实的UserID
+	realUserID, err := idmap.RetrieveRowByID(userID)
+	if err != nil {
+		return "", "", fmt.Errorf("error retrieving real UserID: %v", err)
+	}
+	// 使用realUserID作为sectionName从数据库中获取channel_id
+	channelID, err := idmap.ReadConfig(realUserID, "channel_id")
+	if err != nil {
+		return "", "", fmt.Errorf("error reading channel_id: %v", err)
+	}
+
+	// 使用channelID作为sectionName从数据库中获取guild_id
+	guildID, err := idmap.ReadConfig(channelID, "guild_id")
+	if err != nil {
+		return "", "", fmt.Errorf("error reading guild_id: %v", err)
+	}
+
+	return guildID, channelID, nil
 }
