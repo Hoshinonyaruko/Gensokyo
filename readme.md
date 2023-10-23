@@ -6,7 +6,7 @@
 
 <div align="center">
 
-# go-cqhttp
+# gensokyo
 
 _✨ 基于 [OneBot](https://github.com/howmanybots/onebot/blob/master/README.md) QQ官方机器人Api Golang 原生实现 ✨_  
 
@@ -132,7 +132,7 @@ todo,正在施工中
 | /can_send_image          | [检查是否可以发送图片] |
 | /can_send_record         | [检查是否可以发送语音] |
 | /get_version_info        | [获取版本信息]         |
-| /set_restart             | [重启 go-cqhttp]       |
+| /set_restart             | [重启 gensokyo]       |
 | /.handle_quick_operation | [对事件执行快速操作]   |
 
 
