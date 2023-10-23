@@ -7,3 +7,4 @@ idmap.ini
 # Go specific
 go.mod
 go.sum
+*.exe
