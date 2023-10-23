@@ -1,0 +1,9 @@
+# botgo specific
+config.yml
+idmap.db
+idmap.db.lock
+idmap.ini
+
+# Go specific
+go.mod
+go.sum
