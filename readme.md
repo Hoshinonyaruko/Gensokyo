@@ -43,9 +43,13 @@ _✨ 基于 [OneBot](https://github.com/howmanybots/onebot/blob/master/README.md
 
 
 ## 兼容性
-gensokyo兼容 [OneBot-v11](https://github.com/botuniverse/onebot-11) ，并在其基础上做了一些扩展，详情请看 gensokyo 的文档。
+gensokyo兼容 [OneBot-v11](https://github.com/botuniverse/onebot-11) ，并在其基础上做了一些扩展，详情请看 OneBot 的文档。
+
 可将官方的websocket和api转换至onebotv11标准,和koishi,nonebot2,trss等项目的onebot适配器相连接使用.
+
 实现插件开发和用户开发者无需重新开发,复用过往生态的插件和使用体验.
+
+目前还在开发中.....
 
 ### 接口
 

@@ -1,0 +1,13 @@
+version: 1
+settings:
+  ws_address: "ws://<YOUR_WS_ADDRESS>:<YOUR_WS_PORT>" # WebSocket服务的地址
+  app_id: <YOUR_APP_ID>                              # 你的应用ID
+  token: "<YOUR_APP_TOKEN>"                          # 你的应用令牌
+  client_secret: "<YOUR_CLIENT_SECRET>"              # 你的客户端密钥
+  text_intent:                                       # 你希望监听的事件类型
+    - "ATMessageEventHandler"                        # 频道at
+    - "DirectMessageHandler"
+    # - "GroupATMessageEventHandler"                 # 群at 测试频道机器人时候需要注释
+  global_channel_to_group: false                     # 是否将频道转换成群
+  global_private_to_channel: false                   # 是否将私聊转换成频道
+  array: false
