@@ -93,8 +93,7 @@ func (o *openAPIv2) setupClient() {
 			func(c *resty.Client, r *resty.Request) error {
 				// 设置授权方案为 "QQBot"
 				c.SetAuthScheme("QQBot")
-				c.SetAuthToken("Sv0g5ZqFKn1E7iSBYxQzzWb7ky0X-W6P6QtGRJy1cgPm8bqGLMl73b9_72kyR9y1mBE-OvXsBMpA")
-				//c.SetAuthToken(o.token.GetAccessToken())
+				c.SetAuthToken(o.token.GetAccessToken())
 				return nil
 			},
 		).
