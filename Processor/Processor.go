@@ -86,10 +86,11 @@ type OnebotPrivateMessage struct {
 	Time        int64         `json:"time"`
 	Avatar      string        `json:"avatar"`
 	Echo        string        `json:"echo"`
-	Message     interface{}   `json:"message"`               // For array format
-	MessageSeq  int           `json:"message_seq,omitempty"` // Optional field
-	Font        int           `json:"font,omitempty"`        // Optional field
-	UserID      int64         `json:"user_id"`               // Can be either string or int depending on logic
+	Message     interface{}   `json:"message"`     // For array format
+	MessageSeq  int           `json:"message_seq"` // Optional field
+	Font        int           `json:"font"`        // Optional field
+	UserID      int64         `json:"user_id"`     // Can be either string or int depending on logic
+
 }
 
 type PrivateSender struct {
@@ -157,6 +158,8 @@ func (p *Processor) ProcessGuildATMessage(data *dto.WSATMessageData) error {
 		//将当前s和appid和message进行映射
 		echo.AddMsgID(AppIDString, s, data.ID)
 		echo.AddMsgType(AppIDString, s, "guild")
+		//为不支持双向echo的ob11服务端映射
+		echo.AddMsgType(AppIDString, userid64, "guild")
 
 		//调试
 		PrintStructWithFieldNames(onebotMsg)
@@ -225,6 +228,9 @@ func (p *Processor) ProcessGuildATMessage(data *dto.WSATMessageData) error {
 		//将当前s和appid和message进行映射
 		echo.AddMsgID(AppIDString, s, data.ID)
 		echo.AddMsgType(AppIDString, s, "guild")
+		//为不支持双向echo的ob服务端映射
+		fmt.Printf("AppIDString: %s, channelIDInt: %d\n", AppIDString, int64(channelIDInt))
+		echo.AddMsgType(AppIDString, int64(channelIDInt), "guild")
 
 		//调试
 		PrintStructWithFieldNames(groupMsg)
@@ -318,6 +324,8 @@ func (p *Processor) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 	// 将当前s和appid和message进行映射
 	echo.AddMsgID(AppIDString, s, data.ID)
 	echo.AddMsgType(AppIDString, s, "group")
+	//为不支持双向echo的ob服务端映射
+	echo.AddMsgType(AppIDString, userid64, "group")
 
 	// 调试
 	PrintStructWithFieldNames(groupMsg)
@@ -345,7 +353,9 @@ func (p *Processor) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) e
 
 	//获取当前的s值 当前ws连接所收到的信息条数
 	s := client.GetGlobalS()
-	if !p.Settings.GlobalChannelToGroup {
+
+	if !p.Settings.GlobalPrivateToChannel {
+
 		// 把频道类型的私信转换成普通ob11的私信
 
 		//转换appidstring
@@ -395,6 +405,10 @@ func (p *Processor) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) e
 		// 将当前s和appid和message进行映射
 		echo.AddMsgID(AppIDString, s, data.ID)
 		echo.AddMsgType(AppIDString, s, "guild_private")
+
+		//其实不需要用AppIDString,因为gensokyo是单机器人框架
+		echo.AddMsgType(AppIDString, userid64, "guild_private")
+
 
 		// 调试
 		PrintStructWithFieldNames(privateMsg)
@@ -455,6 +469,9 @@ func (p *Processor) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) e
 			echo.AddMsgID(AppIDString, s, data.ID)
 			//通过echo始终得知真实的事件类型,来对应调用正确的api
 			echo.AddMsgType(AppIDString, s, "guild_private")
+			//为不支持双向echo的ob服务端映射
+			echo.AddMsgType(AppIDString, userid64, "guild_private")
+
 
 			//调试
 			PrintStructWithFieldNames(onebotMsg)
