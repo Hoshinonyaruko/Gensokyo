@@ -85,6 +85,7 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 	case "guild_private":
 		//当收到发私信调用 并且来源是频道
 		handleSendGuildChannelPrivateMsg(client, api, apiv2, message, nil, nil)
+
 	default:
 		log.Printf("Unknown message type: %s", msgType)
 	}
@@ -122,6 +123,7 @@ func generatePrivateMessage(id string, foundItems map[string][]string, messageTe
 	return nil
 }
 
+
 // 处理频道私信 最后2个指针参数可空 代表使用userid倒推
 func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage, optionalGuildID *string, optionalChannelID *string) {
 	params := message.Params
@@ -140,6 +142,7 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 			log.Printf("获取 guild_id 和 channel_id 出错: %v", err)
 			return
 		}
+
 	}
 
 	// 获取 echo 的值
@@ -162,6 +165,7 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 	// 优先发送文本信息
 	if messageText != "" {
 		textMsg, _ := generateReplyMessage(messageID, nil, messageText)
+
 		if _, err := apiv2.PostDirectMessage(context.TODO(), dm, textMsg); err != nil {
 			log.Printf("发送文本信息失败: %v", err)
 		}
@@ -173,6 +177,7 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 		singleItem[key] = urls
 
 		reply, _ := generateReplyMessage(messageID, singleItem, "")
+
 		if _, err := apiv2.PostDirectMessage(context.TODO(), dm, reply); err != nil {
 			log.Printf("发送 %s 信息失败: %v", key, err)
 		}
@@ -187,12 +192,14 @@ func getGuildIDFromMessage(message callapi.ActionMessage) (string, string, error
 	switch v := message.Params.UserID.(type) {
 	case int:
 		userID = strconv.Itoa(v)
+
 	case float64:
 		userID = strconv.FormatInt(int64(v), 10) // 将float64先转为int64，然后再转为string
 	case string:
 		userID = v
 	default:
 		return "", "", fmt.Errorf("unexpected type for UserID: %T", v) // 使用%T来打印具体的类型
+
 	}
 
 	// 使用RetrieveRowByID还原真实的UserID

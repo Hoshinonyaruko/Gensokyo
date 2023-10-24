@@ -90,6 +90,7 @@ type OnebotPrivateMessage struct {
 	MessageSeq  int           `json:"message_seq"` // Optional field
 	Font        int           `json:"font"`        // Optional field
 	UserID      int64         `json:"user_id"`     // Can be either string or int depending on logic
+
 }
 
 type PrivateSender struct {
@@ -352,7 +353,9 @@ func (p *Processor) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) e
 
 	//获取当前的s值 当前ws连接所收到的信息条数
 	s := client.GetGlobalS()
+
 	if !p.Settings.GlobalPrivateToChannel {
+
 		// 把频道类型的私信转换成普通ob11的私信
 
 		//转换appidstring
@@ -402,8 +405,10 @@ func (p *Processor) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) e
 		// 将当前s和appid和message进行映射
 		echo.AddMsgID(AppIDString, s, data.ID)
 		echo.AddMsgType(AppIDString, s, "guild_private")
+
 		//其实不需要用AppIDString,因为gensokyo是单机器人框架
 		echo.AddMsgType(AppIDString, userid64, "guild_private")
+
 
 		// 调试
 		PrintStructWithFieldNames(privateMsg)
@@ -466,6 +471,7 @@ func (p *Processor) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) e
 			echo.AddMsgType(AppIDString, s, "guild_private")
 			//为不支持双向echo的ob服务端映射
 			echo.AddMsgType(AppIDString, userid64, "guild_private")
+
 
 			//调试
 			PrintStructWithFieldNames(onebotMsg)
