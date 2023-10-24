@@ -14,7 +14,7 @@ _✨ 基于 [OneBot](https://github.com/howmanybots/onebot/blob/master/README.md
 </div>
 
 <p align="center">
-  <a href="https://raw.githubusercontent.com/hoshinonyaruko/gensokyo/master/LICENSE">
+  <a href="https://raw.githubusercontent.com/hoshinonyaruko/gensokyo/main/LICENSE">
     <img src="https://img.shields.io/github/license/hoshinonyaruko/gensokyo" alt="license">
   </a>
   <a href="https://github.com/hoshinonyaruko/gensokyo/releases">
