@@ -20,8 +20,9 @@ type ParamsContent struct {
 	BotQQ     string      `json:"botqq"`
 	ChannelID string      `json:"channel_id"`
 	GuildID   string      `json:"guild_id"`
-	GroupID   interface{} `json:"group_id"`
-	Message   interface{} `json:"message"` // 这里使用interface{}因为它可能是多种类型
+	GroupID   interface{} `json:"group_id"` // 每一种onebotv11实现的字段类型都可能不同
+	Message   interface{} `json:"message"`  // 这里使用interface{}因为它可能是多种类型
+	UserID    interface{} `json:"user_id"`  // 这里使用interface{}因为它可能是多种类型
 }
 
 // 自定义一个ParamsContent的UnmarshalJSON 让GroupID同时兼容str和int
@@ -60,6 +61,7 @@ type Message struct {
 // 这是一个接口,在wsclient传入client但不需要引用wsclient包,避免循环引用
 type Client interface {
 	SendMessage(message map[string]interface{}) error
+	GetAppID() string
 }
 
 // 根据action订阅handler处理api

@@ -17,6 +17,12 @@ type WebSocketClient struct {
 	conn  *websocket.Conn
 	api   openapi.OpenAPI
 	apiv2 openapi.OpenAPI
+	appid string
+}
+
+// 获取appid
+func (c *WebSocketClient) GetAppID() string {
+	return c.appid
 }
 
 // 发送json信息给onebot应用端
@@ -126,7 +132,7 @@ func NewWebSocketClient(urlStr string, botID string, api openapi.OpenAPI, apiv2 
 		}
 	}
 
-	client := &WebSocketClient{conn: conn, api: api, apiv2: apiv2}
+	client := &WebSocketClient{conn: conn, api: api, apiv2: apiv2, appid: botID}
 
 	// Sending initial message similar to your setupB function
 	message := map[string]interface{}{

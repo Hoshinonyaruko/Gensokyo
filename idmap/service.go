@@ -10,9 +10,10 @@ import (
 )
 
 const (
-	DBName     = "idmap.db"
-	BucketName = "ids"
-	CounterKey = "currentRow"
+	DBName       = "idmap.db"
+	BucketName   = "ids"
+	ConfigBucket = "config"
+	CounterKey   = "currentRow"
 )
 
 var db *bolt.DB
@@ -36,6 +37,7 @@ func CloseDB() {
 	db.Close()
 }
 
+// 根据a储存b
 func StoreID(id string) (int64, error) {
 	var newRow int64
 
@@ -72,6 +74,7 @@ func StoreID(id string) (int64, error) {
 	return newRow, err
 }
 
+// 根据b得到a
 func RetrieveRowByID(rowid string) (string, error) {
 	var id string
 	err := db.View(func(tx *bolt.Tx) error {
@@ -88,4 +91,44 @@ func RetrieveRowByID(rowid string) (string, error) {
 	})
 
 	return id, err
+}
+
+// 根据a 以b为类别 储存c
+func WriteConfig(sectionName, keyName, value string) error {
+	return db.Update(func(tx *bolt.Tx) error {
+		b, err := tx.CreateBucketIfNotExists([]byte(ConfigBucket))
+		if err != nil {
+			return err
+		}
+
+		key := joinSectionAndKey(sectionName, keyName)
+		return b.Put(key, []byte(value))
+	})
+}
+
+// 根据a和b取出c
+func ReadConfig(sectionName, keyName string) (string, error) {
+	var result string
+	err := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(ConfigBucket))
+		if b == nil {
+			return fmt.Errorf("bucket not found")
+		}
+
+		key := joinSectionAndKey(sectionName, keyName)
+		v := b.Get(key)
+		if v == nil {
+			return fmt.Errorf("key '%s' in section '%s' does not exist", keyName, sectionName)
+		}
+
+		result = string(v)
+		return nil
+	})
+
+	return result, err
+}
+
+// 灵感,ini配置文件
+func joinSectionAndKey(sectionName, keyName string) []byte {
+	return []byte(sectionName + ":" + keyName)
 }

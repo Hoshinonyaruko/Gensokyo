@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
+	"github.com/hoshinonyaruko/gensokyo/idmap"
 
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/openapi"
@@ -57,7 +58,7 @@ func handleGetGroupInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 	//用GroupID给ChannelID赋值,因为我们是把频道虚拟成了群
 	ChannelID := params.GroupID
 	//读取ini 通过ChannelID取回之前储存的guild_id
-	value, err := compatibilityMapping.ReadConfig(ChannelID.(string), "guild_id")
+	value, err := idmap.ReadConfig(ChannelID.(string), "guild_id")
 	if err != nil {
 		log.Printf("handleGetGroupInfo:Error reading config: %v\n", err)
 		return
