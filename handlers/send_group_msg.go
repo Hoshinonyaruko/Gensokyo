@@ -44,6 +44,11 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		log.Println("群组发信息对应的message_id:", messageID)
 		log.Println("群组发信息messageText:", messageText)
 		log.Println("foundItems:", foundItems)
+		// 如果messageID为空，通过函数获取
+		if messageID == "" {
+			messageID = GetMessageIDByUseridOrGroupid(client.GetAppID(), message.Params.GroupID)
+			log.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
+		}
 
 		//通过bolt数据库还原真实的GroupID
 		originalGroupID, err := idmap.RetrieveRowByID(message.Params.GroupID.(string))

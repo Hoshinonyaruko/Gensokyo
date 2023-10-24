@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"strconv"
@@ -148,6 +149,11 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 	log.Println("私聊信息对应的message_id:", messageID)
 	log.Println("私聊信息messageText:", messageText)
 	log.Println("foundItems:", foundItems)
+	// 如果messageID为空，通过函数获取
+	if messageID == "" {
+		messageID = GetMessageIDByUseridOrGroupid(client.GetAppID(), message.Params.UserID)
+		log.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
+	}
 
 	timestamp := time.Now().Unix()
 	timestampStr := fmt.Sprintf("%d", timestamp)
@@ -172,10 +178,29 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 		var singleItem = make(map[string][]string)
 		singleItem[key] = urls
 
-		reply, _ := generateReplyMessage(messageID, singleItem, "")
-		if _, err := apiv2.PostDirectMessage(context.TODO(), dm, reply); err != nil {
-			log.Printf("发送 %s 信息失败: %v", key, err)
+		reply, isBase64Image := generateReplyMessage(messageID, singleItem, "")
+
+		if isBase64Image {
+			// 将base64内容从reply的Content转换回字节
+			fileImageData, err := base64.StdEncoding.DecodeString(reply.Content)
+			if err != nil {
+				log.Printf("Base64 解码失败: %v", err)
+				return // 或其他的错误处理方式
+			}
+
+			// 清除reply的Content
+			reply.Content = ""
+
+			// 使用Multipart方法发送
+			if _, err := api.PostDirectMessageMultipart(context.TODO(), dm, reply, fileImageData); err != nil {
+				log.Printf("使用multipart发送 %s 信息失败: %v message_id %v", key, err, messageID)
+			}
+		} else {
+			if _, err := api.PostDirectMessage(context.TODO(), dm, reply); err != nil {
+				log.Printf("发送 %s 信息失败: %v", key, err)
+			}
 		}
+
 	}
 }
 

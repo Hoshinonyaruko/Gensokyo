@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 
@@ -74,19 +75,13 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 					log.Printf("Base64 解码失败: %v", err)
 					return // 或其他的错误处理方式
 				}
-				// 将解码后的数据保存到文件中以进行验证
-				// err = ioutil.WriteFile("1.jpg", fileImageData, 0644)
-				// if err != nil {
-				// 	log.Printf("写入文件失败: %v", err)
-				// 	return // 或其他的错误处理方式
-				// }
 
 				// 清除reply的Content
 				reply.Content = ""
 
 				// 使用Multipart方法发送
 				if _, err := api.PostMessageMultipart(context.TODO(), channelID, reply, fileImageData); err != nil {
-					log.Printf("使用multipart发送 %s 信息失败: %v", key, err)
+					log.Printf("使用multipart发送 %s 信息失败: %v message_id %v", key, err, messageID)
 				}
 			} else {
 				if _, err := api.PostMessage(context.TODO(), channelID, reply); err != nil {
@@ -112,15 +107,26 @@ func generateReplyMessage(id string, foundItems map[string][]string, messageText
 	var isBase64 bool
 
 	if imageURLs, ok := foundItems["local_image"]; ok && len(imageURLs) > 0 {
-		// todo 完善本地文件上传 发送机制
+		// 从本地图路径读取图片
+		imageData, err := os.ReadFile(imageURLs[0])
+		if err != nil {
+			// 读入文件,如果是本地图,应用端和gensokyo需要在一台电脑
+			log.Printf("Error reading the image from path %s: %v", imageURLs[0], err)
+			return nil, false
+		}
+
+		//base64编码
+		base64Encoded := base64.StdEncoding.EncodeToString(imageData)
+
+		// 当作base64图来处理
 		reply = dto.MessageToCreate{
-			//EventID: id, // Use a placeholder event ID for now
-			Image:   imageURLs[0],
+			Content: base64Encoded,
 			MsgID:   id,
 			MsgType: 0, // Assuming type 0 for images
 		}
+		isBase64 = true
 	} else if imageURLs, ok := foundItems["url_image"]; ok && len(imageURLs) > 0 {
-		// Sending an external image
+		// 发送网络图
 		reply = dto.MessageToCreate{
 			//EventID: id,           // Use a placeholder event ID for now
 			Image:   "http://" + imageURLs[0], // Using the same Image field for external URLs, adjust if needed

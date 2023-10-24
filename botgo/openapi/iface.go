@@ -164,6 +164,8 @@ type DirectMessageAPI interface {
 	CreateDirectMessage(ctx context.Context, dm *dto.DirectMessageToCreate) (*dto.DirectMessage, error)
 	// PostDirectMessage 在私信频道内发消息
 	PostDirectMessage(ctx context.Context, dm *dto.DirectMessage, msg *dto.MessageToCreate) (*dto.Message, error)
+	//自己加的 官方没有
+	PostDirectMessageMultipart(ctx context.Context, dm *dto.DirectMessage, msg *dto.MessageToCreate, fileImageData []byte) (*dto.Message, error)
 	// RetractDMMessage 撤回私信频道消息
 	RetractDMMessage(ctx context.Context, guildID, msgID string, options ...RetractMessageOption) error
 	// PostDMSettingGuide 发送私信设置引导, jumpGuildID为设置引导要跳转的频道ID
