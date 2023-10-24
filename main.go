@@ -221,11 +221,11 @@ func DirectMessageHandler() event.DirectMessageEventHandler {
 	}
 }
 
-// CreateMessageHandler 处理消息事件
+// CreateMessageHandler 处理消息事件 私域的事件 不at信息
 func CreateMessageHandler() event.MessageEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSMessageData) error {
-		fmt.Println(data)
-		return nil
+		fmt.Println("收到私域信息", data)
+		return processor.ProcessGuildNormalMessage(data)
 	}
 }
 
@@ -244,7 +244,7 @@ func GroupATMessageEventHandler() event.GroupATMessageEventHandler {
 	}
 }
 
-// C2CMessageEventHandler 实现处理 at 消息的回调
+// C2CMessageEventHandler 实现处理 群私聊 消息的回调
 func C2CMessageEventHandler() event.C2CMessageEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSC2CMessageData) error {
 		return processor.ProcessC2CMessage(string(event.RawMessage), data)

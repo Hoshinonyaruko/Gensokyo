@@ -44,6 +44,11 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		log.Println("群组发信息对应的message_id:", messageID)
 		log.Println("群组发信息messageText:", messageText)
 		log.Println("foundItems:", foundItems)
+		// 如果messageID为空，通过函数获取
+		if messageID == "" {
+			messageID = GetMessageIDByUseridOrGroupid(client.GetAppID(), message.Params.GroupID)
+			log.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
+		}
 
 		//通过bolt数据库还原真实的GroupID
 		originalGroupID, err := idmap.RetrieveRowByID(message.Params.GroupID.(string))
@@ -56,7 +61,6 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		// 优先发送文本信息
 		if messageText != "" {
 			groupReply := generateMessage(messageID, nil, messageText)
-
 
 			// 进行类型断言
 			groupMessage, ok := groupReply.(*dto.MessageToCreate)
@@ -77,9 +81,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			var singleItem = make(map[string][]string)
 			singleItem[key] = urls
 
-
 			groupReply := generateMessage(messageID, singleItem, "")
-
 
 			// 进行类型断言
 			richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
@@ -98,7 +100,6 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		//用GroupID给ChannelID赋值,因为我们是把频道虚拟成了群
 		message.Params.ChannelID = message.Params.GroupID.(string)
 		//读取ini 通过ChannelID取回之前储存的guild_id
-
 		// value, err := idmap.ReadConfig(message.Params.ChannelID, "guild_id")
 		// if err != nil {
 		// 	log.Printf("Error reading config: %v", err)
@@ -122,7 +123,6 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		//todo
 		message.Params.ChannelID = message.Params.GroupID.(string)
 		//读取ini 通过ChannelID取回之前储存的guild_id
-
 		value, err := idmap.ReadConfig(message.Params.ChannelID, "guild_id")
 		if err != nil {
 			log.Printf("Error reading config: %v", err)
@@ -207,5 +207,4 @@ func GetMessageTypeByGroupid(appID string, GroupID interface{}) string {
 
 	key := appID + "_" + GroupIDStr
 	return echo.GetMsgTypeByKey(key)
-
 }

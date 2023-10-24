@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
@@ -21,11 +22,6 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 	// 使用 message.Echo 作为key来获取消息类型
 	msgType := echo.GetMsgTypeByKey(message.Echo)
 
-	//如果获取不到 就用user_id获取信息类型
-	if msgType == "" {
-		msgType = GetMessageTypeByUserid(client.GetAppID(), message.Params.UserID)
-	}
-
 	//如果获取不到 就用group_id获取信息类型
 	if msgType == "" {
 		appID := client.GetAppID()
@@ -34,6 +30,11 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 
 		msgType = GetMessageTypeByGroupid(appID, groupID)
 		fmt.Printf("msgType: %s\n", msgType)
+	}
+
+	//如果获取不到 就用user_id获取信息类型
+	if msgType == "" {
+		msgType = GetMessageTypeByUserid(client.GetAppID(), message.Params.UserID)
 	}
 
 	switch msgType {
@@ -49,6 +50,11 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 		log.Println("群组发信息对应的message_id:", messageID)
 		log.Println("群组发信息messageText:", messageText)
 		log.Println("foundItems:", foundItems)
+		// 如果messageID为空，通过函数获取
+		if messageID == "" {
+			messageID = GetMessageIDByUseridOrGroupid(client.GetAppID(), message.Params.GroupID)
+			log.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
+		}
 
 		//通过bolt数据库还原真实的GroupID
 		originalGroupID, err := idmap.RetrieveRowByID(message.Params.GroupID.(string))
@@ -182,4 +188,26 @@ func generateMessage(id string, foundItems map[string][]string, messageText stri
 		}
 	}
 	return nil
+}
+
+// 通过user_id获取messageID
+func GetMessageIDByUseridOrGroupid(appID string, userID interface{}) string {
+	// 从appID和userID生成key
+	var userIDStr string
+	switch u := userID.(type) {
+	case int:
+		userIDStr = strconv.Itoa(u)
+	case int64:
+		userIDStr = strconv.FormatInt(u, 10)
+	case float64:
+		userIDStr = strconv.FormatFloat(u, 'f', 0, 64)
+	case string:
+		userIDStr = u
+	default:
+		// 可能需要处理其他类型或报错
+		return ""
+	}
+
+	key := appID + "_" + userIDStr
+	return echo.GetMsgIDByKey(key)
 }
