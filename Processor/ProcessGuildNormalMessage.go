@@ -31,14 +31,14 @@ func (p *Processor) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 		//构造echo
 		echostr := AppIDString + "_" + strconv.FormatInt(s, 10)
 		//映射str的userid到int
-		userid64, err := idmap.StoreID(data.Author.ID)
+		userid64, err := idmap.StoreIDv2(data.Author.ID)
 		if err != nil {
 			log.Printf("Error storing ID: %v", err)
 			return nil
 		}
 		//映射str的messageID到int
 		//可以是string
-		// messageID64, err := idmap.StoreID(data.ID)
+		// messageID64, err := idmap.StoreIDv2(data.ID)
 		// if err != nil {
 		// 	log.Printf("Error storing ID: %v", err)
 		// 	return nil
@@ -92,7 +92,7 @@ func (p *Processor) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 		//获取s
 		s := client.GetGlobalS()
 		//将channelid写入ini,可取出guild_id todo 比ini更好的储存方式
-		idmap.WriteConfig(data.ChannelID, "guild_id", data.GuildID)
+		idmap.WriteConfigv2(data.ChannelID, "guild_id", data.GuildID)
 		//转换at
 		messageText := handlers.RevertTransformedText(data.Content)
 		//转换appid
@@ -106,14 +106,14 @@ func (p *Processor) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 			return fmt.Errorf("failed to convert ChannelID to int: %v", err)
 		}
 		//映射str的userid到int
-		userid64, err := idmap.StoreID(data.Author.ID)
+		userid64, err := idmap.StoreIDv2(data.Author.ID)
 		if err != nil {
 			log.Printf("Error storing ID: %v", err)
 			return nil
 		}
 		//userid := int(userid64)
 		//映射str的messageID到int
-		messageID64, err := idmap.StoreID(data.ID)
+		messageID64, err := idmap.StoreIDv2(data.ID)
 		if err != nil {
 			log.Printf("Error storing ID: %v", err)
 			return nil

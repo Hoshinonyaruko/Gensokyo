@@ -64,7 +64,7 @@ func (c *WebSocketClient) recvMessage(msg []byte) {
 		return
 	}
 
-	fmt.Println("Received from onebotv11:", truncateMessage(message, 200))
+	fmt.Println("Received from onebotv11:", truncateMessage(message, 500))
 	// 调用callapi
 	callapi.CallAPIFromDict(c, c.api, c.apiv2, message)
 }
@@ -122,9 +122,10 @@ func NewWebSocketClient(urlStr string, botID string, api openapi.OpenAPI, apiv2 
 
 	// Retry mechanism
 	for {
+		fmt.Println("Dialing URL:", urlStr)
 		conn, _, err = dialer.Dial(urlStr, headers)
 		if err != nil {
-			fmt.Printf("Failed to connect to WebSocket: %v, retrying in 5 seconds...\n", err)
+			fmt.Printf("Failed to connect to WebSocket[%v]: %v, retrying in 5 seconds...\n", urlStr, err)
 			time.Sleep(5 * time.Second) // sleep for 5 seconds before retrying
 		} else {
 			fmt.Printf("成功连接到 %s.\n", urlStr) // 输出连接成功提示

@@ -20,7 +20,7 @@ func (p *Processor) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 	// 获取s
 	s := client.GetGlobalS()
 
-	idmap.WriteConfig(data.ChannelID, "guild_id", data.GuildID)
+	idmap.WriteConfigv2(data.ChannelID, "guild_id", data.GuildID)
 
 	// 转换at
 	messageText := handlers.RevertTransformedText(data.Content)
@@ -32,20 +32,20 @@ func (p *Processor) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 	echostr := AppIDString + "_" + strconv.FormatInt(s, 10)
 
 	// 映射str的GroupID到int
-	GroupID64, err := idmap.StoreID(data.GroupID)
+	GroupID64, err := idmap.StoreIDv2(data.GroupID)
 	if err != nil {
 		return fmt.Errorf("failed to convert ChannelID to int: %v", err)
 	}
 
 	// 映射str的userid到int
-	userid64, err := idmap.StoreID(data.Author.ID)
+	userid64, err := idmap.StoreIDv2(data.Author.ID)
 	if err != nil {
 		log.Printf("Error storing ID: %v", err)
 		return nil
 	}
 	//userid := int(userid64)
 	//映射str的messageID到int
-	messageID64, err := idmap.StoreID(data.ID)
+	messageID64, err := idmap.StoreIDv2(data.ID)
 	if err != nil {
 		log.Printf("Error storing ID: %v", err)
 		return nil

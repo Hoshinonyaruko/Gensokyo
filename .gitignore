@@ -8,3 +8,6 @@ idmap.ini
 go.mod
 go.sum
 *.exe
+
+# Ignore channel_temp
+channel_temp/
