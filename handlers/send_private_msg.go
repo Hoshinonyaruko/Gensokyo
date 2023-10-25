@@ -21,7 +21,7 @@ func init() {
 
 func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
 	// 使用 message.Echo 作为key来获取消息类型
-	msgType := echo.GetMsgTypeByKey(message.Echo)
+	msgType := echo.GetMsgTypeByKey(string(message.Echo))
 
 	switch msgType {
 	case "group_private":
@@ -29,7 +29,7 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		messageText, foundItems := parseMessageContent(message.Params)
 
 		// 获取 echo 的值
-		echostr := message.Echo
+		echostr := string(message.Echo)
 
 		// 使用 echo 获取消息ID
 		messageID := echo.GetMsgIDByKey(echostr)
@@ -38,7 +38,7 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		log.Println("foundItems:", foundItems)
 
 		//通过bolt数据库还原真实的GroupID
-		originalGroupID, err := idmap.RetrieveRowByID(message.Params.GroupID.(string))
+		originalGroupID, err := idmap.RetrieveRowByIDv2(message.Params.GroupID.(string))
 		if err != nil {
 			log.Printf("Error retrieving original GroupID: %v", err)
 			return
@@ -144,7 +144,7 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 	}
 
 	// 获取 echo 的值
-	echostr := message.Echo
+	echostr := string(message.Echo)
 	messageID := echo.GetMsgIDByKey(echostr)
 	log.Println("私聊信息对应的message_id:", messageID)
 	log.Println("私聊信息messageText:", messageText)
@@ -220,19 +220,19 @@ func getGuildIDFromMessage(message callapi.ActionMessage) (string, string, error
 		return "", "", fmt.Errorf("unexpected type for UserID: %T", v) // 使用%T来打印具体的类型
 	}
 
-	// 使用RetrieveRowByID还原真实的UserID
-	realUserID, err := idmap.RetrieveRowByID(userID)
+	// 使用RetrieveRowByIDv2还原真实的UserID
+	realUserID, err := idmap.RetrieveRowByIDv2(userID)
 	if err != nil {
 		return "", "", fmt.Errorf("error retrieving real UserID: %v", err)
 	}
 	// 使用realUserID作为sectionName从数据库中获取channel_id
-	channelID, err := idmap.ReadConfig(realUserID, "channel_id")
+	channelID, err := idmap.ReadConfigv2(realUserID, "channel_id")
 	if err != nil {
 		return "", "", fmt.Errorf("error reading channel_id: %v", err)
 	}
 
 	// 使用channelID作为sectionName从数据库中获取guild_id
-	guildID, err := idmap.ReadConfig(channelID, "guild_id")
+	guildID, err := idmap.ReadConfigv2(channelID, "guild_id")
 	if err != nil {
 		return "", "", fmt.Errorf("error reading guild_id: %v", err)
 	}

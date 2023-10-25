@@ -4,15 +4,53 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 
 	"github.com/tencent-connect/botgo/openapi"
 )
+
+type EchoData struct {
+	Seq int `json:"seq"`
+}
+
+type EchoContent string
+
+func (e *EchoContent) UnmarshalJSON(data []byte) error {
+	// 尝试解析为字符串
+	var strVal string
+	if err := json.Unmarshal(data, &strVal); err == nil {
+		*e = EchoContent(strVal)
+		return nil
+	}
+
+	// 尝试解析为整数
+	var intVal int
+	if err := json.Unmarshal(data, &intVal); err == nil {
+		*e = EchoContent(strconv.Itoa(intVal))
+		return nil
+	}
+
+	// 尝试解析为EchoData结构体
+	var echoData EchoData
+	if err := json.Unmarshal(data, &echoData); err == nil {
+		*e = EchoContent(strconv.Itoa(echoData.Seq))
+		return nil
+	}
+
+	// 如果都不符合预期,设置为空字符串
+	*e = ""
+	return nil
+}
+
+// func (e EchoContent) String() string {
+// 	return string(e)
+// }
 
 // onebot发来的action调用信息
 type ActionMessage struct {
 	Action string        `json:"action"`
 	Params ParamsContent `json:"params"`
-	Echo   string        `json:"echo,omitempty"`
+	Echo   EchoContent   `json:"echo,omitempty"`
 }
 
 // params类型

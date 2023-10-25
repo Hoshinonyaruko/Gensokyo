@@ -2,11 +2,16 @@ package idmap
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
+	"net/url"
 
 	"github.com/boltdb/bolt"
+	"github.com/hoshinonyaruko/gensokyo/config"
 )
 
 const (
@@ -38,7 +43,7 @@ func CloseDB() {
 }
 
 // 根据a储存b
-func StoreID(id string) (int64, error) {
+func StoreIDv2(id string) (int64, error) {
 	var newRow int64
 
 	err := db.Update(func(tx *bolt.Tx) error {
@@ -74,8 +79,44 @@ func StoreID(id string) (int64, error) {
 	return newRow, err
 }
 
+// StoreIDv2v2 根据a储存b
+func StoreIDv2v2(id string) (int64, error) {
+	if config.GetLotusValue() {
+		// 使用网络请求方式
+		serverDir := config.GetServer_dir()
+		portValue := config.GetPortValue()
+
+		// 构建请求URL
+		url := fmt.Sprintf("http://%s:%s/getid?type=1&id=%s", serverDir, portValue, id)
+		resp, err := http.Get(url)
+		if err != nil {
+			return 0, fmt.Errorf("failed to send request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		// 解析响应
+		var response map[string]interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+			return 0, fmt.Errorf("failed to decode response: %v", err)
+		}
+		if resp.StatusCode != http.StatusOK {
+			return 0, fmt.Errorf("error response from server: %s", response["error"])
+		}
+
+		rowValue, ok := response["row"].(float64)
+		if !ok {
+			return 0, fmt.Errorf("invalid response format")
+		}
+
+		return int64(rowValue), nil
+	}
+
+	// 如果lotus为假,就保持原来的store的方法
+	return StoreIDv2(id)
+}
+
 // 根据b得到a
-func RetrieveRowByID(rowid string) (string, error) {
+func RetrieveRowByIDv2(rowid string) (string, error) {
 	var id string
 	err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(BucketName))
@@ -93,8 +134,44 @@ func RetrieveRowByID(rowid string) (string, error) {
 	return id, err
 }
 
+// RetrieveRowByIDv2v2 根据b得到a
+func RetrieveRowByIDv2v2(rowid string) (string, error) {
+	if config.GetLotusValue() {
+		// 使用网络请求方式
+		serverDir := config.GetServer_dir()
+		portValue := config.GetPortValue()
+
+		// 构建请求URL
+		url := fmt.Sprintf("http://%s:%s/getid?type=2&id=%s", serverDir, portValue, rowid)
+		resp, err := http.Get(url)
+		if err != nil {
+			return "", fmt.Errorf("failed to send request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		// 解析响应
+		var response map[string]interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+			return "", fmt.Errorf("failed to decode response: %v", err)
+		}
+		if resp.StatusCode != http.StatusOK {
+			return "", fmt.Errorf("error response from server: %s", response["error"])
+		}
+
+		idValue, ok := response["id"].(string)
+		if !ok {
+			return "", fmt.Errorf("invalid response format")
+		}
+
+		return idValue, nil
+	}
+
+	// 如果lotus为假,就保持原来的RetrieveRowByIDv2的方法
+	return RetrieveRowByIDv2(rowid)
+}
+
 // 根据a 以b为类别 储存c
-func WriteConfig(sectionName, keyName, value string) error {
+func WriteConfigv2(sectionName, keyName, value string) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b, err := tx.CreateBucketIfNotExists([]byte(ConfigBucket))
 		if err != nil {
@@ -106,8 +183,41 @@ func WriteConfig(sectionName, keyName, value string) error {
 	})
 }
 
+// WriteConfigv2v2 根据a以b为类别储存c
+func WriteConfigv2v2(sectionName, keyName, value string) error {
+	if config.GetLotusValue() {
+		// 使用网络请求方式
+		serverDir := config.GetServer_dir()
+		portValue := config.GetPortValue()
+
+		// 构建请求URL和参数
+		baseURL := fmt.Sprintf("http://%s:%s/getid", serverDir, portValue)
+		params := url.Values{}
+		params.Add("type", "3")
+		params.Add("id", sectionName)
+		params.Add("subtype", keyName)
+		params.Add("value", value)
+		url := baseURL + "?" + params.Encode()
+
+		resp, err := http.Get(url)
+		if err != nil {
+			return fmt.Errorf("failed to send request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("error response from server: %s", resp.Status)
+		}
+
+		return nil
+	}
+
+	// 如果lotus为假,则使用原始方法在本地写入配置
+	return WriteConfigv2(sectionName, keyName, value)
+}
+
 // 根据a和b取出c
-func ReadConfig(sectionName, keyName string) (string, error) {
+func ReadConfigv2(sectionName, keyName string) (string, error) {
 	var result string
 	err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(ConfigBucket))
@@ -126,6 +236,52 @@ func ReadConfig(sectionName, keyName string) (string, error) {
 	})
 
 	return result, err
+}
+
+// ReadConfigv2v2 根据a和b取出c
+func ReadConfigv2v2(sectionName, keyName string) (string, error) {
+	if config.GetLotusValue() {
+		// 使用网络请求方式
+		serverDir := config.GetServer_dir()
+		portValue := config.GetPortValue()
+
+		// 构建请求URL和参数
+		baseURL := fmt.Sprintf("http://%s:%s/getid", serverDir, portValue)
+		params := url.Values{}
+		params.Add("type", "4")
+		params.Add("id", sectionName)
+		params.Add("subtype", keyName)
+		url := baseURL + "?" + params.Encode()
+
+		resp, err := http.Get(url)
+		if err != nil {
+			return "", fmt.Errorf("failed to send request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return "", fmt.Errorf("error response from server: %s", resp.Status)
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return "", fmt.Errorf("failed to read response body: %v", err)
+		}
+
+		var responseMap map[string]interface{}
+		if err := json.Unmarshal(body, &responseMap); err != nil {
+			return "", fmt.Errorf("failed to unmarshal response: %v", err)
+		}
+
+		if value, ok := responseMap["value"]; ok {
+			return fmt.Sprintf("%v", value), nil
+		}
+
+		return "", fmt.Errorf("value not found in response")
+	}
+
+	// 如果lotus为假,则使用原始方法在本地读取配置
+	return ReadConfigv2(sectionName, keyName)
 }
 
 // 灵感,ini配置文件

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
@@ -16,9 +15,11 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/handlers"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
+	"github.com/hoshinonyaruko/gensokyo/server"
 	"github.com/hoshinonyaruko/gensokyo/wsclient"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sqweek/dialog"
 	"github.com/tencent-connect/botgo"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/event"
@@ -41,6 +42,19 @@ func NewProcessor(api openapi.OpenAPI, apiv2 openapi.OpenAPI, settings *config.S
 }
 
 func main() {
+	if _, err := os.Stat("config.yml"); os.IsNotExist(err) {
+		// 如果config.yml不存在
+		err = os.WriteFile("config.yml", []byte(configTemplate), 0644)
+		if err != nil {
+			fmt.Println("Error writing config.yml:", err)
+			return
+		}
+
+		dialog.Message("%s", "请配置config.yml然后再次运行.").Title("配置提示").Info()
+		os.Exit(0)
+	}
+
+	// 主逻辑
 	// 加载配置
 	conf, err := config.LoadConfig("config.yml")
 	if err != nil {
@@ -73,16 +87,16 @@ func main() {
 	apiV2 := botgo.NewOpenAPI(token).WithTimeout(3 * time.Second)
 
 	// 执行API请求 显示机器人信息
-	me, err := api.Me(ctx) // Adjusted to pass only the context
-	if err != nil {
-		fmt.Printf("Error fetching bot details: %v\n", err)
-		return
-	}
-	fmt.Printf("Bot details: %+v\n", me)
+	// me, err := api.Me(ctx) // Adjusted to pass only the context
+	// if err != nil {
+	// 	fmt.Printf("Error fetching bot details: %v\n", err)
+	// 	return
+	// }
+	// fmt.Printf("Bot details: %+v\n", me)
 
 	//初始化handlers
-	handlers.BotID = me.ID
-	//handlers.BotID = "1234"
+	//handlers.BotID = me.ID
+	handlers.BotID = "1234"
 	handlers.AppID = fmt.Sprintf("%d", conf.Settings.AppID)
 
 	// 获取 websocket 信息 这里用哪一个api获取就是用哪一个api去连接ws
@@ -151,9 +165,17 @@ func main() {
 	idmap.InitializeDB()
 	defer idmap.CloseDB()
 
-	r := gin.Default()
-	r.GET("/getid", getIDHandler)
-	r.Run(":15817")
+	//图片上传 调用次数限制
+	rateLimiter := server.NewRateLimiter()
+
+	//如果连接到其他gensokyo,则不需要启动服务器
+	if !conf.Settings.Lotus {
+		r := gin.Default()
+		r.GET("/getid", server.GetIDHandler)
+		r.POST("/uploadpic", server.UploadBase64ImageHandler(rateLimiter))
+		r.Static("/channel_temp", "./channel_temp")
+		r.Run("0.0.0.0:" + conf.Settings.Port) // 注意，这里我更改了端口为你提供的Port，并监听0.0.0.0地址
+	}
 
 	// 使用通道来等待信号
 	sigCh := make(chan os.Signal, 1)
@@ -282,59 +304,4 @@ func getHandlerByName(handlerName string) (interface{}, bool) {
 		fmt.Printf("Unknown handler: %s\n", handlerName)
 		return nil, false
 	}
-}
-
-func getIDHandler(c *gin.Context) {
-	idOrRow := c.Query("id")
-	typeVal, err := strconv.Atoi(c.Query("type"))
-
-	if err != nil || (typeVal != 1 && typeVal != 2) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid type"})
-		return
-	}
-
-	switch typeVal {
-	case 1:
-		newRow, err := idmap.StoreID(idOrRow)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"row": newRow})
-
-	case 2:
-		id, err := idmap.RetrieveRowByID(idOrRow)
-		if err == idmap.ErrKeyNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "ID not found"})
-			return
-		} else if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"id": id})
-
-	case 3:
-		// 存储
-		section := c.Query("id")
-		subtype := c.Query("subtype")
-		value := c.Query("value")
-		err := idmap.WriteConfig(section, subtype, value)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"status": "success"})
-
-	case 4:
-		// 获取值
-		section := c.Query("id")
-		subtype := c.Query("subtype")
-		value, err := idmap.ReadConfig(section, subtype)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"value": value})
-	}
-
 }

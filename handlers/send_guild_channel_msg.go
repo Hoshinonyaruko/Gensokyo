@@ -21,7 +21,7 @@ func init() {
 
 func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
 	// 使用 message.Echo 作为key来获取消息类型
-	msgType := echo.GetMsgTypeByKey(message.Echo)
+	msgType := echo.GetMsgTypeByKey(string(message.Echo))
 
 	//如果获取不到 就用user_id获取信息类型
 	if msgType == "" {
@@ -46,7 +46,7 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 
 		channelID := params.ChannelID
 		// 获取 echo 的值
-		echostr := message.Echo
+		echostr := string(message.Echo)
 
 		//messageType := echo.GetMsgTypeByKey(echostr)
 		messageID := echo.GetMsgIDByKey(echostr)

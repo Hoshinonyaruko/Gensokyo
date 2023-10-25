@@ -36,14 +36,14 @@ func (p *Processor) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) e
 		echostr := AppIDString + "_" + strconv.FormatInt(s, 10)
 
 		//将真实id转为int userid64
-		userid64, err := idmap.StoreID(data.Author.ID)
+		userid64, err := idmap.StoreIDv2(data.Author.ID)
 		if err != nil {
 			log.Fatalf("Error storing ID: %v", err)
 		}
 		//将真实id写入数据库,可取出ChannelID
-		idmap.WriteConfig(data.Author.ID, "channel_id", data.ChannelID)
+		idmap.WriteConfigv2(data.Author.ID, "channel_id", data.ChannelID)
 		//将channelid写入数据库,可取出guild_id
-		idmap.WriteConfig(data.ChannelID, "guild_id", data.GuildID)
+		idmap.WriteConfigv2(data.ChannelID, "guild_id", data.GuildID)
 
 		//收到私聊信息调用的具体还原步骤
 		//1,idmap还原真实userid,
@@ -51,7 +51,7 @@ func (p *Processor) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) e
 		//3,通过idmap用channelid获取guildid,
 		//发信息使用的是guildid
 		//todo 优化数据库读写次数
-		messageID64, err := idmap.StoreID(data.ID)
+		messageID64, err := idmap.StoreIDv2(data.ID)
 		if err != nil {
 			log.Fatalf("Error storing ID: %v", err)
 		}
@@ -109,7 +109,7 @@ func (p *Processor) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) e
 			//构造echo
 			echostr := AppIDString + "_" + strconv.FormatInt(s, 10)
 			//映射str的userid到int
-			userid64, err := idmap.StoreID(data.Author.ID)
+			userid64, err := idmap.StoreIDv2(data.Author.ID)
 			if err != nil {
 				log.Printf("Error storing ID: %v", err)
 				return nil
@@ -159,7 +159,7 @@ func (p *Processor) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) e
 		} else {
 			//将频道信息转化为群信息(特殊需求情况下)
 			//将channelid写入ini,可取出guild_id
-			idmap.WriteConfig(data.ChannelID, "guild_id", data.GuildID)
+			idmap.WriteConfigv2(data.ChannelID, "guild_id", data.GuildID)
 			//转换at
 			messageText := handlers.RevertTransformedText(data.Content)
 			//转换appid
@@ -173,14 +173,14 @@ func (p *Processor) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) e
 				return fmt.Errorf("failed to convert ChannelID to int: %v", err)
 			}
 			//映射str的userid到int
-			userid64, err := idmap.StoreID(data.Author.ID)
+			userid64, err := idmap.StoreIDv2(data.Author.ID)
 			if err != nil {
 				log.Printf("Error storing ID: %v", err)
 				return nil
 			}
 			//userid := int(userid64)
 			//映射str的messageID到int
-			messageID64, err := idmap.StoreID(data.ID)
+			messageID64, err := idmap.StoreIDv2(data.ID)
 			if err != nil {
 				log.Printf("Error storing ID: %v", err)
 				return nil

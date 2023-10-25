@@ -1,10 +1,13 @@
+package main
+
+const configTemplate = `
 version: 1
 settings:
   ws_address: "ws://<YOUR_WS_ADDRESS>:<YOUR_WS_PORT>" # WebSocket服务的地址
   app_id: <YOUR_APP_ID>                              # 你的应用ID
   token: "<YOUR_APP_TOKEN>"                          # 你的应用令牌
   client_secret: "<YOUR_CLIENT_SECRET>"              # 你的客户端密钥
-  
+
   text_intent:                                       # 请根据公域 私域来选择intent,错误的intent将连接失败
     - "ATMessageEventHandler"                        # 频道at信息
     - "DirectMessageHandler"                         # 私域频道私信(dms)
@@ -28,3 +31,4 @@ settings:
   lotus: false                                       # lotus特性默认为false,当为true时,将会连接到另一个lotus为false的gensokyo。
                                                      # 使用它提供的图床和idmaps服务(场景:同一个机器人在不同服务器运行,或内网需要发送base64图)。
                                                      # 如果需要发送base64图片,需要设置正确的公网server_dir和开放对应的port
+`
