@@ -27,13 +27,12 @@ type OnebotGroupInfo struct {
 	MaxMemberCount  int32  `json:"max_member_count"`
 }
 
-func ConvertGuildToGroupInfo(guild *dto.Guild) *OnebotGroupInfo {
-	groupID, err := strconv.ParseInt(guild.ID, 10, 64)
+func ConvertGuildToGroupInfo(guild *dto.Guild, GroupId string) *OnebotGroupInfo {
+	groupidstr, err := strconv.ParseInt(GroupId, 10, 64)
 	if err != nil {
-		log.Printf("转换ID失败: %v", err)
+		log.Printf("groupidstr: %v", err)
 		return nil
 	}
-
 	ts, err := guild.JoinedAt.Time()
 	if err != nil {
 		log.Printf("转换JoinedAt失败: %v", err)
@@ -42,7 +41,7 @@ func ConvertGuildToGroupInfo(guild *dto.Guild) *OnebotGroupInfo {
 	groupCreateTime := uint32(ts.Unix())
 
 	return &OnebotGroupInfo{
-		GroupID:         groupID,
+		GroupID:         groupidstr,
 		GroupName:       guild.Name,
 		GroupMemo:       guild.Desc,
 		GroupCreateTime: groupCreateTime,
@@ -71,8 +70,15 @@ func handleGetGroupInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		log.Printf("获取频道信息失败: %v", err)
 		return
 	}
-
-	groupInfo := ConvertGuildToGroupInfo(guild)
+	//用group_id还原出channelid 这是虚拟成群的私聊信息
+	message.Params.ChannelID = message.Params.GroupID.(string)
+	//读取ini 通过ChannelID取回之前储存的guild_id
+	GroupId, err := idmap.ReadConfigv2(message.Params.ChannelID, "guild_id")
+	if err != nil {
+		log.Printf("Error reading config: %v", err)
+		return
+	}
+	groupInfo := ConvertGuildToGroupInfo(guild, GroupId)
 
 	groupInfoMap := structToMap(groupInfo)
 

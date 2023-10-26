@@ -100,7 +100,7 @@ func (atoken *AuthTokenInfo) StartRefreshAccessToken(ctx context.Context, tokenU
 // func (atoken *AuthTokenInfo) StartRefreshAccessToken(ctx context.Context, tokenURL, appID, clientSecrent string) (err error) {
 // 	// 创建一个固定的token信息
 // 	fixedTokenInfo := AccessTokenInfo{
-// 		Token:     "PpAPgoel0-gTeaxy-ydak0kUKxJrCSlbLcwtuPt99jCPVrahkqh3WSiIy9s63tCZnTEp4asw035u",
+// 		Token:     "PyR4PL9_eRfAkIIlWE4nAawocFMlPfQCySgASB5vJRduWgKh0mSOp4zm4AOzDKpweV9iu5zq-OWm",
 // 		ExpiresIn: 3600, // 这里假设token的有效时间是3600秒，你可以根据需要调整
 // 	}
 // 	atoken.setAuthToken(fixedTokenInfo)

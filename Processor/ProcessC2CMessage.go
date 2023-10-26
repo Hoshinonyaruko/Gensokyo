@@ -135,6 +135,24 @@ func (p *Processor) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 			Avatar:  "",
 			Echo:    echostr,
 		}
+		// 获取MasterID数组
+		masterIDs := config.GetMasterID()
+
+		// 判断userid64是否在masterIDs数组里
+		isMaster := false
+		for _, id := range masterIDs {
+			if strconv.FormatInt(userid64, 10) == id {
+				isMaster = true
+				break
+			}
+		}
+
+		// 根据isMaster的值为groupMsg的Sender赋值role字段
+		if isMaster {
+			groupMsg.Sender.Role = "owner"
+		} else {
+			groupMsg.Sender.Role = "member"
+		}
 		//将当前s和appid和message进行映射
 		echo.AddMsgID(AppIDString, s, data.ID)
 		echo.AddMsgType(AppIDString, s, "group_private")

@@ -10,6 +10,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/hoshinonyaruko/gensokyo/callapi"
+	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/tencent-connect/botgo/openapi"
 )
 
@@ -111,10 +112,17 @@ func (c *WebSocketClient) sendHeartbeat(ctx context.Context, botID uint64) {
 
 // NewWebSocketClient 创建 WebSocketClient 实例，接受 WebSocket URL、botID 和 openapi.OpenAPI 实例
 func NewWebSocketClient(urlStr string, botID uint64, api openapi.OpenAPI, apiv2 openapi.OpenAPI) (*WebSocketClient, error) {
+	token := config.GetWsToken() // 从配置中获取 token
+
 	headers := http.Header{
 		"User-Agent":    []string{"CQHttp/4.15.0"},
 		"X-Client-Role": []string{"Universal"},
 		"X-Self-ID":     []string{fmt.Sprintf("%d", botID)},
+	}
+
+	// 如果 token 不为空，将其添加到 headers 中
+	if token != "" {
+		headers["Authorization"] = []string{"Token " + token}
 	}
 
 	dialer := websocket.Dialer{

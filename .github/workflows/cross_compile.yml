@@ -1,0 +1,69 @@
+name: Cross Compile Go Project
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }} for ${{ matrix.goarch }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: linux
+            goarch: amd64
+          - os: linux
+            goarch: 386
+          - os: linux
+            goarch: arm
+          - os: linux
+            goarch: arm64
+          - os: darwin
+            goarch: amd64
+          - os: darwin
+            goarch: arm64
+          - os: windows
+            goarch: amd64
+          - os: windows
+            goarch: 386
+          - os: android
+            goarch: arm
+          - os: android
+            goarch: arm64
+          # ... Add other combinations as needed
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.21.1' # Set to specific Go version.
+
+    - name: Setup Android NDK (only for Android builds)
+      if: matrix.os == 'android'
+      run: |
+        sudo apt-get install -y wget unzip
+        wget https://dl.google.com/android/repository/android-ndk-r21e-linux-x86_64.zip || exit 1
+        unzip android-ndk-r21e-linux-x86_64.zip || exit 1
+        export ANDROID_NDK_HOME=$PWD/android-ndk-r21e
+        echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >> $GITHUB_ENV
+
+    - name: Create output directory
+      run: mkdir -p output
+
+    - name: Compile Go for target
+      env:
+        GOOS: ${{ matrix.os }}
+        GOARCH: ${{ matrix.goarch }}
+        CGO_ENABLED: ${{ matrix.os == 'android' || matrix.goarch == 'arm' || matrix.goarch == 'arm64' ? '0' : '1' }}
+      run: |
+        go build -o output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: gensokyo-${{ matrix.os }}-${{ matrix.goarch }}
+        path: output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}

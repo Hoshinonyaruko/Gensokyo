@@ -5,8 +5,6 @@ idmap.db.lock
 idmap.ini
 
 # Go specific
-go.mod
-go.sum
 *.exe
 
 # Ignore channel_temp
