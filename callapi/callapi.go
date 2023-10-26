@@ -58,9 +58,11 @@ type ParamsContent struct {
 	BotQQ     string      `json:"botqq"`
 	ChannelID string      `json:"channel_id"`
 	GuildID   string      `json:"guild_id"`
-	GroupID   interface{} `json:"group_id"` // 每一种onebotv11实现的字段类型都可能不同
-	Message   interface{} `json:"message"`  // 这里使用interface{}因为它可能是多种类型
-	UserID    interface{} `json:"user_id"`  // 这里使用interface{}因为它可能是多种类型
+	GroupID   interface{} `json:"group_id"`           // 每一种onebotv11实现的字段类型都可能不同
+	Message   interface{} `json:"message"`            // 这里使用interface{}因为它可能是多种类型
+	UserID    interface{} `json:"user_id"`            // 这里使用interface{}因为它可能是多种类型
+	Duration  int         `json:"duration,omitempty"` // 可选的整数
+	Enable    bool        `json:"enable,omitempty"`   // 可选的布尔值
 }
 
 // 自定义一个ParamsContent的UnmarshalJSON 让GroupID同时兼容str和int
@@ -68,6 +70,7 @@ func (p *ParamsContent) UnmarshalJSON(data []byte) error {
 	type Alias ParamsContent
 	aux := &struct {
 		GroupID interface{} `json:"group_id"`
+		UserID  interface{} `json:"user_id"`
 		*Alias
 	}{
 		Alias: (*Alias)(p),
@@ -86,6 +89,18 @@ func (p *ParamsContent) UnmarshalJSON(data []byte) error {
 	default:
 		return fmt.Errorf("GroupID has unsupported type")
 	}
+
+	switch v := aux.UserID.(type) {
+	case nil: // 当UserID不存在时
+		p.UserID = ""
+	case float64: // JSON的数字默认被解码为float64
+		p.UserID = fmt.Sprintf("%.0f", v) // 将其转换为字符串，忽略小数点后的部分
+	case string:
+		p.UserID = v
+	default:
+		return fmt.Errorf("UserID has unsupported type")
+	}
+
 	return nil
 }
 
@@ -99,7 +114,8 @@ type Message struct {
 // 这是一个接口,在wsclient传入client但不需要引用wsclient包,避免循环引用
 type Client interface {
 	SendMessage(message map[string]interface{}) error
-	GetAppID() string
+	GetAppID() uint64
+	GetAppIDStr() string
 }
 
 // 根据action订阅handler处理api

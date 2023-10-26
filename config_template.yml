@@ -23,7 +23,7 @@ settings:
   global_private_to_channel: false                   # 是否将私聊转换成频道
   array: false
 
-  server_dir: "<YOUR_SERVER_DIR>:<YOUR_SERVER_PORT>" # 提供图片上传服务的服务器(图床)需要带端口号. 如果需要发base64图,需为公网ip,且开放对应端口
+  server_dir: "<YOUR_SERVER_DIR>" # 提供图片上传服务的服务器(图床)需要带端口号. 如果需要发base64图,需为公网ip,且开放对应端口
   port: "<YOUR_PORT>"                               # idmaps和图床对外开放的端口号
   lotus: false                                       # lotus特性默认为false,当为true时,将会连接到另一个lotus为false的gensokyo。
                                                      # 使用它提供的图床和idmaps服务(场景:同一个机器人在不同服务器运行,或内网需要发送base64图)。

@@ -91,15 +91,15 @@ func (t *Token) GetString_old() string {
 }
 
 // GetAccessToken 取得鉴权Token
-// func (t *Token) GetAccessToken() string {
-// 	return t.authToken.getAuthToken().Token
-// }
+func (t *Token) GetAccessToken() string {
+	return t.authToken.getAuthToken().Token
+}
 
 // GetAccessToken 取得测试鉴权Token
-func (t *Token) GetAccessToken() string {
-	// 固定的token值
-	return "PpAPgoel0-gTeaxy-ydak0kUKxJrCSlbLcwtuPt99jCPVrahkqh3WSiIy9s63tCZnTEp4asw035u"
-}
+// func (t *Token) GetAccessToken() string {
+// 	// 固定的token值
+// 	return "FK2RrubmpJ29LZ1v2LVuE6YrRB6zsjnP4wF3EaHy0g48H-SPYIGn4irXvHNvYMgV6hLP6hEimUgXuw"
+// }
 
 // UpAccessToken 更新accessToken
 func (t *Token) UpAccessToken(ctx context.Context, reason interface{}) error {

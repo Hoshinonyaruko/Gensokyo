@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -87,16 +86,16 @@ func main() {
 	apiV2 := botgo.NewOpenAPI(token).WithTimeout(3 * time.Second)
 
 	// 执行API请求 显示机器人信息
-	// me, err := api.Me(ctx) // Adjusted to pass only the context
-	// if err != nil {
-	// 	fmt.Printf("Error fetching bot details: %v\n", err)
-	// 	return
-	// }
-	// fmt.Printf("Bot details: %+v\n", me)
+	me, err := api.Me(ctx) // Adjusted to pass only the context
+	if err != nil {
+		fmt.Printf("Error fetching bot details: %v\n", err)
+		return
+	}
+	fmt.Printf("Bot details: %+v\n", me)
 
 	//初始化handlers
-	//handlers.BotID = me.ID
-	handlers.BotID = "1234"
+	handlers.BotID = me.ID
+	//handlers.BotID = "1234"
 	handlers.AppID = fmt.Sprintf("%d", conf.Settings.AppID)
 
 	// 获取 websocket 信息 这里用哪一个api获取就是用哪一个api去连接ws
@@ -139,8 +138,7 @@ func main() {
 
 	// 在新的 go 函数中初始化 wsClient
 	go func() {
-		appIDStr := strconv.FormatUint(conf.Settings.AppID, 10) // Assuming base 10
-		wsClient, err := wsclient.NewWebSocketClient(conf.Settings.WsAddress, appIDStr, api, apiV2)
+		wsClient, err := wsclient.NewWebSocketClient(conf.Settings.WsAddress, conf.Settings.AppID, api, apiV2)
 		if err != nil {
 			fmt.Printf("Error creating WebSocketClient: %v\n", err)
 			close(wsClientChan) // 关闭通道表示不再发送值
@@ -269,7 +267,8 @@ func GroupATMessageEventHandler() event.GroupATMessageEventHandler {
 // C2CMessageEventHandler 实现处理 群私聊 消息的回调
 func C2CMessageEventHandler() event.C2CMessageEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSC2CMessageData) error {
-		return processor.ProcessC2CMessage(string(event.RawMessage), data)
+		log.Print("1111")
+		return processor.ProcessC2CMessage(data)
 	}
 }
 

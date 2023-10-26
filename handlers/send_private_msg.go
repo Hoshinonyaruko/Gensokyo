@@ -25,6 +25,14 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 
 	switch msgType {
 	case "group_private":
+		//私聊信息
+		//还原真实的userid
+		UserID, err := idmap.RetrieveRowByIDv2(message.Params.UserID.(string))
+		if err != nil {
+			log.Printf("Error reading config: %v", err)
+			return
+		}
+
 		// 解析消息内容
 		messageText, foundItems := parseMessageContent(message.Params)
 
@@ -33,17 +41,9 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 
 		// 使用 echo 获取消息ID
 		messageID := echo.GetMsgIDByKey(echostr)
-		log.Println("群组发信息对应的message_id:", messageID)
-		log.Println("群组发信息messageText:", messageText)
+		log.Println("私聊发信息对应的message_id:", messageID)
+		log.Println("私聊发信息messageText:", messageText)
 		log.Println("foundItems:", foundItems)
-
-		//通过bolt数据库还原真实的GroupID
-		originalGroupID, err := idmap.RetrieveRowByIDv2(message.Params.GroupID.(string))
-		if err != nil {
-			log.Printf("Error retrieving original GroupID: %v", err)
-			return
-		}
-		message.Params.GroupID = originalGroupID
 
 		// 优先发送文本信息
 		if messageText != "" {
@@ -53,17 +53,17 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			groupMessage, ok := groupReply.(*dto.MessageToCreate)
 			if !ok {
 				log.Println("Error: Expected MessageToCreate type.")
-				return // 或其他错误处理
+				return
 			}
 
 			groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
-			_, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
+			_, err := apiv2.PostC2CMessage(context.TODO(), UserID, groupMessage)
 			if err != nil {
-				log.Printf("发送文本群组信息失败: %v", err)
+				log.Printf("发送文本私聊信息失败: %v", err)
 			}
 		}
 
-		// 遍历foundItems并发送每种信息
+		// 遍历 foundItems 并发送每种信息
 		for key, urls := range foundItems {
 			var singleItem = make(map[string][]string)
 			singleItem[key] = urls
@@ -74,13 +74,11 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
 			if !ok {
 				log.Printf("Error: Expected RichMediaMessage type for key %s.", key)
-				continue // 跳过这个项，继续下一个
+				continue
 			}
-
-			//richMediaMessage.Timestamp = time.Now().Unix() // 设置时间戳
-			_, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), richMediaMessage)
+			_, err := apiv2.PostC2CMessage(context.TODO(), UserID, richMediaMessage)
 			if err != nil {
-				log.Printf("发送 %s 信息失败: %v", key, err)
+				log.Printf("发送 %s 私聊信息失败: %v", key, err)
 			}
 		}
 	case "guild_private":
@@ -151,7 +149,7 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 	log.Println("foundItems:", foundItems)
 	// 如果messageID为空，通过函数获取
 	if messageID == "" {
-		messageID = GetMessageIDByUseridOrGroupid(client.GetAppID(), message.Params.UserID)
+		messageID = GetMessageIDByUseridOrGroupid(client.GetAppIDStr(), message.Params.UserID)
 		log.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
 	}
 

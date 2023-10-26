@@ -30,21 +30,21 @@ type Sender struct {
 
 // 频道信息事件
 type OnebotChannelMessage struct {
-	ChannelID   string `json:"channel_id"`
-	GuildID     string `json:"guild_id"`
-	Message     string `json:"message"`
-	MessageID   string `json:"message_id"`
-	MessageType string `json:"message_type"`
-	PostType    string `json:"post_type"`
-	SelfID      int64  `json:"self_id"`
-	SelfTinyID  string `json:"self_tiny_id"`
-	Sender      Sender `json:"sender"`
-	SubType     string `json:"sub_type"`
-	Time        int64  `json:"time"`
-	Avatar      string `json:"avatar"`
-	UserID      int64  `json:"user_id"`
-	RawMessage  string `json:"raw_message"`
-	Echo        string `json:"echo"`
+	ChannelID   string      `json:"channel_id"`
+	GuildID     string      `json:"guild_id"`
+	Message     interface{} `json:"message"`
+	MessageID   string      `json:"message_id"`
+	MessageType string      `json:"message_type"`
+	PostType    string      `json:"post_type"`
+	SelfID      int64       `json:"self_id"`
+	SelfTinyID  string      `json:"self_tiny_id"`
+	Sender      Sender      `json:"sender"`
+	SubType     string      `json:"sub_type"`
+	Time        int64       `json:"time"`
+	Avatar      string      `json:"avatar"`
+	UserID      int64       `json:"user_id"`
+	RawMessage  string      `json:"raw_message"`
+	Echo        string      `json:"echo"`
 }
 
 // 群信息事件
@@ -139,23 +139,6 @@ func (p *Processor) ProcessInlineSearch(data *dto.WSInteractionData) error {
 // 	log.Println("Error sending default reply:", err)
 // 	return nil
 // }
-
-// ProcessC2CMessage 处理C2C消息 群私聊
-func (p *Processor) ProcessC2CMessage(rawMessage string, data *dto.WSC2CMessageData) error {
-	// ctx := context.Background() // 或从更高级别传递一个上下文
-
-	// // 在这里处理C2C消息
-	// // ...
-
-	// // 示例：直接回复收到的消息
-	// response := fmt.Sprintf("Received your message: %s", rawMessage) // 创建响应消息
-	// err := p.api.PostC2CMessage(ctx, response)                       // 替换为您的OpenAPI方法
-	// if err != nil {
-	// 	return err
-	// }
-
-	return nil
-}
 
 // 打印结构体的函数
 func PrintStructWithFieldNames(v interface{}) {

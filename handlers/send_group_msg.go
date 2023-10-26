@@ -27,12 +27,12 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 
 	//如果获取不到 就用user_id获取信息类型
 	if msgType == "" {
-		msgType = GetMessageTypeByUserid(client.GetAppID(), message.Params.UserID)
+		msgType = GetMessageTypeByUserid(client.GetAppIDStr(), message.Params.UserID)
 	}
 
 	//如果获取不到 就用group_id获取信息类型
 	if msgType == "" {
-		msgType = GetMessageTypeByGroupid(client.GetAppID(), message.Params.GroupID)
+		msgType = GetMessageTypeByGroupid(client.GetAppIDStr(), message.Params.GroupID)
 	}
 
 	switch msgType {
@@ -50,7 +50,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		log.Println("foundItems:", foundItems)
 		// 如果messageID为空，通过函数获取
 		if messageID == "" {
-			messageID = GetMessageIDByUseridOrGroupid(client.GetAppID(), message.Params.GroupID)
+			messageID = GetMessageIDByUseridOrGroupid(client.GetAppIDStr(), message.Params.GroupID)
 			log.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
 		}
 
@@ -64,7 +64,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 
 		// 优先发送文本信息
 		if messageText != "" {
-			groupReply := generateMessage(messageID, nil, messageText)
+			groupReply := generateGroupMessage(messageID, nil, messageText)
 
 			// 进行类型断言
 			groupMessage, ok := groupReply.(*dto.MessageToCreate)
@@ -85,7 +85,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			var singleItem = make(map[string][]string)
 			singleItem[key] = urls
 
-			groupReply := generateMessage(messageID, singleItem, "")
+			groupReply := generateGroupMessage(messageID, singleItem, "")
 
 			// 进行类型断言
 			richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
@@ -123,16 +123,8 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		handleSendGuildChannelPrivateMsg(client, api, apiv2, message, &value, &message.Params.ChannelID)
 	case "group_private":
 		//用userid还原出openid 这是虚拟成群的群聊私聊信息
-		//todo
-		message.Params.ChannelID = message.Params.GroupID.(string)
-		//读取ini 通过ChannelID取回之前储存的guild_id
-		value, err := idmap.ReadConfigv2(message.Params.ChannelID, "guild_id")
-		if err != nil {
-			log.Printf("Error reading config: %v", err)
-			return
-		}
-		message.Params.GroupID = value
-		handleSendGuildChannelMsg(client, api, apiv2, message)
+		message.Params.UserID = message.Params.GroupID.(string)
+		handleSendPrivateMsg(client, api, apiv2, message)
 	default:
 		log.Printf("Unknown message type: %s", msgType)
 	}
