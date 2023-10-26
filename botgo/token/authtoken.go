@@ -97,6 +97,49 @@ func (atoken *AuthTokenInfo) StartRefreshAccessToken(ctx context.Context, tokenU
 }
 
 // 测试用
+func (atoken *AuthTokenInfo) StartRefreshAccessToken(ctx context.Context, tokenURL, appID, clientSecrent string) (err error) {
+	// 首先，立即获取一次AccessToken
+	tokenInfo, err := queryAccessToken(ctx, tokenURL, appID, clientSecrent)
+	if err != nil {
+		return err
+	}
+	atoken.setAuthToken(tokenInfo)
+	fmt.Printf("获取到的token是: %s\n", tokenInfo.Token) // 输出获取到的token
+
+	// 获取token的有效期（通常以秒为单位）
+	tokenTTL := tokenInfo.ExpiresIn
+	// 使用sync.Once保证仅启动一个goroutine进行定时刷新
+	atoken.once.Do(func() {
+		go func() { // 启动一个新的goroutine
+			for {
+				// 如果tokenTTL为0或负数，将其设置为1
+				if tokenTTL <= 0 {
+					tokenTTL = 1
+				}
+				select {
+				case <-time.NewTimer(time.Duration(tokenTTL) * time.Second).C: // 当token过期时
+				case upToken := <-atoken.forceUpToken: // 接收强制更新token的信号
+					log.Warnf("recv uptoken info:%v", upToken)
+				case <-ctx.Done(): // 当上下文结束时，退出goroutine
+					log.Warnf("recv ctx:%v exit refreshAccessToken", ctx.Err())
+					return
+				}
+				// 查询并获取新的AccessToken
+				tokenInfo, err := queryAccessToken(ctx, tokenURL, appID, clientSecrent)
+				if err == nil {
+					atoken.setAuthToken(tokenInfo)
+					fmt.Printf("获取到的token是: %s\n", tokenInfo.Token) // 输出获取到的token
+					tokenTTL = tokenInfo.ExpiresIn
+				} else {
+					log.Errorf("queryAccessToken err:%v", err)
+				}
+			}
+		}()
+	})
+	return
+}
+
+// 测试用
 // func (atoken *AuthTokenInfo) StartRefreshAccessToken(ctx context.Context, tokenURL, appID, clientSecrent string) (err error) {
 // 	// 创建一个固定的token信息
 // 	fixedTokenInfo := AccessTokenInfo{

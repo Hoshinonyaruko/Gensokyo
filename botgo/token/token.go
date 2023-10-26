@@ -96,6 +96,11 @@ func (t *Token) GetAccessToken() string {
 }
 
 // GetAccessToken 取得测试鉴权Token
+func (t *Token) GetAccessToken() string {
+	return t.authToken.getAuthToken().Token
+}
+
+// GetAccessToken 取得测试鉴权Token
 // func (t *Token) GetAccessToken() string {
 // 	// 固定的token值
 // 	return "PyR4PL9_eRfAkIIlWE4nAawocFMlPfQCySgASB5vJRduWgKh0mSOp4zm4AOzDKpweV9iu5zq-OWm"
