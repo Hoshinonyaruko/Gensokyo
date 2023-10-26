@@ -58,6 +58,7 @@ jobs:
       env:
         GOOS: ${{ matrix.os }}
         GOARCH: ${{ matrix.goarch }}
+        CGO_ENABLED: ${{ matrix.os == 'android' || matrix.goarch == 'arm' || matrix.goarch == 'arm64' ? '0' : '1' }}
       run: |
         go build -o output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}
 
