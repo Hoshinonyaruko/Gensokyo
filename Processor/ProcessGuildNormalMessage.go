@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/handlers"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
@@ -36,19 +37,16 @@ func (p *Processor) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 			log.Printf("Error storing ID: %v", err)
 			return nil
 		}
-		//映射str的messageID到int
-		//可以是string
-		// messageID64, err := idmap.StoreIDv2(data.ID)
-		// if err != nil {
-		// 	log.Printf("Error storing ID: %v", err)
-		// 	return nil
-		// }
-		// messageID := int(messageID64)
+		// 如果在Array模式下, 则处理Message为Segment格式
+		var segmentedMessages interface{} = messageText
+		if config.GetArrayValue() {
+			segmentedMessages = handlers.ConvertToSegmentedMessage(data)
+		}
 		// 处理onebot_channel_message逻辑
 		onebotMsg := OnebotChannelMessage{
 			ChannelID:   data.ChannelID,
 			GuildID:     data.GuildID,
-			Message:     messageText,
+			Message:     segmentedMessages,
 			RawMessage:  messageText,
 			MessageID:   data.ID,
 			MessageType: "guild",
@@ -73,6 +71,8 @@ func (p *Processor) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 		//为不支持双向echo的ob11服务端映射
 		echo.AddMsgID(AppIDString, userid64, data.ID)
 		echo.AddMsgType(AppIDString, userid64, "guild")
+		//储存当前群或频道号的类型
+		idmap.WriteConfigv2(data.ChannelID, "type", "guild")
 
 		//调试
 		PrintStructWithFieldNames(onebotMsg)
@@ -119,10 +119,14 @@ func (p *Processor) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 			return nil
 		}
 		messageID := int(messageID64)
-		//todo 判断array模式 然后对Message处理成array格式
+		// 如果在Array模式下, 则处理Message为Segment格式
+		var segmentedMessages interface{} = messageText
+		if config.GetArrayValue() {
+			segmentedMessages = handlers.ConvertToSegmentedMessage(data)
+		}
 		groupMsg := OnebotGroupMessage{
 			RawMessage:  messageText,
-			Message:     messageText,
+			Message:     segmentedMessages,
 			MessageID:   messageID,
 			GroupID:     int64(channelIDInt),
 			MessageType: "group",
@@ -144,6 +148,8 @@ func (p *Processor) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 		//为不支持双向echo的ob服务端映射
 		echo.AddMsgID(AppIDString, int64(channelIDInt), data.ID)
 		echo.AddMsgType(AppIDString, int64(channelIDInt), "guild")
+		//储存当前群或频道号的类型
+		idmap.WriteConfigv2(data.ChannelID, "type", "guild")
 
 		//调试
 		PrintStructWithFieldNames(groupMsg)

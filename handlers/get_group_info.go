@@ -77,7 +77,7 @@ func handleGetGroupInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 	groupInfoMap := structToMap(groupInfo)
 
 	// 打印groupInfoMap的内容
-	log.Printf("groupInfoMap(频道): %+v/n", groupInfoMap)
+	log.Printf("groupInfoMap(频道): %+v\n", groupInfoMap)
 
 	err = client.SendMessage(groupInfoMap) //发回去
 	if err != nil {

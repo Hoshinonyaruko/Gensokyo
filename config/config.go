@@ -101,3 +101,25 @@ func GetPortValue() string {
 	}
 	return instance.Settings.Port
 }
+
+// 获取Array的值
+func GetArrayValue() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		log.Println("Warning: instance is nil when trying to get array value.")
+		return false
+	}
+	return instance.Settings.Array
+}
+
+// 获取AppID
+func GetAppID() uint64 {
+	mu.Lock()
+	defer mu.Unlock()
+	if instance != nil {
+		return instance.Settings.AppID
+	}
+	return 0 // or whatever default value you'd like to return if instance is nil
+}

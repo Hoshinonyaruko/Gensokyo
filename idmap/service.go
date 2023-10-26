@@ -43,7 +43,7 @@ func CloseDB() {
 }
 
 // 根据a储存b
-func StoreIDv2(id string) (int64, error) {
+func StoreID(id string) (int64, error) {
 	var newRow int64
 
 	err := db.Update(func(tx *bolt.Tx) error {
@@ -79,8 +79,8 @@ func StoreIDv2(id string) (int64, error) {
 	return newRow, err
 }
 
-// StoreIDv2v2 根据a储存b
-func StoreIDv2v2(id string) (int64, error) {
+// StoreIDv2 根据a储存b
+func StoreIDv2(id string) (int64, error) {
 	if config.GetLotusValue() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
@@ -112,11 +112,11 @@ func StoreIDv2v2(id string) (int64, error) {
 	}
 
 	// 如果lotus为假,就保持原来的store的方法
-	return StoreIDv2(id)
+	return StoreID(id)
 }
 
 // 根据b得到a
-func RetrieveRowByIDv2(rowid string) (string, error) {
+func RetrieveRowByID(rowid string) (string, error) {
 	var id string
 	err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(BucketName))
@@ -134,8 +134,8 @@ func RetrieveRowByIDv2(rowid string) (string, error) {
 	return id, err
 }
 
-// RetrieveRowByIDv2v2 根据b得到a
-func RetrieveRowByIDv2v2(rowid string) (string, error) {
+// RetrieveRowByIDv2 根据b得到a
+func RetrieveRowByIDv2(rowid string) (string, error) {
 	if config.GetLotusValue() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
@@ -167,11 +167,11 @@ func RetrieveRowByIDv2v2(rowid string) (string, error) {
 	}
 
 	// 如果lotus为假,就保持原来的RetrieveRowByIDv2的方法
-	return RetrieveRowByIDv2(rowid)
+	return RetrieveRowByID(rowid)
 }
 
 // 根据a 以b为类别 储存c
-func WriteConfigv2(sectionName, keyName, value string) error {
+func WriteConfig(sectionName, keyName, value string) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b, err := tx.CreateBucketIfNotExists([]byte(ConfigBucket))
 		if err != nil {
@@ -183,8 +183,8 @@ func WriteConfigv2(sectionName, keyName, value string) error {
 	})
 }
 
-// WriteConfigv2v2 根据a以b为类别储存c
-func WriteConfigv2v2(sectionName, keyName, value string) error {
+// WriteConfigv2 根据a以b为类别储存c
+func WriteConfigv2(sectionName, keyName, value string) error {
 	if config.GetLotusValue() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
@@ -213,11 +213,11 @@ func WriteConfigv2v2(sectionName, keyName, value string) error {
 	}
 
 	// 如果lotus为假,则使用原始方法在本地写入配置
-	return WriteConfigv2(sectionName, keyName, value)
+	return WriteConfig(sectionName, keyName, value)
 }
 
 // 根据a和b取出c
-func ReadConfigv2(sectionName, keyName string) (string, error) {
+func ReadConfig(sectionName, keyName string) (string, error) {
 	var result string
 	err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(ConfigBucket))
@@ -238,8 +238,8 @@ func ReadConfigv2(sectionName, keyName string) (string, error) {
 	return result, err
 }
 
-// ReadConfigv2v2 根据a和b取出c
-func ReadConfigv2v2(sectionName, keyName string) (string, error) {
+// ReadConfigv2 根据a和b取出c
+func ReadConfigv2(sectionName, keyName string) (string, error) {
 	if config.GetLotusValue() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
@@ -281,7 +281,7 @@ func ReadConfigv2v2(sectionName, keyName string) (string, error) {
 	}
 
 	// 如果lotus为假,则使用原始方法在本地读取配置
-	return ReadConfigv2(sectionName, keyName)
+	return ReadConfig(sectionName, keyName)
 }
 
 // 灵感,ini配置文件

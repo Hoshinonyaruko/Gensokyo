@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/handlers"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
@@ -56,10 +57,15 @@ func (p *Processor) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) e
 			log.Fatalf("Error storing ID: %v", err)
 		}
 		messageID := int(messageID64)
-
+		messageText := data.Content
+		// 如果在Array模式下, 则处理Message为Segment格式
+		var segmentedMessages interface{} = messageText
+		if config.GetArrayValue() {
+			segmentedMessages = handlers.ConvertToSegmentedMessage(data)
+		}
 		privateMsg := OnebotPrivateMessage{
-			RawMessage:  data.Content,
-			Message:     data.Content,
+			RawMessage:  messageText,
+			Message:     segmentedMessages,
 			MessageID:   messageID,
 			MessageType: "private",
 			PostType:    "message",
@@ -144,6 +150,8 @@ func (p *Processor) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) e
 			//为不支持双向echo的ob服务端映射
 			echo.AddMsgID(AppIDString, userid64, data.ID)
 			echo.AddMsgType(AppIDString, userid64, "guild_private")
+			//储存当前群或频道号的类型
+			idmap.WriteConfigv2(data.ChannelID, "type", "guild_private")
 
 			//调试
 			PrintStructWithFieldNames(onebotMsg)
@@ -186,10 +194,14 @@ func (p *Processor) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) e
 				return nil
 			}
 			messageID := int(messageID64)
-			//todo 判断array模式 然后对Message处理成array格式
+			// 如果在Array模式下, 则处理Message为Segment格式
+			var segmentedMessages interface{} = messageText
+			if config.GetArrayValue() {
+				segmentedMessages = handlers.ConvertToSegmentedMessage(data)
+			}
 			groupMsg := OnebotGroupMessage{
 				RawMessage:  messageText,
-				Message:     messageText,
+				Message:     segmentedMessages,
 				MessageID:   messageID,
 				GroupID:     int64(channelIDInt),
 				MessageType: "group",
@@ -211,6 +223,8 @@ func (p *Processor) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) e
 			//为不支持双向echo的ob服务端映射
 			echo.AddMsgID(AppIDString, userid64, data.ID)
 			echo.AddMsgType(AppIDString, userid64, "guild_private")
+			//储存当前群或频道号的类型
+			idmap.WriteConfigv2(data.ChannelID, "type", "guild_private")
 
 			//调试
 			PrintStructWithFieldNames(groupMsg)

@@ -25,12 +25,12 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 
 	//如果获取不到 就用user_id获取信息类型
 	if msgType == "" {
-		msgType = GetMessageTypeByUserid(client.GetAppID(), message.Params.UserID)
+		msgType = GetMessageTypeByUserid(client.GetAppIDStr(), message.Params.UserID)
 	}
 
 	//如果获取不到 就用group_id获取信息类型
 	if msgType == "" {
-		appID := client.GetAppID()
+		appID := client.GetAppIDStr()
 		groupID := message.Params.GroupID
 		fmt.Printf("appID: %s, GroupID: %v\n", appID, groupID)
 

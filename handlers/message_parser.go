@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
+	"github.com/tencent-connect/botgo/dto"
 )
 
 var BotID string
@@ -116,6 +117,7 @@ func transformMessageText(messageText string) string {
 	})
 }
 
+// 处理at和其他定形文到onebotv11格式(cq码)
 func RevertTransformedText(messageText string) string {
 	// Trim leading and trailing spaces
 	messageText = strings.TrimSpace(messageText)
@@ -133,4 +135,78 @@ func RevertTransformedText(messageText string) string {
 		}
 		return m
 	})
+}
+
+// 将收到的data.content转换为message segment todo,群场景不支持受图片,频道场景的图片可以拼一下
+func ConvertToSegmentedMessage(data interface{}) []map[string]interface{} {
+	// 强制类型转换，获取Message结构
+	var msg *dto.Message
+	switch v := data.(type) {
+	case *dto.WSGroupATMessageData:
+		msg = (*dto.Message)(v)
+	case *dto.WSATMessageData:
+		msg = (*dto.Message)(v)
+	case *dto.WSMessageData:
+		msg = (*dto.Message)(v)
+	case *dto.WSDirectMessageData:
+		msg = (*dto.Message)(v)
+	case *dto.WSC2CMessageData:
+		msg = (*dto.Message)(v)
+	default:
+		return nil
+	}
+
+	var messageSegments []map[string]interface{}
+
+	// 处理Attachments字段来构建图片消息
+	for _, attachment := range msg.Attachments {
+		imageFileMD5 := attachment.FileName
+		for _, ext := range []string{"{", "}", ".png", ".jpg", ".gif", "-"} {
+			imageFileMD5 = strings.ReplaceAll(imageFileMD5, ext, "")
+		}
+		imageSegment := map[string]interface{}{
+			"type": "image",
+			"data": map[string]interface{}{
+				"file":    imageFileMD5 + ".image",
+				"subType": "0",
+				"url":     attachment.URL,
+			},
+		}
+		messageSegments = append(messageSegments, imageSegment)
+
+		// 在msg.Content中替换旧的图片链接
+		newImagePattern := "[CQ:image,file=" + attachment.URL + "]"
+		msg.Content = msg.Content + newImagePattern
+	}
+
+	// 使用正则表达式查找所有的[@数字]格式
+	r := regexp.MustCompile(`<@!(\d+)>`)
+	atMatches := r.FindAllStringSubmatch(msg.Content, -1)
+
+	for _, match := range atMatches {
+		// 构建at部分的映射并加入到messageSegments
+		atSegment := map[string]interface{}{
+			"type": "at",
+			"data": map[string]interface{}{
+				"qq": match[1],
+			},
+		}
+		messageSegments = append(messageSegments, atSegment)
+
+		// 从原始内容中移除at部分
+		msg.Content = strings.Replace(msg.Content, match[0], "", 1)
+	}
+
+	// 如果还有其他内容，那么这些内容被视为文本部分
+	if msg.Content != "" {
+		textSegment := map[string]interface{}{
+			"type": "text",
+			"data": map[string]interface{}{
+				"text": msg.Content,
+			},
+		}
+		messageSegments = append(messageSegments, textSegment)
+	}
+
+	return messageSegments
 }

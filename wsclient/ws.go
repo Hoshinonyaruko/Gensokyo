@@ -17,12 +17,17 @@ type WebSocketClient struct {
 	conn  *websocket.Conn
 	api   openapi.OpenAPI
 	apiv2 openapi.OpenAPI
-	appid string
+	appid uint64
 }
 
 // 获取appid
-func (c *WebSocketClient) GetAppID() string {
+func (c *WebSocketClient) GetAppID() uint64 {
 	return c.appid
+}
+
+// 获取appid的字符串形式
+func (c *WebSocketClient) GetAppIDStr() string {
+	return fmt.Sprintf("%d", c.appid)
 }
 
 // 发送json信息给onebot应用端
@@ -86,7 +91,7 @@ func truncateMessage(message callapi.ActionMessage, maxLength int) string {
 }
 
 // 发送心跳包
-func (c *WebSocketClient) sendHeartbeat(ctx context.Context, botID string) {
+func (c *WebSocketClient) sendHeartbeat(ctx context.Context, botID uint64) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -105,11 +110,11 @@ func (c *WebSocketClient) sendHeartbeat(ctx context.Context, botID string) {
 }
 
 // NewWebSocketClient 创建 WebSocketClient 实例，接受 WebSocket URL、botID 和 openapi.OpenAPI 实例
-func NewWebSocketClient(urlStr string, botID string, api openapi.OpenAPI, apiv2 openapi.OpenAPI) (*WebSocketClient, error) {
+func NewWebSocketClient(urlStr string, botID uint64, api openapi.OpenAPI, apiv2 openapi.OpenAPI) (*WebSocketClient, error) {
 	headers := http.Header{
 		"User-Agent":    []string{"CQHttp/4.15.0"},
 		"X-Client-Role": []string{"Universal"},
-		"X-Self-ID":     []string{botID},
+		"X-Self-ID":     []string{fmt.Sprintf("%d", botID)},
 	}
 
 	dialer := websocket.Dialer{
