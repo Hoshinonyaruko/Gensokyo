@@ -28,8 +28,6 @@ jobs:
           - os: windows
             goarch: 386
           - os: android
-            goarch: arm
-          - os: android
             goarch: arm64
           # ... Add other combinations as needed
 
