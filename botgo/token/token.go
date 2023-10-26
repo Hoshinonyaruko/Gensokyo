@@ -98,7 +98,7 @@ func (t *Token) GetAccessToken() string {
 // GetAccessToken 取得测试鉴权Token
 // func (t *Token) GetAccessToken() string {
 // 	// 固定的token值
-// 	return "PpAPgoel0-gTeaxy-ydak0kUKxJrCSlbLcwtuPt99jCPVrahkqh3WSiIy9s63tCZnTEp4asw035u"
+// 	return "PyR4PL9_eRfAkIIlWE4nAawocFMlPfQCySgASB5vJRduWgKh0mSOp4zm4AOzDKpweV9iu5zq-OWm"
 // }
 
 // UpAccessToken 更新accessToken

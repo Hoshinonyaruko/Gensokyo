@@ -32,6 +32,12 @@ type Settings struct {
 	Server_dir             string   `yaml:"server_dir"`
 	Lotus                  bool     `yaml:"lotus"`
 	Port                   string   `yaml:"port"`
+
+	// 连接wss时使用,不是wss可留空
+	WsToken string `yaml:"ws_token,omitempty"`
+
+	// 如果需要在群权限判断是管理员是,将user_id填入这里,master_id是一个文本数组
+	MasterID []string `yaml:"master_id,omitempty"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -122,4 +128,24 @@ func GetAppID() uint64 {
 		return instance.Settings.AppID
 	}
 	return 0 // or whatever default value you'd like to return if instance is nil
+}
+
+// 获取WsToken
+func GetWsToken() string {
+	mu.Lock()
+	defer mu.Unlock()
+	if instance != nil {
+		return instance.Settings.WsToken
+	}
+	return "" // 返回空字符串，如果instance为nil
+}
+
+// 获取MasterID数组
+func GetMasterID() []string {
+	mu.Lock()
+	defer mu.Unlock()
+	if instance != nil {
+		return instance.Settings.MasterID
+	}
+	return nil // 返回nil，如果instance为nil
 }

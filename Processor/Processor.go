@@ -26,6 +26,7 @@ type Sender struct {
 	Nickname string `json:"nickname"`
 	TinyID   string `json:"tiny_id"`
 	UserID   int64  `json:"user_id"`
+	Role     string `json:"role,omitempty"`
 }
 
 // 频道信息事件

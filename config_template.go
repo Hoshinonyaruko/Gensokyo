@@ -31,4 +31,6 @@ settings:
   lotus: false                                       # lotus特性默认为false,当为true时,将会连接到另一个lotus为false的gensokyo。
                                                      # 使用它提供的图床和idmaps服务(场景:同一个机器人在不同服务器运行,或内网需要发送base64图)。
                                                      # 如果需要发送base64图片,需要设置正确的公网server_dir和开放对应的port
+  ws_token: ""    #连接wss地址时服务器所需的token,如果是ws,可留空
+  master_id : ["1","2"]     #群场景尚未开放获取管理员和列表能力,手动从日志中获取需要设置为管理,的user_id并填入(适用插件有权限判断场景)
 `
