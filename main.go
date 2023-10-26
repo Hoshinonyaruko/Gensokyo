@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -18,7 +19,6 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/wsclient"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sqweek/dialog"
 	"github.com/tencent-connect/botgo"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/event"
@@ -42,14 +42,15 @@ func NewProcessor(api openapi.OpenAPI, apiv2 openapi.OpenAPI, settings *config.S
 
 func main() {
 	if _, err := os.Stat("config.yml"); os.IsNotExist(err) {
-		// 如果config.yml不存在
 		err = os.WriteFile("config.yml", []byte(configTemplate), 0644)
 		if err != nil {
 			fmt.Println("Error writing config.yml:", err)
 			return
 		}
 
-		dialog.Message("%s", "请配置config.yml然后再次运行.").Title("配置提示").Info()
+		fmt.Println("请配置config.yml然后再次运行.")
+		fmt.Print("按下 Enter 继续...")
+		bufio.NewReader(os.Stdin).ReadBytes('\n')
 		os.Exit(0)
 	}
 
