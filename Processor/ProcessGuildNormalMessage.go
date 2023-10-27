@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/config"
@@ -16,7 +17,7 @@ import (
 )
 
 // ProcessGuildNormalMessage 处理频道常规消息
-func (p *Processor) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
+func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 	if !p.Settings.GlobalChannelToGroup {
 		// 将时间字符串转换为时间戳
 		t, err := time.Parse(time.RFC3339, string(data.Timestamp))
@@ -26,7 +27,7 @@ func (p *Processor) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 		//获取s
 		s := client.GetGlobalS()
 		//转换at
-		messageText := handlers.RevertTransformedText(data.Content)
+		messageText := handlers.RevertTransformedText(data)
 		//转换appid
 		AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 		//构造echo
@@ -97,12 +98,22 @@ func (p *Processor) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 		// 将 onebotMsg 结构体转换为 map[string]interface{}
 		msgMap := structToMap(onebotMsg)
 
-		// 使用 wsclient 发送消息
-		err = p.Wsclient.SendMessage(msgMap)
-		if err != nil {
-			return fmt.Errorf("error sending message via wsclient: %v", err)
+		var errors []string
+
+		// 遍历每一个 wsclient 并发送消息
+		for _, client := range p.Wsclient {
+			err = client.SendMessage(msgMap)
+			if err != nil {
+				// 记录错误但不立即返回
+				errors = append(errors, fmt.Sprintf("error sending message via wsclient: %v", err))
+			}
 		}
 
+		// 在循环结束后处理记录的错误
+		if len(errors) > 0 {
+			// 使用strings.Join来合并所有的错误信息
+			return fmt.Errorf(strings.Join(errors, "; "))
+		}
 	} else {
 		// GlobalChannelToGroup为true时的处理逻辑
 		//将频道转化为一个群
@@ -111,7 +122,7 @@ func (p *Processor) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 		//将channelid写入ini,可取出guild_id todo 比ini更好的储存方式
 		idmap.WriteConfigv2(data.ChannelID, "guild_id", data.GuildID)
 		//转换at
-		messageText := handlers.RevertTransformedText(data.Content)
+		messageText := handlers.RevertTransformedText(data)
 		//转换appid
 		AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 		//构造echo
@@ -191,11 +202,23 @@ func (p *Processor) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 
 		// Convert OnebotGroupMessage to map and send
 		groupMsgMap := structToMap(groupMsg)
-		err = p.Wsclient.SendMessage(groupMsgMap)
-		if err != nil {
-			return fmt.Errorf("error sending group message via wsclient: %v", err)
+
+		var errors []string
+
+		// 遍历每一个 wsclient 并发送消息
+		for _, client := range p.Wsclient {
+			err = client.SendMessage(groupMsgMap)
+			if err != nil {
+				// 记录错误但不立即返回
+				errors = append(errors, fmt.Sprintf("error sending group message via wsclient: %v", err))
+			}
 		}
 
+		// 在循环结束后处理记录的错误
+		if len(errors) > 0 {
+			// 使用strings.Join来合并所有的错误信息
+			return fmt.Errorf(strings.Join(errors, "; "))
+		}
 	}
 
 	return nil

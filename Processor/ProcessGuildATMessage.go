@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/config"
@@ -17,7 +18,7 @@ import (
 )
 
 // ProcessGuildATMessage 处理消息，执行逻辑并可能使用 api 发送响应
-func (p *Processor) ProcessGuildATMessage(data *dto.WSATMessageData) error {
+func (p *Processors) ProcessGuildATMessage(data *dto.WSATMessageData) error {
 	if !p.Settings.GlobalChannelToGroup {
 		// 将时间字符串转换为时间戳
 		t, err := time.Parse(time.RFC3339, string(data.Timestamp))
@@ -27,7 +28,7 @@ func (p *Processor) ProcessGuildATMessage(data *dto.WSATMessageData) error {
 		//获取s
 		s := client.GetGlobalS()
 		//转换at
-		messageText := handlers.RevertTransformedText(data.Content)
+		messageText := handlers.RevertTransformedText(data)
 		//转换appid
 		AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 		//构造echo
@@ -98,12 +99,21 @@ func (p *Processor) ProcessGuildATMessage(data *dto.WSATMessageData) error {
 		// 将 onebotMsg 结构体转换为 map[string]interface{}
 		msgMap := structToMap(onebotMsg)
 
-		// 使用 wsclient 发送消息
-		err = p.Wsclient.SendMessage(msgMap)
-		if err != nil {
-			return fmt.Errorf("error sending message via wsclient: %v", err)
+		var errors []string
+
+		for _, client := range p.Wsclient {
+			err = client.SendMessage(msgMap)
+			if err != nil {
+				// 记录错误信息，但不立即返回
+				errors = append(errors, fmt.Sprintf("error sending message via wsclient: %v", err))
+			}
 		}
 
+		// 在循环结束后处理记录的错误
+		if len(errors) > 0 {
+			// 使用strings.Join合并所有的错误信息
+			return fmt.Errorf(strings.Join(errors, "; "))
+		}
 	} else {
 		// GlobalChannelToGroup为true时的处理逻辑
 		//将频道转化为一个群
@@ -111,8 +121,8 @@ func (p *Processor) ProcessGuildATMessage(data *dto.WSATMessageData) error {
 		s := client.GetGlobalS()
 		//将channelid写入ini,可取出guild_id todo 比ini更好的储存方式
 		idmap.WriteConfigv2(data.ChannelID, "guild_id", data.GuildID)
-		//转换at
-		messageText := handlers.RevertTransformedText(data.Content)
+		//转换at和图片
+		messageText := handlers.RevertTransformedText(data)
 		//转换appid
 		AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 		//构造echo
@@ -192,9 +202,20 @@ func (p *Processor) ProcessGuildATMessage(data *dto.WSATMessageData) error {
 
 		// Convert OnebotGroupMessage to map and send
 		groupMsgMap := structToMap(groupMsg)
-		err = p.Wsclient.SendMessage(groupMsgMap)
-		if err != nil {
-			return fmt.Errorf("error sending group message via wsclient: %v", err)
+		var errors []string
+
+		for _, client := range p.Wsclient {
+			err = client.SendMessage(groupMsgMap)
+			if err != nil {
+				// 记录错误信息，但不立即返回
+				errors = append(errors, fmt.Sprintf("error sending group message via wsclient: %v", err))
+			}
+		}
+
+		// 在循环结束后处理记录的错误
+		if len(errors) > 0 {
+			// 使用strings.Join合并所有的错误信息
+			return fmt.Errorf(strings.Join(errors, "; "))
 		}
 
 	}

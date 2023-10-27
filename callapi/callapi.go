@@ -111,11 +111,9 @@ type Message struct {
 	Echo   interface{}            `json:"echo,omitempty"`
 }
 
-// 这是一个接口,在wsclient传入client但不需要引用wsclient包,避免循环引用
+// 这是一个接口,在wsclient传入client但不需要引用wsclient包,避免循环引用,复用wsserver和client逻辑
 type Client interface {
 	SendMessage(message map[string]interface{}) error
-	GetAppID() uint64
-	GetAppIDStr() string
 }
 
 // 根据action订阅handler处理api

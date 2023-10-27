@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/config"
@@ -16,7 +17,7 @@ import (
 )
 
 // ProcessC2CMessage 处理C2C消息 群私聊
-func (p *Processor) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
+func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 	// 打印data结构体
 	PrintStructWithFieldNames(data)
 
@@ -89,15 +90,26 @@ func (p *Processor) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 
 		// Convert OnebotGroupMessage to map and send
 		privateMsgMap := structToMap(privateMsg)
-		err = p.Wsclient.SendMessage(privateMsgMap)
-		if err != nil {
-			return fmt.Errorf("error sending group message via wsclient: %v", err)
+		var errors []string
+
+		for _, client := range p.Wsclient {
+			err = client.SendMessage(privateMsgMap)
+			if err != nil {
+				// 记录错误信息，但不立即返回
+				errors = append(errors, fmt.Sprintf("error sending private message via wsclient: %v", err))
+			}
+		}
+
+		// 在循环结束后处理记录的错误
+		if len(errors) > 0 {
+			// 使用strings.Join合并所有的错误信息
+			return fmt.Errorf(strings.Join(errors, "; "))
 		}
 	} else {
 		//将私聊信息转化为群信息(特殊需求情况下)
 
 		//转换at
-		messageText := handlers.RevertTransformedText(data.Content)
+		messageText := handlers.RevertTransformedText(data)
 		//转换appid
 		AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 		//构造echo
@@ -165,11 +177,21 @@ func (p *Processor) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 
 		// Convert OnebotGroupMessage to map and send
 		groupMsgMap := structToMap(groupMsg)
-		err = p.Wsclient.SendMessage(groupMsgMap)
-		if err != nil {
-			return fmt.Errorf("error sending group message via wsclient: %v", err)
+		var errors []string
+
+		for _, client := range p.Wsclient {
+			err = client.SendMessage(groupMsgMap)
+			if err != nil {
+				// 记录错误信息，但不立即返回
+				errors = append(errors, fmt.Sprintf("error sending group message via wsclient: %v", err))
+			}
+		}
+
+		// 在循环结束后处理记录的错误
+		if len(errors) > 0 {
+			// 使用strings.Join合并所有的错误信息
+			log.Println("Encountered errors while sending to wsclients:", strings.Join(errors, "; "))
 		}
 	}
-
 	return nil
 }
