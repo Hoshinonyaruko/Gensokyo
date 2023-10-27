@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
+	"github.com/hoshinonyaruko/gensokyo/config"
 
 	"github.com/hoshinonyaruko/gensokyo/echo"
 
@@ -25,12 +26,12 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 
 	//如果获取不到 就用user_id获取信息类型
 	if msgType == "" {
-		msgType = GetMessageTypeByUserid(client.GetAppIDStr(), message.Params.UserID)
+		msgType = GetMessageTypeByUserid(config.GetAppIDStr(), message.Params.UserID)
 	}
 
 	//如果获取不到 就用group_id获取信息类型
 	if msgType == "" {
-		appID := client.GetAppIDStr()
+		appID := config.GetAppIDStr()
 		groupID := message.Params.GroupID
 		fmt.Printf("appID: %s, GroupID: %v\n", appID, groupID)
 
@@ -53,12 +54,15 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 		log.Println("频道发信息对应的message_id:", messageID)
 		log.Println("频道发信息messageText:", messageText)
 		log.Println("foundItems:", foundItems)
+		var err error
 		// 优先发送文本信息
 		if messageText != "" {
 			textMsg, _ := generateReplyMessage(messageID, nil, messageText)
-			if _, err := api.PostMessage(context.TODO(), channelID, textMsg); err != nil {
+			if _, err = api.PostMessage(context.TODO(), channelID, textMsg); err != nil {
 				log.Printf("发送文本信息失败: %v", err)
 			}
+			//发送成功回执
+			SendResponse(client, err, &message)
 		}
 
 		// 遍历foundItems并发送每种信息
@@ -80,13 +84,17 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 				reply.Content = ""
 
 				// 使用Multipart方法发送
-				if _, err := api.PostMessageMultipart(context.TODO(), channelID, reply, fileImageData); err != nil {
+				if _, err = api.PostMessageMultipart(context.TODO(), channelID, reply, fileImageData); err != nil {
 					log.Printf("使用multipart发送 %s 信息失败: %v message_id %v", key, err, messageID)
 				}
+				//发送成功回执
+				SendResponse(client, err, &message)
 			} else {
-				if _, err := api.PostMessage(context.TODO(), channelID, reply); err != nil {
+				if _, err = api.PostMessage(context.TODO(), channelID, reply); err != nil {
 					log.Printf("发送 %s 信息失败: %v", key, err)
 				}
+				//发送成功回执
+				SendResponse(client, err, &message)
 			}
 
 		}

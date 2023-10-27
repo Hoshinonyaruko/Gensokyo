@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"log"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -12,6 +13,48 @@ import (
 
 var BotID string
 var AppID string
+
+// 定义响应结构体
+type ServerResponse struct {
+	Data struct {
+		MessageID int `json:"message_id"`
+	} `json:"data"`
+	Message string `json:"message"`
+	RetCode int    `json:"retcode"`
+	Status  string `json:"status"`
+	Echo    string `json:"echo"`
+}
+
+// 发送成功回执 todo 返回可互转的messageid
+func SendResponse(client callapi.Client, err error, message *callapi.ActionMessage) error {
+	// 设置响应值
+	response := ServerResponse{}
+	response.Data.MessageID = 0 // todo 实现messageid转换
+	response.Echo = string(message.Echo)
+	if err != nil {
+		response.Message = err.Error() // 可选：在响应中添加错误消息
+		//response.RetCode = -1          // 可以是任何非零值，表示出错
+		//response.Status = "failed"
+		response.RetCode = 0 //官方api审核异步的 审核中默认返回失败,但其实信息发送成功了
+		response.Status = "ok"
+	} else {
+		response.Message = ""
+		response.RetCode = 0
+		response.Status = "ok"
+	}
+
+	// 转化为map并发送
+	outputMap := structToMap(response)
+
+	sendErr := client.SendMessage(outputMap)
+	if sendErr != nil {
+		log.Printf("Error sending message via client: %v", sendErr)
+		return sendErr
+	}
+
+	log.Printf("发送成功回执: %+v", outputMap)
+	return nil
+}
 
 func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[string][]string) {
 	messageText := ""
@@ -118,9 +161,23 @@ func transformMessageText(messageText string) string {
 }
 
 // 处理at和其他定形文到onebotv11格式(cq码)
-func RevertTransformedText(messageText string) string {
-	// Trim leading and trailing spaces
-	messageText = strings.TrimSpace(messageText)
+func RevertTransformedText(data interface{}) string {
+	var msg *dto.Message
+	switch v := data.(type) {
+	case *dto.WSGroupATMessageData:
+		msg = (*dto.Message)(v)
+	case *dto.WSATMessageData:
+		msg = (*dto.Message)(v)
+	case *dto.WSMessageData:
+		msg = (*dto.Message)(v)
+	case *dto.WSDirectMessageData:
+		msg = (*dto.Message)(v)
+	case *dto.WSC2CMessageData:
+		msg = (*dto.Message)(v)
+	default:
+		return ""
+	}
+	messageText := strings.TrimSpace(msg.Content)
 
 	// 将messageText里的BotID替换成AppID
 	messageText = strings.ReplaceAll(messageText, BotID, AppID)
@@ -128,13 +185,26 @@ func RevertTransformedText(messageText string) string {
 	// 使用正则表达式来查找所有<@!数字>的模式
 	re := regexp.MustCompile(`<@!(\d+)>`)
 	// 使用正则表达式来替换找到的模式为[CQ:at,qq=数字]
-	return re.ReplaceAllStringFunc(messageText, func(m string) string {
+	messageText = re.ReplaceAllStringFunc(messageText, func(m string) string {
 		submatches := re.FindStringSubmatch(m)
 		if len(submatches) > 1 {
 			return "[CQ:at,qq=" + submatches[1] + "]"
 		}
 		return m
 	})
+
+	// 处理图片附件
+	for _, attachment := range msg.Attachments {
+		if strings.HasPrefix(attachment.ContentType, "image/") {
+			// 获取文件的后缀名
+			ext := filepath.Ext(attachment.FileName)
+			md5name := strings.TrimSuffix(attachment.FileName, ext)
+			imageCQ := "[CQ:image,file=" + md5name + ".image,subType=0,url=" + attachment.URL + "]"
+			messageText += imageCQ
+		}
+	}
+
+	return messageText
 }
 
 // 将收到的data.content转换为message segment todo,群场景不支持受图片,频道场景的图片可以拼一下

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
+	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/tencent-connect/botgo/dto"
@@ -149,7 +150,7 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 	log.Println("foundItems:", foundItems)
 	// 如果messageID为空，通过函数获取
 	if messageID == "" {
-		messageID = GetMessageIDByUseridOrGroupid(client.GetAppIDStr(), message.Params.UserID)
+		messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), message.Params.UserID)
 		log.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
 	}
 
@@ -166,9 +167,11 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 	// 优先发送文本信息
 	if messageText != "" {
 		textMsg, _ := generateReplyMessage(messageID, nil, messageText)
-		if _, err := apiv2.PostDirectMessage(context.TODO(), dm, textMsg); err != nil {
+		if _, err = apiv2.PostDirectMessage(context.TODO(), dm, textMsg); err != nil {
 			log.Printf("发送文本信息失败: %v", err)
 		}
+		//发送成功回执
+		SendResponse(client, err, &message)
 	}
 
 	// 遍历foundItems并发送每种信息
@@ -190,13 +193,17 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 			reply.Content = ""
 
 			// 使用Multipart方法发送
-			if _, err := api.PostDirectMessageMultipart(context.TODO(), dm, reply, fileImageData); err != nil {
+			if _, err = api.PostDirectMessageMultipart(context.TODO(), dm, reply, fileImageData); err != nil {
 				log.Printf("使用multipart发送 %s 信息失败: %v message_id %v", key, err, messageID)
 			}
+			//发送成功回执
+			SendResponse(client, err, &message)
 		} else {
-			if _, err := api.PostDirectMessage(context.TODO(), dm, reply); err != nil {
+			if _, err = api.PostDirectMessage(context.TODO(), dm, reply); err != nil {
 				log.Printf("发送 %s 信息失败: %v", key, err)
 			}
+			//发送成功回执
+			SendResponse(client, err, &message)
 		}
 
 	}

@@ -15,11 +15,11 @@ import (
 )
 
 // Processor 结构体用于处理消息
-type Processor struct {
-	Api      openapi.OpenAPI           // API 类型
-	Apiv2    openapi.OpenAPI           //群的API
-	Settings *config.Settings          // 使用指针
-	Wsclient *wsclient.WebSocketClient // 使用指针
+type Processors struct {
+	Api      openapi.OpenAPI             // API 类型
+	Apiv2    openapi.OpenAPI             //群的API
+	Settings *config.Settings            // 使用指针
+	Wsclient []*wsclient.WebSocketClient // 指针的切片
 }
 
 type Sender struct {
@@ -95,7 +95,7 @@ func FoxTimestamp() int64 {
 }
 
 // ProcessInlineSearch 处理内联查询
-func (p *Processor) ProcessInlineSearch(data *dto.WSInteractionData) error {
+func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 	//ctx := context.Background() // 或从更高级别传递一个上下文
 
 	// 在这里处理内联查询
@@ -172,4 +172,14 @@ func structToMap(obj interface{}) map[string]interface{} {
 	j, _ := json.Marshal(obj)
 	json.Unmarshal(j, &out)
 	return out
+}
+
+// 修改函数的返回类型为 *Processor
+func NewProcessor(api openapi.OpenAPI, apiv2 openapi.OpenAPI, settings *config.Settings, wsclient []*wsclient.WebSocketClient) *Processors {
+	return &Processors{
+		Api:      api,
+		Apiv2:    apiv2,
+		Settings: settings,
+		Wsclient: wsclient,
+	}
 }

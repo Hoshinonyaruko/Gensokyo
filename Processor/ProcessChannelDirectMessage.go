@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/config"
@@ -17,7 +18,7 @@ import (
 )
 
 // ProcessChannelDirectMessage 处理频道私信消息 这里我们是被动收到
-func (p *Processor) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) error {
+func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) error {
 	// 打印data结构体
 	//PrintStructWithFieldNames(data)
 
@@ -93,9 +94,20 @@ func (p *Processor) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) e
 
 		// Convert OnebotGroupMessage to map and send
 		privateMsgMap := structToMap(privateMsg)
-		err = p.Wsclient.SendMessage(privateMsgMap)
-		if err != nil {
-			return fmt.Errorf("error sending group message via wsclient: %v", err)
+		var errors []string
+
+		for _, client := range p.Wsclient {
+			err = client.SendMessage(privateMsgMap)
+			if err != nil {
+				// 记录错误信息，但不立即返回
+				errors = append(errors, fmt.Sprintf("error sending private message via wsclient: %v", err))
+			}
+		}
+
+		// 在循环结束后处理记录的错误
+		if len(errors) > 0 {
+			// 使用strings.Join合并所有的错误信息
+			return fmt.Errorf(strings.Join(errors, "; "))
 		}
 	} else {
 		if !p.Settings.GlobalChannelToGroup {
@@ -109,7 +121,7 @@ func (p *Processor) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) e
 			//获取s
 			s := client.GetGlobalS()
 			//转换at
-			messageText := handlers.RevertTransformedText(data.Content)
+			messageText := handlers.RevertTransformedText(data)
 			//转换appid
 			AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 			//构造echo
@@ -175,18 +187,27 @@ func (p *Processor) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) e
 
 			// 将 onebotMsg 结构体转换为 map[string]interface{}
 			msgMap := structToMap(onebotMsg)
+			var errors []string
 
-			// 使用 wsclient 发送消息
-			err = p.Wsclient.SendMessage(msgMap)
-			if err != nil {
-				return fmt.Errorf("error sending message via wsclient: %v", err)
+			for _, client := range p.Wsclient {
+				err = client.SendMessage(msgMap)
+				if err != nil {
+					// 记录错误信息，但不立即返回
+					errors = append(errors, fmt.Sprintf("error sending message via wsclient: %v", err))
+				}
+			}
+
+			// 在循环结束后处理记录的错误
+			if len(errors) > 0 {
+				// 使用strings.Join合并所有的错误信息
+				return fmt.Errorf(strings.Join(errors, "; "))
 			}
 		} else {
 			//将频道信息转化为群信息(特殊需求情况下)
 			//将channelid写入ini,可取出guild_id
 			idmap.WriteConfigv2(data.ChannelID, "guild_id", data.GuildID)
 			//转换at
-			messageText := handlers.RevertTransformedText(data.Content)
+			messageText := handlers.RevertTransformedText(data)
 			//转换appid
 			AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 			//构造echo
@@ -266,9 +287,20 @@ func (p *Processor) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) e
 
 			// Convert OnebotGroupMessage to map and send
 			groupMsgMap := structToMap(groupMsg)
-			err = p.Wsclient.SendMessage(groupMsgMap)
-			if err != nil {
-				return fmt.Errorf("error sending group message via wsclient: %v", err)
+			var errors []string
+
+			for _, client := range p.Wsclient {
+				err = client.SendMessage(groupMsgMap)
+				if err != nil {
+					// 记录错误信息，但不立即返回
+					errors = append(errors, fmt.Sprintf("error sending group message via wsclient: %v", err))
+				}
+			}
+
+			// 在循环结束后处理记录的错误
+			if len(errors) > 0 {
+				// 使用strings.Join合并所有的错误信息
+				return fmt.Errorf(strings.Join(errors, "; "))
 			}
 		}
 

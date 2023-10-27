@@ -28,17 +28,7 @@ import (
 )
 
 // 消息处理器，持有 openapi 对象
-var processor *Processor.Processor
-
-// 修改函数的返回类型为 *Processor
-func NewProcessor(api openapi.OpenAPI, apiv2 openapi.OpenAPI, settings *config.Settings, wsclient *wsclient.WebSocketClient) *Processor.Processor {
-	return &Processor.Processor{
-		Api:      api,
-		Apiv2:    apiv2,
-		Settings: settings,
-		Wsclient: wsclient,
-	}
-}
+var p *Processor.Processors
 
 func main() {
 	if _, err := os.Stat("config.yml"); os.IsNotExist(err) {
@@ -134,30 +124,40 @@ func main() {
 		}
 	}()
 
-	// 创建一个通道来传递 WebSocketClient
-	wsClientChan := make(chan *wsclient.WebSocketClient)
+	// 启动多个WebSocket客户端
+	wsClients := []*wsclient.WebSocketClient{}
+	wsClientChan := make(chan *wsclient.WebSocketClient, len(conf.Settings.WsAddress))
+	errorChan := make(chan error, len(conf.Settings.WsAddress))
 
-	// 在新的 go 函数中初始化 wsClient
-	go func() {
-		wsClient, err := wsclient.NewWebSocketClient(conf.Settings.WsAddress, conf.Settings.AppID, api, apiV2)
-		if err != nil {
-			fmt.Printf("Error creating WebSocketClient: %v\n", err)
-			close(wsClientChan) // 关闭通道表示不再发送值
-			return
+	for _, wsAddr := range conf.Settings.WsAddress {
+		go func(address string) {
+			wsClient, err := wsclient.NewWebSocketClient(address, conf.Settings.AppID, api, apiV2)
+			if err != nil {
+				fmt.Printf("Error creating WebSocketClient for address %s: %v\n", address, err)
+				errorChan <- err
+				return
+			}
+			wsClientChan <- wsClient
+		}(wsAddr)
+	}
+
+	// Collect results
+	for i := 0; i < len(conf.Settings.WsAddress); i++ {
+		select {
+		case wsClient := <-wsClientChan:
+			wsClients = append(wsClients, wsClient)
+		case err := <-errorChan:
+			fmt.Printf("Error encountered while initializing WebSocketClient: %v\n", err)
 		}
-		wsClientChan <- wsClient // 将 wsClient 发送到通道
-	}()
+	}
 
-	// 从通道中接收 wsClient 的值
-	wsClient := <-wsClientChan
-
-	// 确保 wsClient 不为 nil，然后创建 Processor
-	if wsClient != nil {
-		fmt.Println("wsClient is successfully initialized.")
-		processor = NewProcessor(api, apiV2, &conf.Settings, wsClient)
+	// 确保所有wsClients都已初始化
+	if len(wsClients) != len(conf.Settings.WsAddress) {
+		fmt.Println("Error: Not all wsClients are initialized!")
+		log.Fatalln("Failed to initialize all WebSocketClients.")
 	} else {
-		fmt.Println("Error: wsClient is nil!")
-		log.Fatalln("Failed to initialize WebSocketClient.")
+		fmt.Println("All wsClients are successfully initialized.")
+		p = Processor.NewProcessor(api, apiV2, &conf.Settings, wsClients)
 	}
 
 	//创建idmap服务器
@@ -166,14 +166,16 @@ func main() {
 
 	//图片上传 调用次数限制
 	rateLimiter := server.NewRateLimiter()
-
+	//是否启动服务器
+	shouldStartServer := !conf.Settings.Lotus || conf.Settings.EnableWsServer
 	//如果连接到其他gensokyo,则不需要启动服务器
-	if !conf.Settings.Lotus {
+	if shouldStartServer {
 		r := gin.Default()
 		r.GET("/getid", server.GetIDHandler)
 		r.POST("/uploadpic", server.UploadBase64ImageHandler(rateLimiter))
 		r.Static("/channel_temp", "./channel_temp")
-		r.Run("0.0.0.0:" + conf.Settings.Port) // 注意，这里我更改了端口为你提供的Port，并监听0.0.0.0地址
+		r.GET("/ws", server.WsHandlerWithDependencies(api, apiV2))
+		r.Run("0.0.0.0:" + conf.Settings.Port) // 监听0.0.0.0地址的Port端口
 	}
 
 	// 使用通道来等待信号
@@ -184,9 +186,12 @@ func main() {
 	<-sigCh
 
 	// 关闭 WebSocket 连接
-	err = wsClient.Close()
-	if err != nil {
-		fmt.Printf("Error closing WebSocket connection: %v\n", err)
+	// wsClients 是一个 *wsclient.WebSocketClient 的切片
+	for _, client := range wsClients {
+		err := client.Close()
+		if err != nil {
+			fmt.Printf("Error closing WebSocket connection: %v\n", err)
+		}
 	}
 }
 
@@ -207,7 +212,7 @@ func ErrorNotifyHandler() event.ErrorNotifyHandler {
 // ATMessageEventHandler 实现处理 频道at 消息的回调
 func ATMessageEventHandler() event.ATMessageEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSATMessageData) error {
-		return processor.ProcessGuildATMessage(data)
+		return p.ProcessGuildATMessage(data)
 	}
 }
 
@@ -238,7 +243,7 @@ func MemberEventHandler() event.GuildMemberEventHandler {
 // DirectMessageHandler 处理私信事件
 func DirectMessageHandler() event.DirectMessageEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSDirectMessageData) error {
-		return processor.ProcessChannelDirectMessage(data)
+		return p.ProcessChannelDirectMessage(data)
 	}
 }
 
@@ -246,7 +251,7 @@ func DirectMessageHandler() event.DirectMessageEventHandler {
 func CreateMessageHandler() event.MessageEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSMessageData) error {
 		fmt.Println("收到私域信息", data)
-		return processor.ProcessGuildNormalMessage(data)
+		return p.ProcessGuildNormalMessage(data)
 	}
 }
 
@@ -254,22 +259,21 @@ func CreateMessageHandler() event.MessageEventHandler {
 func InteractionHandler() event.InteractionEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSInteractionData) error {
 		fmt.Println(data)
-		return processor.ProcessInlineSearch(data)
+		return p.ProcessInlineSearch(data)
 	}
 }
 
 // GroupATMessageEventHandler 实现处理 群at 消息的回调
 func GroupATMessageEventHandler() event.GroupATMessageEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSGroupATMessageData) error {
-		return processor.ProcessGroupMessage(data)
+		return p.ProcessGroupMessage(data)
 	}
 }
 
 // C2CMessageEventHandler 实现处理 群私聊 消息的回调
 func C2CMessageEventHandler() event.C2CMessageEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSC2CMessageData) error {
-		log.Print("1111")
-		return processor.ProcessC2CMessage(data)
+		return p.ProcessC2CMessage(data)
 	}
 }
 
@@ -293,7 +297,7 @@ func getHandlerByName(handlerName string) (interface{}, bool) {
 		return CreateMessageHandler(), true
 	case "InteractionHandler": //添加频道互动回应
 		return InteractionHandler(), true
-	case "ThreadEventHandler": //发帖事件
+	case "ThreadEventHandler": //发帖事件 暂不支持
 		return nil, false
 		//return ThreadEventHandler(), true
 	case "GroupATMessageEventHandler": //群at信息

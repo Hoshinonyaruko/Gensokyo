@@ -43,7 +43,7 @@ func NewRateLimiter() *RateLimiter {
 	}
 }
 
-// 网页后端,图床逻辑,基于gin和www静态文件的简易图床
+// 闭包,网页后端,图床逻辑,基于gin和www静态文件的简易图床
 func UploadBase64ImageHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ipAddress := c.ClientIP()

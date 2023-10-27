@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/config"
@@ -17,14 +18,14 @@ import (
 )
 
 // ProcessGroupMessage 处理群组消息
-func (p *Processor) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
+func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 	// 获取s
 	s := client.GetGlobalS()
 
 	idmap.WriteConfigv2(data.ChannelID, "guild_id", data.GuildID)
 
 	// 转换at
-	messageText := handlers.RevertTransformedText(data.Content)
+	messageText := handlers.RevertTransformedText(data)
 
 	// 转换appid
 	AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
@@ -107,10 +108,20 @@ func (p *Processor) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 
 	// Convert OnebotGroupMessage to map and send
 	groupMsgMap := structToMap(groupMsg)
-	err = p.Wsclient.SendMessage(groupMsgMap)
-	if err != nil {
-		return fmt.Errorf("error sending group message via wsclient: %v", err)
+	var errors []string
+
+	for _, client := range p.Wsclient {
+		err = client.SendMessage(groupMsgMap)
+		if err != nil {
+			// 记录错误信息，但不立即返回
+			errors = append(errors, fmt.Sprintf("error sending group message via wsclient: %v", err))
+		}
 	}
 
+	// 在循环结束后处理记录的错误
+	if len(errors) > 0 {
+		// 使用strings.Join合并所有的错误信息
+		return fmt.Errorf(strings.Join(errors, "; "))
+	}
 	return nil
 }

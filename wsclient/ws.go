@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -18,17 +19,6 @@ type WebSocketClient struct {
 	conn  *websocket.Conn
 	api   openapi.OpenAPI
 	apiv2 openapi.OpenAPI
-	appid uint64
-}
-
-// 获取appid
-func (c *WebSocketClient) GetAppID() uint64 {
-	return c.appid
-}
-
-// 获取appid的字符串形式
-func (c *WebSocketClient) GetAppIDStr() string {
-	return fmt.Sprintf("%d", c.appid)
 }
 
 // 发送json信息给onebot应用端
@@ -70,13 +60,13 @@ func (c *WebSocketClient) recvMessage(msg []byte) {
 		return
 	}
 
-	fmt.Println("Received from onebotv11:", truncateMessage(message, 500))
+	fmt.Println("Received from onebotv11 server:", TruncateMessage(message, 500))
 	// 调用callapi
 	callapi.CallAPIFromDict(c, c.api, c.apiv2, message)
 }
 
 // 截断信息
-func truncateMessage(message callapi.ActionMessage, maxLength int) string {
+func TruncateMessage(message callapi.ActionMessage, maxLength int) string {
 	paramsStr, err := json.Marshal(message.Params)
 	if err != nil {
 		return "Error marshalling Params for truncation."
@@ -112,7 +102,22 @@ func (c *WebSocketClient) sendHeartbeat(ctx context.Context, botID uint64) {
 
 // NewWebSocketClient 创建 WebSocketClient 实例，接受 WebSocket URL、botID 和 openapi.OpenAPI 实例
 func NewWebSocketClient(urlStr string, botID uint64, api openapi.OpenAPI, apiv2 openapi.OpenAPI) (*WebSocketClient, error) {
-	token := config.GetWsToken() // 从配置中获取 token
+	addresses := config.GetWsAddress()
+	tokens := config.GetWsToken()
+
+	var token string
+	for index, address := range addresses {
+		if address == urlStr && index < len(tokens) {
+			token = tokens[index]
+			break
+		}
+	}
+
+	// 检查URL中是否有access_token参数
+	mp := getParamsFromURI(urlStr)
+	if val, ok := mp["access_token"]; ok {
+		token = val
+	}
 
 	headers := http.Header{
 		"User-Agent":    []string{"CQHttp/4.15.0"},
@@ -120,11 +125,10 @@ func NewWebSocketClient(urlStr string, botID uint64, api openapi.OpenAPI, apiv2 
 		"X-Self-ID":     []string{fmt.Sprintf("%d", botID)},
 	}
 
-	// 如果 token 不为空，将其添加到 headers 中
 	if token != "" {
 		headers["Authorization"] = []string{"Token " + token}
 	}
-
+	fmt.Printf("准备使用token[%s]连接到[%s]\n", token, urlStr)
 	dialer := websocket.Dialer{
 		Proxy:            http.ProxyFromEnvironment,
 		HandshakeTimeout: 45 * time.Second,
@@ -146,7 +150,7 @@ func NewWebSocketClient(urlStr string, botID uint64, api openapi.OpenAPI, apiv2 
 		}
 	}
 
-	client := &WebSocketClient{conn: conn, api: api, apiv2: apiv2, appid: botID}
+	client := &WebSocketClient{conn: conn, api: api, apiv2: apiv2}
 
 	// Sending initial message similar to your setupB function
 	message := map[string]interface{}{
@@ -176,4 +180,24 @@ func NewWebSocketClient(urlStr string, botID uint64, api openapi.OpenAPI, apiv2 
 
 func (ws *WebSocketClient) Close() error {
 	return ws.conn.Close()
+}
+
+// getParamsFromURI 解析给定URI中的查询参数，并返回一个映射（map）
+func getParamsFromURI(uriStr string) map[string]string {
+	params := make(map[string]string)
+
+	u, err := url.Parse(uriStr)
+	if err != nil {
+		fmt.Printf("Error parsing the URL: %v\n", err)
+		return params
+	}
+
+	// 遍历查询参数并将其添加到返回的映射中
+	for key, values := range u.Query() {
+		if len(values) > 0 {
+			params[key] = values[0] // 如果一个参数有多个值，这里只选择第一个。可以根据需求进行调整。
+		}
+	}
+
+	return params
 }

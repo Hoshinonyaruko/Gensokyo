@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
+	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/server"
@@ -27,12 +28,12 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 
 	//如果获取不到 就用user_id获取信息类型
 	if msgType == "" {
-		msgType = GetMessageTypeByUserid(client.GetAppIDStr(), message.Params.UserID)
+		msgType = GetMessageTypeByUserid(config.GetAppIDStr(), message.Params.UserID)
 	}
 
 	//如果获取不到 就用group_id获取信息类型
 	if msgType == "" {
-		msgType = GetMessageTypeByGroupid(client.GetAppIDStr(), message.Params.GroupID)
+		msgType = GetMessageTypeByGroupid(config.GetAppIDStr(), message.Params.GroupID)
 	}
 
 	switch msgType {
@@ -50,7 +51,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		log.Println("foundItems:", foundItems)
 		// 如果messageID为空，通过函数获取
 		if messageID == "" {
-			messageID = GetMessageIDByUseridOrGroupid(client.GetAppIDStr(), message.Params.GroupID)
+			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), message.Params.GroupID)
 			log.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
 		}
 
@@ -74,10 +75,13 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			}
 
 			groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
-			_, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
+			//重新为err赋值
+			_, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 			if err != nil {
 				log.Printf("发送文本群组信息失败: %v", err)
 			}
+			//发送成功回执
+			SendResponse(client, err, &message)
 		}
 
 		// 遍历foundItems并发送每种信息
@@ -98,6 +102,8 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			if err != nil {
 				log.Printf("发送 %s 信息失败_send_group_msg: %v", key, err)
 			}
+			//发送成功回执
+			SendResponse(client, err, &message)
 		}
 	case "guild":
 		//用GroupID给ChannelID赋值,因为我们是把频道虚拟成了群
