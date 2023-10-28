@@ -174,7 +174,7 @@ func main() {
 		r.GET("/getid", server.GetIDHandler)
 		r.POST("/uploadpic", server.UploadBase64ImageHandler(rateLimiter))
 		r.Static("/channel_temp", "./channel_temp")
-		r.GET("/ws", server.WsHandlerWithDependencies(api, apiV2))
+		r.GET("/ws", server.WsHandlerWithDependencies(api, apiV2, p))
 		r.Run("0.0.0.0:" + conf.Settings.Port) // 监听0.0.0.0地址的Port端口
 	}
 
@@ -297,7 +297,7 @@ func getHandlerByName(handlerName string) (interface{}, bool) {
 		return CreateMessageHandler(), true
 	case "InteractionHandler": //添加频道互动回应
 		return InteractionHandler(), true
-	case "ThreadEventHandler": //发帖事件 暂不支持
+	case "ThreadEventHandler": //发帖事件 暂不支持 暂不支持
 		return nil, false
 		//return ThreadEventHandler(), true
 	case "GroupATMessageEventHandler": //群at信息

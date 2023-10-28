@@ -116,6 +116,11 @@ type Client interface {
 	SendMessage(message map[string]interface{}) error
 }
 
+// 为了解决processor和server循环依赖设计的接口
+type WebSocketServerClienter interface {
+	SendMessage(message map[string]interface{}) error
+}
+
 // 根据action订阅handler处理api
 type HandlerFunc func(client Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, messgae ActionMessage)
 

@@ -2,10 +2,8 @@
 package Processor
 
 import (
-	"fmt"
 	"log"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/config"
@@ -90,21 +88,8 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 
 		// Convert OnebotGroupMessage to map and send
 		privateMsgMap := structToMap(privateMsg)
-		var errors []string
-
-		for _, client := range p.Wsclient {
-			err = client.SendMessage(privateMsgMap)
-			if err != nil {
-				// 记录错误信息，但不立即返回
-				errors = append(errors, fmt.Sprintf("error sending private message via wsclient: %v", err))
-			}
-		}
-
-		// 在循环结束后处理记录的错误
-		if len(errors) > 0 {
-			// 使用strings.Join合并所有的错误信息
-			return fmt.Errorf(strings.Join(errors, "; "))
-		}
+		//上报信息到onebotv11应用端(正反ws)
+		p.BroadcastMessageToAll(privateMsgMap)
 	} else {
 		//将私聊信息转化为群信息(特殊需求情况下)
 
@@ -177,21 +162,8 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 
 		// Convert OnebotGroupMessage to map and send
 		groupMsgMap := structToMap(groupMsg)
-		var errors []string
-
-		for _, client := range p.Wsclient {
-			err = client.SendMessage(groupMsgMap)
-			if err != nil {
-				// 记录错误信息，但不立即返回
-				errors = append(errors, fmt.Sprintf("error sending group message via wsclient: %v", err))
-			}
-		}
-
-		// 在循环结束后处理记录的错误
-		if len(errors) > 0 {
-			// 使用strings.Join合并所有的错误信息
-			log.Println("Encountered errors while sending to wsclients:", strings.Join(errors, "; "))
-		}
+		//上报信息到onebotv11应用端(正反ws)
+		p.BroadcastMessageToAll(groupMsgMap)
 	}
 	return nil
 }

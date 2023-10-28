@@ -36,6 +36,7 @@ type Settings struct {
 	WsToken                []string `yaml:"ws_token,omitempty"`         // 连接wss时使用,不是wss可留空 一一对应
 	MasterID               []string `yaml:"master_id,omitempty"`        // 如果需要在群权限判断是管理员是,将user_id填入这里,master_id是一个文本数组
 	EnableWsServer         bool     `yaml:"enable_ws_server,omitempty"` //正向ws开关
+	WsServerToken          string   `yaml:"ws_server_token,omitempty"`  //正向ws token
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -168,4 +169,16 @@ func GetEnableWsServer() bool {
 		return false
 	}
 	return instance.Settings.EnableWsServer
+}
+
+// 获取WsServerToken的值
+func GetWsServerToken() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		log.Println("Warning: instance is nil when trying to get WsServerToken value.")
+		return ""
+	}
+	return instance.Settings.WsServerToken
 }

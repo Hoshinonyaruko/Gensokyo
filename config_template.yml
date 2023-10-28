@@ -31,3 +31,4 @@ settings:
   ws_token: ["",""]    #连接wss地址时服务器所需的token,如果是ws,可留空,按顺序一一对应
   master_id : ["1","2"]     #群场景尚未开放获取管理员和列表能力,手动从日志中获取需要设置为管理,的user_id并填入(适用插件有权限判断场景)
   enable_ws_server: true #是否启用正向ws服务器 监听server_dir:port/ws
+  ws_server_token : "12345" #正向ws的token 不启动正向ws可忽略

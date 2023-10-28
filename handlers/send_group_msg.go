@@ -13,7 +13,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
-	"github.com/hoshinonyaruko/gensokyo/server"
+	"github.com/hoshinonyaruko/gensokyo/images"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/openapi"
 )
@@ -150,7 +150,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 		base64Encoded := base64.StdEncoding.EncodeToString(imageData)
 
 		// 上传base64编码的图片并获取其URL
-		imageURL, err := server.UploadBase64ImageToServer(base64Encoded)
+		imageURL, err := images.UploadBase64ImageToServer(base64Encoded)
 		if err != nil {
 			log.Printf("Error uploading base64 encoded image: %v", err)
 			return nil
@@ -187,7 +187,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 				return nil
 			}
 			// 将解码的图片数据转换回base64格式并上传
-			imageURL, err := server.UploadBase64ImageToServer(base64.StdEncoding.EncodeToString(fileImageData))
+			imageURL, err := images.UploadBase64ImageToServer(base64.StdEncoding.EncodeToString(fileImageData))
 			if err != nil {
 				log.Printf("failed to upload base64 image: %v", err)
 				return nil
