@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -16,9 +17,14 @@ import (
 )
 
 type WebSocketClient struct {
-	conn  *websocket.Conn
-	api   openapi.OpenAPI
-	apiv2 openapi.OpenAPI
+	conn           *websocket.Conn
+	api            openapi.OpenAPI
+	apiv2          openapi.OpenAPI
+	botID          uint64
+	urlStr         string
+	cancel         context.CancelFunc // Add this
+	mutex          sync.Mutex         // Mutex for reconnecting
+	isReconnecting bool
 }
 
 // 发送json信息给onebot应用端
@@ -33,7 +39,6 @@ func (c *WebSocketClient) SendMessage(message map[string]interface{}) error {
 		log.Println("Error sending message:", err)
 		return err
 	}
-
 	return nil
 }
 
@@ -44,10 +49,45 @@ func (c *WebSocketClient) handleIncomingMessages(ctx context.Context, cancel con
 		if err != nil {
 			log.Println("WebSocket connection closed:", err)
 			cancel() // cancel heartbeat goroutine
-			break
+
+			if !c.isReconnecting {
+				go c.Reconnect()
+			}
+			return
 		}
 
 		go c.recvMessage(msg)
+	}
+}
+
+// 断线重连
+func (client *WebSocketClient) Reconnect() {
+	client.mutex.Lock()
+	defer client.mutex.Unlock()
+
+	if client.cancel != nil {
+		client.cancel() // Stop current goroutines
+	}
+
+	client.isReconnecting = true
+	defer func() {
+		client.isReconnecting = false
+	}()
+
+	for {
+		time.Sleep(5 * time.Second)
+
+		newClient, err := NewWebSocketClient(client.urlStr, client.botID, client.api, client.apiv2)
+		if err == nil && newClient != nil {
+			client.conn = newClient.conn
+			client.api = newClient.api
+			client.apiv2 = newClient.apiv2
+			client.cancel = newClient.cancel // Update cancel function
+
+			log.Println("Successfully reconnected to WebSocket.")
+			return
+		}
+		log.Println("Failed to reconnect to WebSocket. Retrying in 5 seconds...")
 	}
 }
 
@@ -100,6 +140,8 @@ func (c *WebSocketClient) sendHeartbeat(ctx context.Context, botID uint64) {
 	}
 }
 
+const maxRetryAttempts = 5
+
 // NewWebSocketClient 创建 WebSocketClient 实例，接受 WebSocket URL、botID 和 openapi.OpenAPI 实例
 func NewWebSocketClient(urlStr string, botID uint64, api openapi.OpenAPI, apiv2 openapi.OpenAPI) (*WebSocketClient, error) {
 	addresses := config.GetWsAddress()
@@ -137,20 +179,31 @@ func NewWebSocketClient(urlStr string, botID uint64, api openapi.OpenAPI, apiv2 
 	var conn *websocket.Conn
 	var err error
 
-	// Retry mechanism
+	retryCount := 0
 	for {
 		fmt.Println("Dialing URL:", urlStr)
 		conn, _, err = dialer.Dial(urlStr, headers)
 		if err != nil {
+			retryCount++
+			if retryCount > maxRetryAttempts {
+				log.Printf("Exceeded maximum retry attempts for WebSocket[%v]: %v\n", urlStr, err)
+				return nil, err
+			}
 			fmt.Printf("Failed to connect to WebSocket[%v]: %v, retrying in 5 seconds...\n", urlStr, err)
 			time.Sleep(5 * time.Second) // sleep for 5 seconds before retrying
 		} else {
-			fmt.Printf("成功连接到 %s.\n", urlStr) // 输出连接成功提示
-			break                             // successfully connected, break the loop
+			fmt.Printf("Successfully connected to %s.\n", urlStr) // 输出连接成功提示
+			break                                                 // successfully connected, break the loop
 		}
 	}
 
-	client := &WebSocketClient{conn: conn, api: api, apiv2: apiv2}
+	client := &WebSocketClient{
+		conn:   conn,
+		api:    api,
+		apiv2:  apiv2,
+		botID:  botID,
+		urlStr: urlStr,
+	}
 
 	// Sending initial message similar to your setupB function
 	message := map[string]interface{}{
@@ -172,8 +225,10 @@ func NewWebSocketClient(urlStr string, botID uint64, api openapi.OpenAPI, apiv2 
 	// Starting goroutine for heartbeats and another for listening to messages
 	ctx, cancel := context.WithCancel(context.Background())
 
+	client.cancel = cancel
+
 	go client.sendHeartbeat(ctx, botID)
-	go client.handleIncomingMessages(ctx, cancel) //包含收到信息,调用api部分的代码
+	go client.handleIncomingMessages(ctx, cancel)
 
 	return client, nil
 }

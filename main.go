@@ -141,7 +141,7 @@ func main() {
 		}(wsAddr)
 	}
 
-	// Collect results
+	// 获取连接成功后的wsClient
 	for i := 0; i < len(conf.Settings.WsAddress); i++ {
 		select {
 		case wsClient := <-wsClientChan:

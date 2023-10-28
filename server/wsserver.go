@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -38,17 +39,29 @@ func WsHandlerWithDependencies(api openapi.OpenAPI, apiV2 openapi.OpenAPI, p *Pr
 	}
 }
 
+// 处理正向ws客户端的连接
 func wsHandler(api openapi.OpenAPI, apiV2 openapi.OpenAPI, p *Processor.Processors, c *gin.Context) {
-	// 先获取请求头中的token
+	// 先从请求头中尝试获取token
 	tokenFromHeader := c.Request.Header.Get("Authorization")
-	if tokenFromHeader == "" || !strings.HasPrefix(tokenFromHeader, "Token ") {
-		log.Printf("Connection failed due to missing or invalid token. Headers: %v, Provided token: %s", c.Request.Header, tokenFromHeader)
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing or invalid token"})
-		return
+	token := ""
+	if tokenFromHeader != "" {
+		if strings.HasPrefix(tokenFromHeader, "Token ") {
+			// 从 "Token " 后面提取真正的token值
+			token = strings.TrimPrefix(tokenFromHeader, "Token ")
+		} else if strings.HasPrefix(tokenFromHeader, "Bearer ") {
+			// 从 "Bearer " 后面提取真正的token值
+			token = strings.TrimPrefix(tokenFromHeader, "Bearer ")
+		}
+	} else {
+		// 如果请求头中没有token，则从URL参数中获取
+		token = c.Query("access_token")
 	}
 
-	// 从 "Token " 后面提取真正的token值
-	token := strings.TrimPrefix(tokenFromHeader, "Token ")
+	if token == "" {
+		log.Printf("Connection failed due to missing token. Headers: %v", c.Request.Header)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing token"})
+		return
+	}
 
 	// 使用GetWsServerToken()来获取有效的token
 	validToken := config.GetWsServerToken()
@@ -75,6 +88,22 @@ func wsHandler(api openapi.OpenAPI, apiV2 openapi.OpenAPI, p *Processor.Processo
 	}
 	// 将此客户端添加到Processor的WsServerClients列表中
 	p.WsServerClients = append(p.WsServerClients, client)
+
+	// 获取botID
+	botID := config.GetAppID()
+
+	// 发送连接成功的消息
+	message := map[string]interface{}{
+		"meta_event_type": "lifecycle",
+		"post_type":       "meta_event",
+		"self_id":         botID,
+		"sub_type":        "connect",
+		"time":            int(time.Now().Unix()),
+	}
+	err = client.SendMessage(message)
+	if err != nil {
+		log.Printf("Error sending connection success message: %v\n", err)
+	}
 
 	defer conn.Close()
 

@@ -35,7 +35,7 @@ func getOnlineClients(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.
 	response.Message = ""
 	response.RetCode = 0
 	response.Status = "ok"
-	response.Echo = string(message.Echo)
+	response.Echo = message.Echo
 
 	// Convert the members slice to a map
 	outputMap := structToMap(response)
