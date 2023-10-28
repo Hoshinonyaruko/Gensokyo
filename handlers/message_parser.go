@@ -5,6 +5,7 @@ import (
 	"log"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
@@ -117,8 +118,15 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 	}
 
 	// 正则表达式部分
-	localImagePattern := regexp.MustCompile(`\[CQ:image,file=file:///([^\]]+?)\]`)
-	urlImagePattern := regexp.MustCompile(`\[CQ:image,file=http://(.+)\]`)
+	var localImagePattern *regexp.Regexp
+
+	if runtime.GOOS == "windows" {
+		localImagePattern = regexp.MustCompile(`\[CQ:image,file=file:///([^\]]+?)\]`)
+	} else {
+		localImagePattern = regexp.MustCompile(`\[CQ:image,file=file://([^\]]+?)\]`)
+	}
+
+	urlImagePattern := regexp.MustCompile(`\[CQ:image,file=https?://(.+)\]`)
 	base64ImagePattern := regexp.MustCompile(`\[CQ:image,file=base64://(.+)\]`)
 	base64RecordPattern := regexp.MustCompile(`\[CQ:record,file=base64://(.+)\]`)
 
