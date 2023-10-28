@@ -19,10 +19,10 @@ type ServerResponse struct {
 	Data struct {
 		MessageID int `json:"message_id"`
 	} `json:"data"`
-	Message string `json:"message"`
-	RetCode int    `json:"retcode"`
-	Status  string `json:"status"`
-	Echo    string `json:"echo"`
+	Message string      `json:"message"`
+	RetCode int         `json:"retcode"`
+	Status  string      `json:"status"`
+	Echo    interface{} `json:"echo"`
 }
 
 // 发送成功回执 todo 返回可互转的messageid
@@ -30,7 +30,7 @@ func SendResponse(client callapi.Client, err error, message *callapi.ActionMessa
 	// 设置响应值
 	response := ServerResponse{}
 	response.Data.MessageID = 0 // todo 实现messageid转换
-	response.Echo = string(message.Echo)
+	response.Echo = message.Echo
 	if err != nil {
 		response.Message = err.Error() // 可选：在响应中添加错误消息
 		//response.RetCode = -1          // 可以是任何非零值，表示出错

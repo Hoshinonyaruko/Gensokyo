@@ -4,53 +4,64 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"strconv"
 
 	"github.com/tencent-connect/botgo/openapi"
 )
-
-type EchoData struct {
-	Seq int `json:"seq"`
-}
-
-type EchoContent string
-
-func (e *EchoContent) UnmarshalJSON(data []byte) error {
-	// 尝试解析为字符串
-	var strVal string
-	if err := json.Unmarshal(data, &strVal); err == nil {
-		*e = EchoContent(strVal)
-		return nil
-	}
-
-	// 尝试解析为整数
-	var intVal int
-	if err := json.Unmarshal(data, &intVal); err == nil {
-		*e = EchoContent(strconv.Itoa(intVal))
-		return nil
-	}
-
-	// 尝试解析为EchoData结构体
-	var echoData EchoData
-	if err := json.Unmarshal(data, &echoData); err == nil {
-		*e = EchoContent(strconv.Itoa(echoData.Seq))
-		return nil
-	}
-
-	// 如果都不符合预期,设置为空字符串
-	*e = ""
-	return nil
-}
-
-// func (e EchoContent) String() string {
-// 	return string(e)
-// }
 
 // onebot发来的action调用信息
 type ActionMessage struct {
 	Action string        `json:"action"`
 	Params ParamsContent `json:"params"`
-	Echo   EchoContent   `json:"echo,omitempty"`
+	Echo   interface{}   `json:"echo,omitempty"`
+}
+
+func (a *ActionMessage) UnmarshalJSON(data []byte) error {
+	type Alias ActionMessage
+
+	var rawEcho json.RawMessage
+	temp := &struct {
+		*Alias
+		Echo *json.RawMessage `json:"echo,omitempty"`
+	}{
+		Alias: (*Alias)(a),
+		Echo:  &rawEcho,
+	}
+
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return err
+	}
+
+	if rawEcho != nil {
+		var lastErr error
+
+		var intValue int
+		if lastErr = json.Unmarshal(rawEcho, &intValue); lastErr == nil {
+			a.Echo = intValue
+			return nil
+		}
+
+		var strValue string
+		if lastErr = json.Unmarshal(rawEcho, &strValue); lastErr == nil {
+			a.Echo = strValue
+			return nil
+		}
+
+		var arrValue []interface{}
+		if lastErr = json.Unmarshal(rawEcho, &arrValue); lastErr == nil {
+			a.Echo = arrValue
+			return nil
+		}
+
+		var objValue map[string]interface{}
+		if lastErr = json.Unmarshal(rawEcho, &objValue); lastErr == nil {
+			a.Echo = objValue
+			return nil
+		}
+
+		return fmt.Errorf("unable to unmarshal echo: %v", lastErr)
+	}
+
+	return nil
 }
 
 // params类型

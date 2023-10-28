@@ -22,7 +22,11 @@ func init() {
 
 func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
 	// 使用 message.Echo 作为key来获取消息类型
-	msgType := echo.GetMsgTypeByKey(string(message.Echo))
+	var msgType string
+	if echoStr, ok := message.Echo.(string); ok {
+		// 当 message.Echo 是字符串类型时执行此块
+		msgType = echo.GetMsgTypeByKey(echoStr)
+	}
 
 	switch msgType {
 	case "group_private":
@@ -37,12 +41,12 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		// 解析消息内容
 		messageText, foundItems := parseMessageContent(message.Params)
 
-		// 获取 echo 的值
-		echostr := string(message.Echo)
-
 		// 使用 echo 获取消息ID
-		messageID := echo.GetMsgIDByKey(echostr)
-		log.Println("私聊发信息对应的message_id:", messageID)
+		var messageID string
+		if echoStr, ok := message.Echo.(string); ok {
+			messageID = echo.GetMsgIDByKey(echoStr)
+			log.Println("echo取私聊发信息对应的message_id:", messageID)
+		}
 		log.Println("私聊发信息messageText:", messageText)
 		log.Println("foundItems:", foundItems)
 
@@ -142,10 +146,12 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 		}
 	}
 
-	// 获取 echo 的值
-	echostr := string(message.Echo)
-	messageID := echo.GetMsgIDByKey(echostr)
-	log.Println("私聊信息对应的message_id:", messageID)
+	// 使用 echo 获取消息ID
+	var messageID string
+	if echoStr, ok := message.Echo.(string); ok {
+		messageID = echo.GetMsgIDByKey(echoStr)
+		log.Println("echo取私聊发信息对应的message_id:", messageID)
+	}
 	log.Println("私聊信息messageText:", messageText)
 	log.Println("foundItems:", foundItems)
 	// 如果messageID为空，通过函数获取

@@ -44,7 +44,7 @@ func getGuildList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 	response.Message = ""
 	response.RetCode = 0
 	response.Status = "ok"
-	response.Echo = string(message.Echo) // Directly assign the string value
+	response.Echo = message.Echo
 
 	// Convert the members slice to a map
 	outputMap := structToMap(response)

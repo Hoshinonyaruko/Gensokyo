@@ -22,7 +22,11 @@ func init() {
 
 func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
 	// 使用 message.Echo 作为key来获取消息类型
-	msgType := echo.GetMsgTypeByKey(string(message.Echo))
+	var msgType string
+	if echoStr, ok := message.Echo.(string); ok {
+		// 当 message.Echo 是字符串类型时执行此块
+		msgType = echo.GetMsgTypeByKey(echoStr)
+	}
 
 	//如果获取不到 就用user_id获取信息类型
 	if msgType == "" {
@@ -46,12 +50,12 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 		messageText, foundItems := parseMessageContent(params)
 
 		channelID := params.ChannelID
-		// 获取 echo 的值
-		echostr := string(message.Echo)
-
-		//messageType := echo.GetMsgTypeByKey(echostr)
-		messageID := echo.GetMsgIDByKey(echostr)
-		log.Println("频道发信息对应的message_id:", messageID)
+		// 使用 echo 获取消息ID
+		var messageID string
+		if echoStr, ok := message.Echo.(string); ok {
+			messageID = echo.GetMsgIDByKey(echoStr)
+			log.Println("echo取频道发信息对应的message_id:", messageID)
+		}
 		log.Println("频道发信息messageText:", messageText)
 		log.Println("foundItems:", foundItems)
 		var err error

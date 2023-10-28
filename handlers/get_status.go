@@ -65,7 +65,7 @@ func getStatus(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI
 	response.Message = ""
 	response.RetCode = 0
 	response.Status = "ok"
-	response.Echo = string(message.Echo) // Directly assign the string value
+	response.Echo = message.Echo
 
 	outputMap := structToMap(response)
 

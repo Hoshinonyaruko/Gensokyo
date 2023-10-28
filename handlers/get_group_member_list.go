@@ -146,9 +146,12 @@ func buildResponse(members []MemberList, echoValue interface{}) map[string]inter
 	case string:
 		log.Printf("Setting echo as string: %s", v)
 		response["echo"] = v
-	case callapi.EchoContent:
-		log.Printf("Setting echo from EchoContent: %s", string(v))
-		response["echo"] = string(v)
+	case []interface{}:
+		log.Printf("Setting echo as array: %v", v)
+		response["echo"] = v
+	case map[string]interface{}:
+		log.Printf("Setting echo as object: %v", v)
+		response["echo"] = v
 	default:
 		log.Printf("Unknown type for echo: %T", v)
 	}

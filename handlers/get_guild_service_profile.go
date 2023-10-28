@@ -35,7 +35,7 @@ func getGuildServiceProfile(client callapi.Client, api openapi.OpenAPI, apiv2 op
 	response.Message = ""
 	response.RetCode = 0
 	response.Status = "ok"
-	response.Echo = string(message.Echo) // Directly assign the string value
+	response.Echo = message.Echo
 
 	// Convert the members slice to a map
 	outputMap := structToMap(response)
