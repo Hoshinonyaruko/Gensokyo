@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/config"
@@ -94,21 +93,8 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 
 		// Convert OnebotGroupMessage to map and send
 		privateMsgMap := structToMap(privateMsg)
-		var errors []string
-
-		for _, client := range p.Wsclient {
-			err = client.SendMessage(privateMsgMap)
-			if err != nil {
-				// 记录错误信息，但不立即返回
-				errors = append(errors, fmt.Sprintf("error sending private message via wsclient: %v", err))
-			}
-		}
-
-		// 在循环结束后处理记录的错误
-		if len(errors) > 0 {
-			// 使用strings.Join合并所有的错误信息
-			return fmt.Errorf(strings.Join(errors, "; "))
-		}
+		//上报信息到onebotv11应用端(正反ws)
+		p.BroadcastMessageToAll(privateMsgMap)
 	} else {
 		if !p.Settings.GlobalChannelToGroup {
 			//将频道私信作为普通频道信息
@@ -187,21 +173,8 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 
 			// 将 onebotMsg 结构体转换为 map[string]interface{}
 			msgMap := structToMap(onebotMsg)
-			var errors []string
-
-			for _, client := range p.Wsclient {
-				err = client.SendMessage(msgMap)
-				if err != nil {
-					// 记录错误信息，但不立即返回
-					errors = append(errors, fmt.Sprintf("error sending message via wsclient: %v", err))
-				}
-			}
-
-			// 在循环结束后处理记录的错误
-			if len(errors) > 0 {
-				// 使用strings.Join合并所有的错误信息
-				return fmt.Errorf(strings.Join(errors, "; "))
-			}
+			//上报信息到onebotv11应用端(正反ws)
+			p.BroadcastMessageToAll(msgMap)
 		} else {
 			//将频道信息转化为群信息(特殊需求情况下)
 			//将channelid写入ini,可取出guild_id
@@ -287,21 +260,8 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 
 			// Convert OnebotGroupMessage to map and send
 			groupMsgMap := structToMap(groupMsg)
-			var errors []string
-
-			for _, client := range p.Wsclient {
-				err = client.SendMessage(groupMsgMap)
-				if err != nil {
-					// 记录错误信息，但不立即返回
-					errors = append(errors, fmt.Sprintf("error sending group message via wsclient: %v", err))
-				}
-			}
-
-			// 在循环结束后处理记录的错误
-			if len(errors) > 0 {
-				// 使用strings.Join合并所有的错误信息
-				return fmt.Errorf(strings.Join(errors, "; "))
-			}
+			//上报信息到onebotv11应用端(正反ws)
+			p.BroadcastMessageToAll(groupMsgMap)
 		}
 
 	}

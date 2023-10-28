@@ -5,21 +5,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
+	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/wsclient"
-
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/openapi"
 )
 
 // Processor 结构体用于处理消息
 type Processors struct {
-	Api      openapi.OpenAPI             // API 类型
-	Apiv2    openapi.OpenAPI             //群的API
-	Settings *config.Settings            // 使用指针
-	Wsclient []*wsclient.WebSocketClient // 指针的切片
+	Api             openapi.OpenAPI                   // API 类型
+	Apiv2           openapi.OpenAPI                   //群的API
+	Settings        *config.Settings                  // 使用指针
+	Wsclient        []*wsclient.WebSocketClient       // 指针的切片
+	WsServerClients []callapi.WebSocketServerClienter //ws server被连接的客户端
 }
 
 type Sender struct {
@@ -182,4 +185,49 @@ func NewProcessor(api openapi.OpenAPI, apiv2 openapi.OpenAPI, settings *config.S
 		Settings: settings,
 		Wsclient: wsclient,
 	}
+}
+
+// 发信息给所有连接正向ws的客户端
+func (p *Processors) SendMessageToAllClients(message map[string]interface{}) error {
+	var result *multierror.Error
+
+	for _, client := range p.WsServerClients {
+		// 使用接口的方法
+		err := client.SendMessage(message)
+		if err != nil {
+			// Append the error to our result
+			result = multierror.Append(result, fmt.Errorf("failed to send to client: %w", err))
+		}
+	}
+
+	// This will return nil if no errors were added
+	return result.ErrorOrNil()
+}
+
+// 方便快捷的发信息函数
+func (p *Processors) BroadcastMessageToAll(message map[string]interface{}) error {
+	var errors []string
+
+	// 发送到我们作为客户端的Wsclient
+	for _, client := range p.Wsclient {
+		err := client.SendMessage(message)
+		if err != nil {
+			errors = append(errors, fmt.Sprintf("error sending private message via wsclient: %v", err))
+		}
+	}
+
+	// 发送到我们作为服务器连接到我们的WsServerClients
+	for _, serverClient := range p.WsServerClients {
+		err := serverClient.SendMessage(message)
+		if err != nil {
+			errors = append(errors, fmt.Sprintf("error sending private message via WsServerClient: %v", err))
+		}
+	}
+
+	// 在循环结束后处理记录的错误
+	if len(errors) > 0 {
+		return fmt.Errorf(strings.Join(errors, "; "))
+	}
+
+	return nil
 }

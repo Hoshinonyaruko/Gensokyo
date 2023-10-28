@@ -174,7 +174,7 @@ func main() {
 		r.GET("/getid", server.GetIDHandler)
 		r.POST("/uploadpic", server.UploadBase64ImageHandler(rateLimiter))
 		r.Static("/channel_temp", "./channel_temp")
-		r.GET("/ws", server.WsHandlerWithDependencies(api, apiV2))
+		r.GET("/ws", server.WsHandlerWithDependencies(api, apiV2, p))
 		r.Run("0.0.0.0:" + conf.Settings.Port) // 监听0.0.0.0地址的Port端口
 	}
 

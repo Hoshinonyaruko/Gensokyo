@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/config"
@@ -108,20 +107,7 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 
 	// Convert OnebotGroupMessage to map and send
 	groupMsgMap := structToMap(groupMsg)
-	var errors []string
-
-	for _, client := range p.Wsclient {
-		err = client.SendMessage(groupMsgMap)
-		if err != nil {
-			// 记录错误信息，但不立即返回
-			errors = append(errors, fmt.Sprintf("error sending group message via wsclient: %v", err))
-		}
-	}
-
-	// 在循环结束后处理记录的错误
-	if len(errors) > 0 {
-		// 使用strings.Join合并所有的错误信息
-		return fmt.Errorf(strings.Join(errors, "; "))
-	}
+	//上报信息到onebotv11应用端(正反ws)
+	p.BroadcastMessageToAll(groupMsgMap)
 	return nil
 }
