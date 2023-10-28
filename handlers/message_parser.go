@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
+	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/tencent-connect/botgo/dto"
 )
 
@@ -154,7 +155,12 @@ func transformMessageText(messageText string) string {
 	return re.ReplaceAllStringFunc(messageText, func(m string) string {
 		submatches := re.FindStringSubmatch(m)
 		if len(submatches) > 1 {
-			return "<@!" + submatches[1] + ">"
+			realUserID, err := idmap.RetrieveRowByIDv2(submatches[1])
+			if err != nil {
+				log.Printf("Error retrieving user ID: %v", err)
+				return m // 如果出错，返回原始匹配
+			}
+			return "<@!" + realUserID + ">"
 		}
 		return m
 	})
