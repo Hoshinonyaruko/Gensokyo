@@ -205,7 +205,7 @@ func RevertTransformedText(data interface{}) string {
 			// 获取文件的后缀名
 			ext := filepath.Ext(attachment.FileName)
 			md5name := strings.TrimSuffix(attachment.FileName, ext)
-			imageCQ := "[CQ:image,file=" + md5name + ".image,subType=0,url=" + attachment.URL + "]"
+			imageCQ := "[CQ:image,file=" + md5name + ".image,subType=0,url=" + "http://" + attachment.URL + "]"
 			messageText += imageCQ
 		}
 	}
