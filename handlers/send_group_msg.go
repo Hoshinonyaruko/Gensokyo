@@ -112,19 +112,20 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 	case "guild":
 		//用GroupID给ChannelID赋值,因为我们是把频道虚拟成了群
 		message.Params.ChannelID = message.Params.GroupID.(string)
+		// 使用RetrieveRowByIDv2还原真实的ChannelID
+		RChannelID, err := idmap.RetrieveRowByIDv2(message.Params.ChannelID)
+		if err != nil {
+			log.Printf("error retrieving real UserID: %v", err)
+		}
+		message.Params.ChannelID = RChannelID
 		//这一句是group_private的逻辑,发频道信息用的是channelid
 		//message.Params.GroupID = value
 		handleSendGuildChannelMsg(client, api, apiv2, message)
 	case "guild_private":
 		//用group_id还原出channelid 这是虚拟成群的私聊信息
 		message.Params.ChannelID = message.Params.GroupID.(string)
-		// 使用RetrieveRowByIDv2还原真实的ChannelID
-		RChannelID, err := idmap.RetrieveRowByIDv2(message.Params.ChannelID)
-		if err != nil {
-			log.Printf("error retrieving real ChannelID: %v", err)
-		}
 		//读取ini 通过ChannelID取回之前储存的guild_id
-		value, err := idmap.ReadConfigv2(RChannelID, "guild_id")
+		value, err := idmap.ReadConfigv2(message.Params.ChannelID, "guild_id")
 		if err != nil {
 			log.Printf("Error reading config: %v", err)
 			return
@@ -139,14 +140,20 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 	}
 }
 
+// 不支持base64
 func generateGroupMessage(id string, foundItems map[string][]string, messageText string) interface{} {
 	if imageURLs, ok := foundItems["local_image"]; ok && len(imageURLs) > 0 {
 		// 从本地路径读取图片
 		imageData, err := os.ReadFile(imageURLs[0])
 		if err != nil {
-			// 读入文件，如果是本地图,应用端和gensokyo需要在一台电脑
+			// 读入文件失败
 			log.Printf("Error reading the image from path %s: %v", imageURLs[0], err)
-			return nil
+			// 返回文本信息，提示图片文件不存在
+			return &dto.MessageToCreate{
+				Content: "错误: 图片文件不存在",
+				MsgID:   id,
+				MsgType: 0, // 默认文本类型
+			}
 		}
 
 		// base64编码
@@ -156,7 +163,12 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 		imageURL, err := images.UploadBase64ImageToServer(base64Encoded)
 		if err != nil {
 			log.Printf("Error uploading base64 encoded image: %v", err)
-			return nil
+			// 如果上传失败，也返回文本信息，提示上传失败
+			return &dto.MessageToCreate{
+				Content: "错误: 上传图片失败",
+				MsgID:   id,
+				MsgType: 0, // 默认文本类型
+			}
 		}
 
 		// 创建RichMediaMessage并返回，当作URL图片处理

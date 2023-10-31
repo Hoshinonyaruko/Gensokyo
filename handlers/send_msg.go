@@ -2,10 +2,8 @@ package handlers
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"log"
-	"os"
 	"strconv"
 	"time"
 
@@ -13,7 +11,6 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
-	"github.com/hoshinonyaruko/gensokyo/images"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/openapi"
 )
@@ -74,7 +71,7 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 
 		// 优先发送文本信息
 		if messageText != "" {
-			groupReply := generateMessage(messageID, nil, messageText)
+			groupReply := generateGroupMessage(messageID, nil, messageText)
 
 			// 进行类型断言
 			groupMessage, ok := groupReply.(*dto.MessageToCreate)
@@ -97,7 +94,7 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 			var singleItem = make(map[string][]string)
 			singleItem[key] = urls
 
-			groupReply := generateMessage(messageID, singleItem, "")
+			groupReply := generateGroupMessage(messageID, singleItem, "")
 
 			// 进行类型断言
 			richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
@@ -117,6 +114,12 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 	case "guild":
 		//用GroupID给ChannelID赋值,因为我们是把频道虚拟成了群
 		message.Params.ChannelID = message.Params.GroupID.(string)
+		// 使用RetrieveRowByIDv2还原真实的ChannelID
+		RChannelID, err := idmap.RetrieveRowByIDv2(message.Params.ChannelID)
+		if err != nil {
+			log.Printf("error retrieving real UserID: %v", err)
+		}
+		message.Params.ChannelID = RChannelID
 		handleSendGuildChannelMsg(client, api, apiv2, message)
 	case "guild_private":
 		//send_msg比具体的send_xxx少一层,其包含的字段类型在虚拟化场景已经失去作用
@@ -130,14 +133,8 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 		// 先尝试将GroupID断言为字符串
 		if channelID, ok := message.Params.GroupID.(string); ok && channelID != "" {
 			channelIDPtr = &channelID
-			// 使用RetrieveRowByIDv2还原真实的UserID
-			RChannelID, err := idmap.RetrieveRowByIDv2(*channelIDPtr)
-			if err != nil {
-				log.Printf("error retrieving real ChannelID: %v", err)
-				return
-			}
 			// 读取bolt数据库 通过ChannelID取回之前储存的guild_id
-			if value, err := idmap.ReadConfigv2(RChannelID, "guild_id"); err == nil && value != "" {
+			if value, err := idmap.ReadConfigv2(*channelIDPtr, "guild_id"); err == nil && value != "" {
 				GuildidPtr = &value
 			} else {
 				log.Printf("Error reading config: %v", err)
@@ -178,7 +175,7 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 
 		// 优先发送文本信息
 		if messageText != "" {
-			groupReply := generateMessage(messageID, nil, messageText)
+			groupReply := generateGroupMessage(messageID, nil, messageText)
 
 			// 进行类型断言
 			groupMessage, ok := groupReply.(*dto.MessageToCreate)
@@ -201,7 +198,7 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 			var singleItem = make(map[string][]string)
 			singleItem[key] = urls
 
-			groupReply := generateMessage(messageID, singleItem, "")
+			groupReply := generateGroupMessage(messageID, singleItem, "")
 
 			// 进行类型断言
 			richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
@@ -219,82 +216,6 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 	default:
 		log.Printf("1Unknown message type: %s", msgType)
 	}
-}
-
-func generateMessage(id string, foundItems map[string][]string, messageText string) interface{} {
-	if imageURLs, ok := foundItems["local_image"]; ok && len(imageURLs) > 0 {
-		// 从本地路径读取图片
-		imageData, err := os.ReadFile(imageURLs[0])
-		if err != nil {
-			// 读入文件，如果是本地图,应用端和gensokyo需要在一台电脑
-			log.Printf("Error reading the image from path %s: %v", imageURLs[0], err)
-			return nil
-		}
-
-		// base64编码
-		base64Encoded := base64.StdEncoding.EncodeToString(imageData)
-
-		// 上传base64编码的图片并获取其URL
-		imageURL, err := images.UploadBase64ImageToServer(base64Encoded)
-		if err != nil {
-			log.Printf("Error uploading base64 encoded image: %v", err)
-			return nil
-		}
-
-		// 创建RichMediaMessage并返回，当作URL图片处理
-		return &dto.RichMediaMessage{
-			EventID:    id,
-			FileType:   1, // 1代表图片
-			URL:        imageURL,
-			Content:    "", // 这个字段文档没有了
-			SrvSendMsg: true,
-		}
-	} else if imageURLs, ok := foundItems["url_image"]; ok && len(imageURLs) > 0 {
-		// 发链接图片
-		return &dto.RichMediaMessage{
-			EventID:    id,
-			FileType:   1, // 1代表图片
-			URL:        "http://" + imageURLs[0],
-			Content:    "", // 这个字段文档没有了
-			SrvSendMsg: true,
-		}
-	} else if base64_image, ok := foundItems["base64_image"]; ok && len(base64_image) > 0 {
-		// todo 适配base64图片
-		//因为QQ群没有 form方式上传,所以在gensokyo内置了图床,需公网,或以lotus方式连接位于公网的gensokyo
-		//要正确的开放对应的端口和设置正确的ip地址在config,这对于一般用户是有一些难度的
-		if base64Image, ok := foundItems["base64_image"]; ok && len(base64Image) > 0 {
-			// 解码base64图片数据
-			fileImageData, err := base64.StdEncoding.DecodeString(base64Image[0])
-			if err != nil {
-				log.Printf("failed to decode base64 image: %v", err)
-				return nil
-			}
-			// 将解码的图片数据转换回base64格式并上传
-			imageURL, err := images.UploadBase64ImageToServer(base64.StdEncoding.EncodeToString(fileImageData))
-			if err != nil {
-				log.Printf("failed to upload base64 image: %v", err)
-				return nil
-			}
-			// 创建RichMediaMessage并返回
-			return &dto.RichMediaMessage{
-				EventID:    id,
-				FileType:   1, // 1代表图片
-				URL:        imageURL,
-				Content:    "", // 这个字段文档没有了
-				SrvSendMsg: true,
-			}
-		}
-	} else if voiceURLs, ok := foundItems["base64_record"]; ok && len(voiceURLs) > 0 {
-		// 目前不支持发语音 todo 适配base64 slik
-	} else {
-		// 返回文本信息
-		return &dto.MessageToCreate{
-			Content: messageText,
-			MsgID:   id,
-			MsgType: 0, // 默认文本类型
-		}
-	}
-	return nil
 }
 
 // 通过user_id获取messageID

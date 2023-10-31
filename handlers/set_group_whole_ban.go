@@ -17,13 +17,8 @@ func init() {
 func setGroupWholeBan(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
 	// 从message中获取group_id
 	groupID := message.Params.GroupID.(string)
-	// 使用RetrieveRowByIDv2还原真实的ChannelID
-	RChannelID, err := idmap.RetrieveRowByIDv2(groupID)
-	if err != nil {
-		log.Printf("error retrieving real UserID: %v", err)
-	}
 	// 根据group_id读取guild_id
-	guildID, err := idmap.ReadConfigv2(RChannelID, "guild_id")
+	guildID, err := idmap.ReadConfigv2(groupID, "guild_id")
 	if err != nil {
 		log.Printf("Error reading config for guild_id: %v", err)
 		return
