@@ -99,7 +99,7 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 	echo.AddMsgType(AppIDString, GroupID64, "group")
 	//储存当前群或频道号的类型
 	idmap.WriteConfigv2(fmt.Sprint(GroupID64), "type", "group")
-	echo.AddMsgType(AppIDString, GroupID64, "guild_private")
+	echo.AddMsgType(AppIDString, GroupID64, "group")
 
 	// 调试
 	PrintStructWithFieldNames(groupMsg)
