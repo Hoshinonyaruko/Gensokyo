@@ -10,7 +10,9 @@ import (
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
+	"github.com/hoshinonyaruko/gensokyo/url"
 	"github.com/tencent-connect/botgo/dto"
+	"mvdan.cc/xurls" //xurls是一个从文本提取url的库 适用于多种场景
 )
 
 var BotID string
@@ -58,6 +60,7 @@ func SendResponse(client callapi.Client, err error, message *callapi.ActionMessa
 	return nil
 }
 
+// 信息处理函数
 func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[string][]string) {
 	messageText := ""
 
@@ -156,11 +159,11 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 	return messageText, foundItems
 }
 
+// at处理和链接处理
 func transformMessageText(messageText string) string {
 	// 使用正则表达式来查找所有[CQ:at,qq=数字]的模式
 	re := regexp.MustCompile(`\[CQ:at,qq=(\d+)\]`)
-	// 使用正则表达式来替换找到的模式为<@!数字>
-	return re.ReplaceAllStringFunc(messageText, func(m string) string {
+	messageText = re.ReplaceAllStringFunc(messageText, func(m string) string {
 		submatches := re.FindStringSubmatch(m)
 		if len(submatches) > 1 {
 			realUserID, err := idmap.RetrieveRowByIDv2(submatches[1])
@@ -172,6 +175,14 @@ func transformMessageText(messageText string) string {
 		}
 		return m
 	})
+
+	// 使用xurls来查找和替换所有的URL
+	messageText = xurls.Relaxed.ReplaceAllStringFunc(messageText, func(originalURL string) string {
+		shortURL := url.GenerateShortURL(originalURL)
+		// 使用getBaseURL函数来获取baseUrl并与shortURL组合
+		return url.GetBaseURL() + "/url/" + shortURL
+	})
+	return messageText
 }
 
 // 处理at和其他定形文到onebotv11格式(cq码)

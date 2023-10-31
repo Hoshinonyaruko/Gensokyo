@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"log"
-	"strconv"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
@@ -28,11 +27,13 @@ type OnebotGroupInfo struct {
 }
 
 func ConvertGuildToGroupInfo(guild *dto.Guild, GroupId string) *OnebotGroupInfo {
-	groupidstr, err := strconv.ParseInt(GroupId, 10, 64)
+	// 使用idmap.StoreIDv2映射GroupId到一个int64的值
+	groupid64, err := idmap.StoreIDv2(GroupId)
 	if err != nil {
-		log.Printf("groupidstr: %v", err)
+		log.Printf("Error storing GroupID: %v", err)
 		return nil
 	}
+
 	ts, err := guild.JoinedAt.Time()
 	if err != nil {
 		log.Printf("转换JoinedAt失败: %v", err)
@@ -41,7 +42,7 @@ func ConvertGuildToGroupInfo(guild *dto.Guild, GroupId string) *OnebotGroupInfo 
 	groupCreateTime := uint32(ts.Unix())
 
 	return &OnebotGroupInfo{
-		GroupID:         groupidstr,
+		GroupID:         groupid64,
 		GroupName:       guild.Name,
 		GroupMemo:       guild.Desc,
 		GroupCreateTime: groupCreateTime,

@@ -37,6 +37,9 @@ type Settings struct {
 	MasterID               []string `yaml:"master_id,omitempty"`        // 如果需要在群权限判断是管理员是,将user_id填入这里,master_id是一个文本数组
 	EnableWsServer         bool     `yaml:"enable_ws_server,omitempty"` //正向ws开关
 	WsServerToken          string   `yaml:"ws_server_token,omitempty"`  //正向ws token
+	IdentifyFile           bool     `yaml:"identify_file"`              // 域名校验文件
+	Crt                    string   `yaml:"crt"`
+	Key                    string   `yaml:"key"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -181,4 +184,40 @@ func GetWsServerToken() string {
 		return ""
 	}
 	return instance.Settings.WsServerToken
+}
+
+// 获取identify_file的值
+func GetIdentifyFile() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		log.Println("Warning: instance is nil when trying to get identify file name.")
+		return false
+	}
+	return instance.Settings.IdentifyFile
+}
+
+// 获取crt路径
+func GetCrtPath() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		log.Println("Warning: instance is nil when trying to get crt path.")
+		return ""
+	}
+	return instance.Settings.Crt
+}
+
+// 获取key路径
+func GetKeyPath() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		log.Println("Warning: instance is nil when trying to get key path.")
+		return ""
+	}
+	return instance.Settings.Key
 }

@@ -45,4 +45,6 @@ require (
 	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
+	mvdan.cc/xurls v1.1.0
+	mvdan.cc/xurls/v2 v2.5.0 // indirect
 )

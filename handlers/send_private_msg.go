@@ -47,6 +47,12 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			messageID = echo.GetMsgIDByKey(echoStr)
 			log.Println("echo取私聊发信息对应的message_id:", messageID)
 		}
+		// 如果messageID仍然为空，尝试使用config.GetAppID和UserID的组合来获取messageID
+		// 如果messageID为空，通过函数获取
+		if messageID == "" {
+			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), UserID)
+			log.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
+		}
 		log.Println("私聊发信息messageText:", messageText)
 		log.Println("foundItems:", foundItems)
 
@@ -66,6 +72,8 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			if err != nil {
 				log.Printf("发送文本私聊信息失败: %v", err)
 			}
+			//发送成功回执
+			SendResponse(client, err, &message)
 		}
 
 		// 遍历 foundItems 并发送每种信息
@@ -85,6 +93,8 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			if err != nil {
 				log.Printf("发送 %s 私聊信息失败: %v", key, err)
 			}
+			//发送成功回执
+			SendResponse(client, err, &message)
 		}
 	case "guild_private":
 		//当收到发私信调用 并且来源是频道

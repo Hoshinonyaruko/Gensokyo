@@ -105,6 +105,17 @@ func wsHandler(api openapi.OpenAPI, apiV2 openapi.OpenAPI, p *Processor.Processo
 		log.Printf("Error sending connection success message: %v\n", err)
 	}
 
+	// 在defer语句之前运行
+	defer func() {
+		// 移除客户端从WsServerClients
+		for i, wsClient := range p.WsServerClients {
+			if wsClient == client {
+				p.WsServerClients = append(p.WsServerClients[:i], p.WsServerClients[i+1:]...)
+				break
+			}
+		}
+	}()
+	//退出时候的清理
 	defer conn.Close()
 
 	for {
@@ -141,4 +152,8 @@ func (c *WebSocketServerClient) SendMessage(message map[string]interface{}) erro
 		return err
 	}
 	return c.Conn.WriteMessage(websocket.TextMessage, msgBytes)
+}
+
+func (client *WebSocketServerClient) Close() error {
+	return client.Conn.Close()
 }

@@ -169,6 +169,11 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 			messageID = echo.GetMsgIDByKey(echoStr)
 			log.Println("echo取私聊发信息对应的message_id:", messageID)
 		}
+		// 如果messageID为空，通过函数获取
+		if messageID == "" {
+			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), UserID)
+			log.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
+		}
 		log.Println("私聊发信息messageText:", messageText)
 		log.Println("foundItems:", foundItems)
 

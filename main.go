@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -16,6 +17,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/handlers"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/server"
+	"github.com/hoshinonyaruko/gensokyo/url"
 	"github.com/hoshinonyaruko/gensokyo/wsclient"
 
 	"github.com/gin-gonic/gin"
@@ -169,13 +171,49 @@ func main() {
 	//是否启动服务器
 	shouldStartServer := !conf.Settings.Lotus || conf.Settings.EnableWsServer
 	//如果连接到其他gensokyo,则不需要启动服务器
+	var httpServer *http.Server
 	if shouldStartServer {
 		r := gin.Default()
 		r.GET("/getid", server.GetIDHandler)
 		r.POST("/uploadpic", server.UploadBase64ImageHandler(rateLimiter))
 		r.Static("/channel_temp", "./channel_temp")
 		r.GET("/ws", server.WsHandlerWithDependencies(api, apiV2, p))
-		r.Run("0.0.0.0:" + conf.Settings.Port) // 监听0.0.0.0地址的Port端口
+		r.POST("/url", url.CreateShortURLHandler)
+		r.GET("/url/:shortURL", url.RedirectFromShortURLHandler)
+		if config.GetIdentifyFile() {
+			appIDStr := config.GetAppIDStr()
+			fileName := appIDStr + ".json"
+			r.GET("/"+fileName, func(c *gin.Context) {
+				content := fmt.Sprintf(`{"bot_appid":%d}`, config.GetAppID())
+				c.Header("Content-Type", "application/json")
+				c.String(200, content)
+			})
+		}
+		// 创建一个http.Server实例
+		httpServer = &http.Server{
+			Addr:    "0.0.0.0:" + conf.Settings.Port,
+			Handler: r,
+		}
+		// 在一个新的goroutine中启动Gin服务器
+		go func() {
+			if conf.Settings.Port == "443" {
+				// 使用HTTPS
+				crtPath := config.GetCrtPath()
+				keyPath := config.GetKeyPath()
+				if crtPath == "" || keyPath == "" {
+					log.Fatalf("crt or key path is missing for HTTPS")
+					return
+				}
+				if err := httpServer.ListenAndServeTLS(crtPath, keyPath); err != nil && err != http.ErrServerClosed {
+					log.Fatalf("listen (HTTPS): %s\n", err)
+				}
+			} else {
+				// 使用HTTP
+				if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+					log.Fatalf("listen: %s\n", err)
+				}
+			}
+		}()
 	}
 
 	// 使用通道来等待信号
@@ -192,6 +230,24 @@ func main() {
 		if err != nil {
 			fmt.Printf("Error closing WebSocket connection: %v\n", err)
 		}
+	}
+
+	// 关闭BoltDB数据库
+	url.CloseDB()
+	idmap.CloseDB()
+
+	// 在关闭WebSocket客户端之前
+	for _, wsClient := range p.WsServerClients {
+		if err := wsClient.Close(); err != nil {
+			log.Printf("Error closing WebSocket server client: %v\n", err)
+		}
+	}
+
+	// 使用一个5秒的超时优雅地关闭Gin服务器
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := httpServer.Shutdown(ctx); err != nil {
+		log.Fatal("Server forced to shutdown:", err)
 	}
 }
 

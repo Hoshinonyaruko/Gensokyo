@@ -56,6 +56,11 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 			messageID = echo.GetMsgIDByKey(echoStr)
 			log.Println("echo取频道发信息对应的message_id:", messageID)
 		}
+		// 如果messageID为空，通过函数获取
+		if messageID == "" {
+			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), channelID)
+			log.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
+		}
 		log.Println("频道发信息messageText:", messageText)
 		log.Println("foundItems:", foundItems)
 		var err error

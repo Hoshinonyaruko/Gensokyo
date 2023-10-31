@@ -16,13 +16,13 @@ var globalEchoMapping = &EchoMapping{
 	msgIDMapping:   make(map[string]string),
 }
 
-func (e *EchoMapping) generateKey(appid string, s int64) string {
+func (e *EchoMapping) GenerateKey(appid string, s int64) string {
 	return appid + "_" + strconv.FormatInt(s, 10)
 }
 
 // 添加echo对应的类型
 func AddMsgType(appid string, s int64, msgType string) {
-	key := globalEchoMapping.generateKey(appid, s)
+	key := globalEchoMapping.GenerateKey(appid, s)
 	globalEchoMapping.mu.Lock()
 	defer globalEchoMapping.mu.Unlock()
 	globalEchoMapping.msgTypeMapping[key] = msgType
@@ -30,7 +30,7 @@ func AddMsgType(appid string, s int64, msgType string) {
 
 // 添加echo对应的messageid
 func AddMsgID(appid string, s int64, msgID string) {
-	key := globalEchoMapping.generateKey(appid, s)
+	key := globalEchoMapping.GenerateKey(appid, s)
 	globalEchoMapping.mu.Lock()
 	defer globalEchoMapping.mu.Unlock()
 	globalEchoMapping.msgIDMapping[key] = msgID
