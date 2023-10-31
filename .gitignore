@@ -1,8 +1,8 @@
 # botgo specific
 config.yml
-idmap.db
-idmap.db.lock
-idmap.ini
+*.db
+*.db.lock
+*.ini
 
 # Go specific
 *.exe
