@@ -175,11 +175,18 @@ func WriteConfig(sectionName, keyName, value string) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b, err := tx.CreateBucketIfNotExists([]byte(ConfigBucket))
 		if err != nil {
-			return err
+			log.Printf("Error creating or accessing bucket: %v", err)
+			return fmt.Errorf("failed to access or create bucket %s: %w", ConfigBucket, err)
 		}
 
 		key := joinSectionAndKey(sectionName, keyName)
-		return b.Put(key, []byte(value))
+		err = b.Put(key, []byte(value))
+		if err != nil {
+			log.Printf("Error putting data into bucket with key %s: %v", key, err)
+			return fmt.Errorf("failed to put data into bucket with key %s: %w", key, err)
+		}
+		//log.Printf("Data saved successfully with key %s,value %s", key, value)
+		return nil
 	})
 }
 

@@ -21,8 +21,6 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 	// 获取s
 	s := client.GetGlobalS()
 
-	idmap.WriteConfigv2(data.ChannelID, "guild_id", data.GuildID)
-
 	// 转换at
 	messageText := handlers.RevertTransformedText(data)
 

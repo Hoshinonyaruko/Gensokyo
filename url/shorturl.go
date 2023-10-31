@@ -296,15 +296,7 @@ func CreateShortURLHandler(c *gin.Context) {
 
 	// Construct baseUrl
 	serverDir := config.GetServer_dir()
-	portValue := config.GetPortValue()
-	protocol := "http"
-	if portValue == "443" {
-		protocol = "https"
-	}
-	baseUrl := protocol + "://" + serverDir
-	if portValue != "80" && portValue != "443" && portValue != "" {
-		baseUrl += ":" + portValue
-	}
+	baseUrl := "https://" + serverDir
 
 	c.JSON(http.StatusOK, gin.H{"shortURL": baseUrl + "/url/" + shortURL})
 }
@@ -312,16 +304,7 @@ func CreateShortURLHandler(c *gin.Context) {
 // 短链接baseurl
 func GetBaseURL() string {
 	serverDir := config.GetServer_dir()
-	portValue := config.GetPortValue()
-	protocol := "http"
-	if portValue == "443" {
-		protocol = "https"
-	}
-	baseUrl := protocol + "://" + serverDir
-	if portValue != "80" && portValue != "443" && portValue != "" {
-		baseUrl += ":" + portValue
-	}
-	return baseUrl
+	return "https://" + serverDir
 }
 
 // RedirectFromShortURLHandler
