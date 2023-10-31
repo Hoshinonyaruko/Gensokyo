@@ -18,7 +18,7 @@ func setGroupWholeBan(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.
 	// 从message中获取group_id
 	groupID := message.Params.GroupID.(string)
 	// 根据group_id读取guild_id
-	guildID, err := idmap.ReadConfigv2(groupID, "guild_id")
+	guildID, err := idmap.ReadConfigv2(RChannelID, "guild_id")
 	if err != nil {
 		log.Printf("Error reading config for guild_id: %v", err)
 		return
