@@ -41,6 +41,7 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 		if err != nil {
 			log.Fatalf("Error storing ID: %v", err)
 		}
+
 		//将真实id写入数据库,可取出ChannelID
 		idmap.WriteConfigv2(data.Author.ID, "channel_id", data.ChannelID)
 		//将channelid写入数据库,可取出guild_id
@@ -177,20 +178,20 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 			p.BroadcastMessageToAll(msgMap)
 		} else {
 			//将频道信息转化为群信息(特殊需求情况下)
-			//将channelid写入ini,可取出guild_id
-			idmap.WriteConfigv2(data.ChannelID, "guild_id", data.GuildID)
+			//将channelid写入bolt,可取出guild_id
+			ChannelID64, err := idmap.StoreIDv2(data.ChannelID)
+			if err != nil {
+				log.Printf("Error storing ID: %v", err)
+				return nil
+			}
+			//转成int再互转
+			idmap.WriteConfigv2(fmt.Sprint(ChannelID64), "guild_id", data.GuildID)
 			//转换at
 			messageText := handlers.RevertTransformedText(data)
 			//转换appid
 			AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 			//构造echo
 			echostr := AppIDString + "_" + strconv.FormatInt(s, 10)
-			//把频道号作为群号
-			channelIDInt, err := strconv.Atoi(data.ChannelID)
-			if err != nil {
-				// handle error, perhaps return it
-				return fmt.Errorf("failed to convert ChannelID to int: %v", err)
-			}
 			//映射str的userid到int
 			userid64, err := idmap.StoreIDv2(data.Author.ID)
 			if err != nil {
@@ -214,7 +215,7 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 				RawMessage:  messageText,
 				Message:     segmentedMessages,
 				MessageID:   messageID,
-				GroupID:     int64(channelIDInt),
+				GroupID:     ChannelID64,
 				MessageType: "group",
 				PostType:    "message",
 				SelfID:      int64(p.Settings.AppID),

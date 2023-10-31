@@ -117,13 +117,6 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 	case "guild":
 		//用GroupID给ChannelID赋值,因为我们是把频道虚拟成了群
 		message.Params.ChannelID = message.Params.GroupID.(string)
-		//读取ini 通过ChannelID取回之前储存的guild_id
-		// value, err := idmap.ReadConfigv2(message.Params.ChannelID, "guild_id")
-		// if err != nil {
-		// 	log.Printf("Error reading config: %v", err)
-		// 	return
-		// }
-		// message.Params.GroupID = value
 		handleSendGuildChannelMsg(client, api, apiv2, message)
 	case "guild_private":
 		//send_msg比具体的send_xxx少一层,其包含的字段类型在虚拟化场景已经失去作用
@@ -137,8 +130,14 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 		// 先尝试将GroupID断言为字符串
 		if channelID, ok := message.Params.GroupID.(string); ok && channelID != "" {
 			channelIDPtr = &channelID
+			// 使用RetrieveRowByIDv2还原真实的UserID
+			RChannelID, err := idmap.RetrieveRowByIDv2(*channelIDPtr)
+			if err != nil {
+				log.Printf("error retrieving real ChannelID: %v", err)
+				return
+			}
 			// 读取bolt数据库 通过ChannelID取回之前储存的guild_id
-			if value, err := idmap.ReadConfigv2(channelID, "guild_id"); err == nil && value != "" {
+			if value, err := idmap.ReadConfigv2(RChannelID, "guild_id"); err == nil && value != "" {
 				GuildidPtr = &value
 			} else {
 				log.Printf("Error reading config: %v", err)

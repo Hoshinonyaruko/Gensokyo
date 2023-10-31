@@ -251,9 +251,13 @@ func getGuildIDFromMessage(message callapi.ActionMessage) (string, string, error
 	if err != nil {
 		return "", "", fmt.Errorf("error reading channel_id: %v", err)
 	}
-
+	// 使用RetrieveRowByIDv2还原真实的ChannelID
+	RChannelID, err := idmap.RetrieveRowByIDv2(channelID)
+	if err != nil {
+		log.Printf("error retrieving real UserID: %v", err)
+	}
 	// 使用channelID作为sectionName从数据库中获取guild_id
-	guildID, err := idmap.ReadConfigv2(channelID, "guild_id")
+	guildID, err := idmap.ReadConfigv2(RChannelID, "guild_id")
 	if err != nil {
 		return "", "", fmt.Errorf("error reading guild_id: %v", err)
 	}

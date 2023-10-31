@@ -112,20 +112,19 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 	case "guild":
 		//用GroupID给ChannelID赋值,因为我们是把频道虚拟成了群
 		message.Params.ChannelID = message.Params.GroupID.(string)
-		//读取ini 通过ChannelID取回之前储存的guild_id
-		// value, err := idmap.ReadConfigv2(message.Params.ChannelID, "guild_id")
-		// if err != nil {
-		// 	log.Printf("Error reading config: %v", err)
-		// 	return
-		// }
-		//这一句是group_private的逻辑,发频道信息用的是channelid,只有频道private需要guildid才需要这些逻辑
+		//这一句是group_private的逻辑,发频道信息用的是channelid
 		//message.Params.GroupID = value
 		handleSendGuildChannelMsg(client, api, apiv2, message)
 	case "guild_private":
 		//用group_id还原出channelid 这是虚拟成群的私聊信息
 		message.Params.ChannelID = message.Params.GroupID.(string)
+		// 使用RetrieveRowByIDv2还原真实的ChannelID
+		RChannelID, err := idmap.RetrieveRowByIDv2(message.Params.ChannelID)
+		if err != nil {
+			log.Printf("error retrieving real ChannelID: %v", err)
+		}
 		//读取ini 通过ChannelID取回之前储存的guild_id
-		value, err := idmap.ReadConfigv2(message.Params.ChannelID, "guild_id")
+		value, err := idmap.ReadConfigv2(RChannelID, "guild_id")
 		if err != nil {
 			log.Printf("Error reading config: %v", err)
 			return

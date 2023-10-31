@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
@@ -57,8 +58,13 @@ func handleGetGroupInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 
 	//用GroupID给ChannelID赋值,因为我们是把频道虚拟成了群
 	ChannelID := params.GroupID
+	// 使用RetrieveRowByIDv2还原真实的ChannelID
+	RChannelID, err := idmap.RetrieveRowByIDv2(ChannelID.(string))
+	if err != nil {
+		fmt.Printf("error retrieving real ChannelID: %v", err)
+	}
 	//读取ini 通过ChannelID取回之前储存的guild_id
-	value, err := idmap.ReadConfigv2(ChannelID.(string), "guild_id")
+	value, err := idmap.ReadConfigv2(RChannelID, "guild_id")
 	if err != nil {
 		log.Printf("handleGetGroupInfo:Error reading config: %v\n", err)
 		return
@@ -71,16 +77,8 @@ func handleGetGroupInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		log.Printf("获取频道信息失败: %v", err)
 		return
 	}
-	//用group_id还原出channelid 这是虚拟成群的私聊信息
-	message.Params.ChannelID = message.Params.GroupID.(string)
-	//读取ini 通过ChannelID取回之前储存的guild_id
-	GroupId, err := idmap.ReadConfigv2(message.Params.ChannelID, "guild_id")
-	if err != nil {
-		log.Printf("Error reading config: %v", err)
-		return
-	}
-	groupInfo := ConvertGuildToGroupInfo(guild, GroupId)
 
+	groupInfo := ConvertGuildToGroupInfo(guild, guildID)
 	groupInfoMap := structToMap(groupInfo)
 
 	// 打印groupInfoMap的内容

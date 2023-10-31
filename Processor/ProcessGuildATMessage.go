@@ -105,20 +105,20 @@ func (p *Processors) ProcessGuildATMessage(data *dto.WSATMessageData) error {
 		//将频道转化为一个群
 		//获取s
 		s := client.GetGlobalS()
-		//将channelid写入ini,可取出guild_id todo 比ini更好的储存方式
-		idmap.WriteConfigv2(data.ChannelID, "guild_id", data.GuildID)
+		//将channelid写入ini,可取出guild_id
+		ChannelID64, err := idmap.StoreIDv2(data.ChannelID)
+		if err != nil {
+			log.Printf("Error storing ID: %v", err)
+			return nil
+		}
+		//转成int再互转
+		idmap.WriteConfigv2(fmt.Sprint(ChannelID64), "guild_id", data.GuildID)
 		//转换at和图片
 		messageText := handlers.RevertTransformedText(data)
 		//转换appid
 		AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 		//构造echo
 		echostr := AppIDString + "_" + strconv.FormatInt(s, 10)
-		//把频道号作为群号
-		channelIDInt, err := strconv.Atoi(data.ChannelID)
-		if err != nil {
-			// handle error, perhaps return it
-			return fmt.Errorf("failed to convert ChannelID to int: %v", err)
-		}
 		//映射str的userid到int
 		userid64, err := idmap.StoreIDv2(data.Author.ID)
 		if err != nil {
@@ -142,7 +142,7 @@ func (p *Processors) ProcessGuildATMessage(data *dto.WSATMessageData) error {
 			RawMessage:  messageText,
 			Message:     segmentedMessages,
 			MessageID:   messageID,
-			GroupID:     int64(channelIDInt),
+			GroupID:     ChannelID64,
 			MessageType: "group",
 			PostType:    "message",
 			SelfID:      int64(p.Settings.AppID),
@@ -178,8 +178,8 @@ func (p *Processors) ProcessGuildATMessage(data *dto.WSATMessageData) error {
 		echo.AddMsgID(AppIDString, s, data.ID)
 		echo.AddMsgType(AppIDString, s, "guild")
 		//为不支持双向echo的ob服务端映射
-		echo.AddMsgID(AppIDString, int64(channelIDInt), data.ID)
-		echo.AddMsgType(AppIDString, int64(channelIDInt), "guild")
+		echo.AddMsgID(AppIDString, ChannelID64, data.ID)
+		echo.AddMsgType(AppIDString, ChannelID64, "guild")
 		//储存当前群或频道号的类型
 		idmap.WriteConfigv2(data.ChannelID, "type", "guild")
 
