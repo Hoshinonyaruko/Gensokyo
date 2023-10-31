@@ -45,8 +45,15 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 		//将真实id写入数据库,可取出ChannelID
 		idmap.WriteConfigv2(data.Author.ID, "channel_id", data.ChannelID)
 		//将channelid写入数据库,可取出guild_id
+		ChannelID64, err := idmap.StoreIDv2(data.ChannelID)
+		if err != nil {
+			log.Printf("Error storing ID: %v", err)
+			return nil
+		}
+		//转成int再互转
+		idmap.WriteConfigv2(fmt.Sprint(ChannelID64), "guild_id", data.GuildID)
+		//直接储存 适用于私信场景私聊
 		idmap.WriteConfigv2(data.ChannelID, "guild_id", data.GuildID)
-
 		//收到私聊信息调用的具体还原步骤
 		//1,idmap还原真实userid,
 		//2,通过idmap获取channelid,
@@ -168,6 +175,7 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 			echo.AddMsgType(AppIDString, userid64, "guild_private")
 			//储存当前群或频道号的类型
 			idmap.WriteConfigv2(data.ChannelID, "type", "guild_private")
+			//todo 完善频道类型信息转换
 
 			//调试
 			PrintStructWithFieldNames(onebotMsg)
@@ -184,7 +192,7 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 				log.Printf("Error storing ID: %v", err)
 				return nil
 			}
-			//转成int再互转
+			//转成int再互转 适用于群场景私聊
 			idmap.WriteConfigv2(fmt.Sprint(ChannelID64), "guild_id", data.GuildID)
 			//转换at
 			messageText := handlers.RevertTransformedText(data)
@@ -254,7 +262,8 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 			echo.AddMsgID(AppIDString, userid64, data.ID)
 			echo.AddMsgType(AppIDString, userid64, "guild_private")
 			//储存当前群或频道号的类型
-			idmap.WriteConfigv2(data.ChannelID, "type", "guild_private")
+			idmap.WriteConfigv2(fmt.Sprint(ChannelID64), "type", "guild_private")
+			echo.AddMsgType(AppIDString, ChannelID64, "guild_private")
 
 			//调试
 			PrintStructWithFieldNames(groupMsg)

@@ -9,6 +9,7 @@ import (
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/config"
+	"github.com/hoshinonyaruko/gensokyo/idmap"
 
 	"github.com/hoshinonyaruko/gensokyo/echo"
 
@@ -50,6 +51,7 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 		messageText, foundItems := parseMessageContent(params)
 
 		channelID := params.ChannelID
+		log.Printf("发送文本信息失败: %v,%v", channelID, channelID)
 		// 使用 echo 获取消息ID
 		var messageID string
 		if echoStr, ok := message.Echo.(string); ok {
@@ -63,8 +65,8 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 		}
 		log.Println("频道发信息messageText:", messageText)
 		log.Println("foundItems:", foundItems)
-		var err error
 		// 优先发送文本信息
+		var err error
 		if messageText != "" {
 			textMsg, _ := generateReplyMessage(messageID, nil, messageText)
 			if _, err = api.PostMessage(context.TODO(), channelID, textMsg); err != nil {
@@ -112,13 +114,18 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 		params := message.Params
 		channelID := params.ChannelID
 		guildID := params.GuildID
-		handleSendGuildChannelPrivateMsg(client, api, apiv2, message, &guildID, &channelID)
+		// 使用RetrieveRowByIDv2还原真实的ChannelID
+		RChannelID, err := idmap.RetrieveRowByIDv2(channelID)
+		if err != nil {
+			log.Printf("error retrieving real UserID: %v", err)
+		}
+		handleSendGuildChannelPrivateMsg(client, api, apiv2, message, &guildID, &RChannelID)
 	default:
 		log.Printf("2Unknown message type: %s", msgType)
 	}
 }
 
-// 组合发频道信息需要的MessageToCreate
+// 组合发频道信息需要的MessageToCreate 支持base64
 func generateReplyMessage(id string, foundItems map[string][]string, messageText string) (*dto.MessageToCreate, bool) {
 	var reply dto.MessageToCreate
 	var isBase64 bool
@@ -129,7 +136,13 @@ func generateReplyMessage(id string, foundItems map[string][]string, messageText
 		if err != nil {
 			// 读入文件,如果是本地图,应用端和gensokyo需要在一台电脑
 			log.Printf("Error reading the image from path %s: %v", imageURLs[0], err)
-			return nil, false
+			// 发文本信息，提示图片文件不存在
+			reply = dto.MessageToCreate{
+				Content: "错误: 图片文件不存在",
+				MsgID:   id,
+				MsgType: 0, // 默认文本类型
+			}
+			return &reply, false
 		}
 
 		//base64编码

@@ -28,6 +28,21 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		msgType = echo.GetMsgTypeByKey(echoStr)
 	}
 
+	//如果获取不到 就用group_id获取信息类型
+	if msgType == "" {
+		appID := config.GetAppIDStr()
+		groupID := message.Params.GroupID
+		fmt.Printf("appID: %s, GroupID: %v\n", appID, groupID)
+
+		msgType = GetMessageTypeByGroupid(appID, groupID)
+		fmt.Printf("msgType: %s\n", msgType)
+	}
+
+	//如果获取不到 就用user_id获取信息类型
+	if msgType == "" {
+		msgType = GetMessageTypeByUserid(config.GetAppIDStr(), message.Params.UserID)
+	}
+
 	switch msgType {
 	case "group_private":
 		//私聊信息
@@ -251,13 +266,8 @@ func getGuildIDFromMessage(message callapi.ActionMessage) (string, string, error
 	if err != nil {
 		return "", "", fmt.Errorf("error reading channel_id: %v", err)
 	}
-	// 使用RetrieveRowByIDv2还原真实的ChannelID
-	RChannelID, err := idmap.RetrieveRowByIDv2(channelID)
-	if err != nil {
-		log.Printf("error retrieving real UserID: %v", err)
-	}
-	// 使用channelID作为sectionName从数据库中获取guild_id
-	guildID, err := idmap.ReadConfigv2(RChannelID, "guild_id")
+	//使用channelID作为sectionName从数据库中获取guild_id
+	guildID, err := idmap.ReadConfigv2(channelID, "guild_id")
 	if err != nil {
 		return "", "", fmt.Errorf("error reading guild_id: %v", err)
 	}
