@@ -20,13 +20,12 @@ func setGroupBan(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenA
 	// 从message中获取group_id和UserID
 	groupID := message.Params.GroupID.(string)
 	receivedUserID := message.Params.UserID.(string)
-	// 根据RChannelID读取guild_id
+	//读取ini 通过ChannelID取回之前储存的guild_id
 	guildID, err := idmap.ReadConfigv2(groupID, "guild_id")
 	if err != nil {
-		log.Printf("Error reading config for guild_id: %v", err)
+		log.Printf("Error reading config: %v", err)
 		return
 	}
-
 	// 根据UserID读取真实的userid
 	realUserID, err := idmap.RetrieveRowByIDv2(receivedUserID)
 	if err != nil {

@@ -133,12 +133,6 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 		// 先尝试将GroupID断言为字符串
 		if channelID, ok := message.Params.GroupID.(string); ok && channelID != "" {
 			channelIDPtr = &channelID
-			// 使用RetrieveRowByIDv2还原真实的UserID
-			RChannelID, err := idmap.RetrieveRowByIDv2(*channelIDPtr)
-			if err != nil {
-				log.Printf("error retrieving real ChannelID: %v", err)
-				return
-			}
 			// 读取bolt数据库 通过ChannelID取回之前储存的guild_id
 			if value, err := idmap.ReadConfigv2(*channelIDPtr, "guild_id"); err == nil && value != "" {
 				GuildidPtr = &value
