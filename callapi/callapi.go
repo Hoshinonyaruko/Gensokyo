@@ -130,6 +130,7 @@ type Client interface {
 // 为了解决processor和server循环依赖设计的接口
 type WebSocketServerClienter interface {
 	SendMessage(message map[string]interface{}) error
+	Close() error
 }
 
 // 根据action订阅handler处理api
