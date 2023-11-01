@@ -51,14 +51,6 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			messageID = echo.GetMsgIDByKey(echoStr)
 			log.Println("echo取群组发信息对应的message_id:", messageID)
 		}
-		log.Println("群组发信息messageText:", messageText)
-		log.Println("foundItems:", foundItems)
-		// 如果messageID为空，通过函数获取
-		if messageID == "" {
-			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), message.Params.GroupID)
-			log.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
-		}
-
 		//通过bolt数据库还原真实的GroupID
 		originalGroupID, err := idmap.RetrieveRowByIDv2(message.Params.GroupID.(string))
 		if err != nil {
@@ -66,6 +58,13 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			return
 		}
 		message.Params.GroupID = originalGroupID
+		log.Println("群组发信息messageText:", messageText)
+		//log.Println("foundItems:", foundItems)
+		// 如果messageID为空，通过函数获取
+		if messageID == "" {
+			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), message.Params.GroupID)
+			log.Println("通过GetMessageIDByUseridOrGroupid函数获取的message_id:", message.Params.GroupID, messageID)
+		}
 
 		// 优先发送文本信息
 		if messageText != "" {

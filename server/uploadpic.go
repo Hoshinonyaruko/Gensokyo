@@ -95,8 +95,15 @@ func UploadBase64ImageHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 			return
 		}
 
-		imageURL := fmt.Sprintf("http://%s:%s/channel_temp/%s", serverAddress, serverPort, fileName)
+		// 根据serverPort确定协议
+		protocol := "http"
+		if serverPort == "443" {
+			protocol = "https"
+		}
+
+		imageURL := fmt.Sprintf("%s://%s:%s/channel_temp/%s", protocol, serverAddress, serverPort, fileName)
 		c.JSON(http.StatusOK, gin.H{"url": imageURL})
+
 	}
 }
 

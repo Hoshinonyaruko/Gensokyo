@@ -121,10 +121,16 @@ func decodeBase64IfNeeded(input string) string {
 
 // 生成短链接
 func GenerateShortURL(longURL string) string {
+	// 根据portValue确定协议
+	protocol := "http"
+	portValue := config.GetPortValue()
+	if portValue == "443" {
+		protocol = "https"
+	}
+
 	if config.GetLotusValue() {
 		serverDir := config.GetServer_dir()
-		portValue := config.GetPortValue()
-		url := fmt.Sprintf("http://%s:%s/url", serverDir, portValue)
+		url := fmt.Sprintf("%s://%s:%s/url", protocol, serverDir, portValue)
 
 		payload := map[string]string{"longURL": longURL}
 		jsonPayload, err := json.Marshal(payload)
@@ -212,10 +218,16 @@ func existsInDB(shortURL string) (bool, error) {
 
 // 从数据库获取短链接
 func getLongURLFromDB(shortURL string) (string, error) {
+	// 根据portValue确定协议
+	protocol := "http"
+	portValue := config.GetPortValue()
+	if portValue == "443" {
+		protocol = "https"
+	}
+
 	if config.GetLotusValue() {
 		serverDir := config.GetServer_dir()
-		portValue := config.GetPortValue()
-		url := fmt.Sprintf("http://%s:%s/url/%s", serverDir, portValue, shortURL)
+		url := fmt.Sprintf("%s://%s:%s/url/%s", protocol, serverDir, portValue, shortURL)
 
 		resp, err := http.Get(url)
 		if err != nil {
@@ -321,7 +333,7 @@ func RedirectFromShortURLHandler(c *gin.Context) {
 	// Ensure longURL has a scheme (http or https)
 	if !strings.HasPrefix(longURL, "http://") && !strings.HasPrefix(longURL, "https://") {
 		// Add default scheme if missing
-		longURL = "http://" + longURL
+		longURL = "https://" + longURL
 	}
 
 	c.Redirect(http.StatusMovedPermanently, longURL)

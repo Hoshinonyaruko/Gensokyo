@@ -177,6 +177,11 @@ func main() {
 		r.GET("/getid", server.GetIDHandler)
 		r.POST("/uploadpic", server.UploadBase64ImageHandler(rateLimiter))
 		r.Static("/channel_temp", "./channel_temp")
+		//webui和它的api
+		r.Static("/webui", "./dist")
+		//r.GET("/webui/api/serverdata", getServerDataHandler)
+		//r.GET("/webui/api/logdata", getLogDataHandler)
+		//正向ws
 		r.GET("/ws", server.WsHandlerWithDependencies(api, apiV2, p))
 		r.POST("/url", url.CreateShortURLHandler)
 		r.GET("/url/:shortURL", url.RedirectFromShortURLHandler)
@@ -189,12 +194,13 @@ func main() {
 				c.String(200, content)
 			})
 		}
-		// 创建一个http.Server实例
-		httpServer = &http.Server{
+		// 创建一个http.Server实例（主服务器）
+		httpServer := &http.Server{
 			Addr:    "0.0.0.0:" + conf.Settings.Port,
 			Handler: r,
 		}
-		// 在一个新的goroutine中启动Gin服务器
+
+		// 在一个新的goroutine中启动主服务器
 		go func() {
 			if conf.Settings.Port == "443" {
 				// 使用HTTPS
@@ -214,6 +220,22 @@ func main() {
 				}
 			}
 		}()
+
+		// 如果主服务器使用443端口，同时在一个新的goroutine中启动444端口的HTTP服务器 todo 更优解
+		if conf.Settings.Port == "443" {
+			go func() {
+				// 创建另一个http.Server实例（用于444端口）
+				httpServer444 := &http.Server{
+					Addr:    "0.0.0.0:444",
+					Handler: r,
+				}
+
+				// 启动444端口的HTTP服务器
+				if err := httpServer444.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+					log.Fatalf("listen (HTTP 444): %s\n", err)
+				}
+			}()
+		}
 	}
 
 	// 使用通道来等待信号

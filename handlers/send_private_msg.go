@@ -69,7 +69,7 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			log.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
 		}
 		log.Println("私聊发信息messageText:", messageText)
-		log.Println("foundItems:", foundItems)
+		//log.Println("foundItems:", foundItems)
 
 		// 优先发送文本信息
 		if messageText != "" {
@@ -178,7 +178,7 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 		log.Println("echo取私聊发信息对应的message_id:", messageID)
 	}
 	log.Println("私聊信息messageText:", messageText)
-	log.Println("foundItems:", foundItems)
+	//log.Println("foundItems:", foundItems)
 	// 如果messageID为空，通过函数获取
 	if messageID == "" {
 		messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), message.Params.UserID)

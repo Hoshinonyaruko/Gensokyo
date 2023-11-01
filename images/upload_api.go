@@ -15,10 +15,16 @@ import (
 
 // 将base64图片通过lotus转换成url
 func UploadBase64ImageToServer(base64Image string) (string, error) {
+	// 根据serverPort确定协议
+	protocol := "http"
+	serverPort := config.GetPortValue()
+	if serverPort == "443" {
+		protocol = "https"
+	}
+
 	if config.GetLotusValue() {
 		serverDir := config.GetServer_dir()
-		serverPort := config.GetPortValue()
-		url := fmt.Sprintf("http://%s:%s/uploadpic", serverDir, serverPort)
+		url := fmt.Sprintf("%s://%s:%s/uploadpic", protocol, serverDir, serverPort)
 
 		resp, err := postImageToServer(base64Image, url)
 		if err != nil {
@@ -28,8 +34,14 @@ func UploadBase64ImageToServer(base64Image string) (string, error) {
 	}
 
 	serverDir := config.GetServer_dir()
+	// 当端口是443时，使用HTTP和444端口
+	if serverPort == "443" {
+		protocol = "http"
+		serverPort = "444"
+	}
+
 	if isPublicAddress(serverDir) {
-		url := fmt.Sprintf("http://127.0.0.1:%s/uploadpic", config.GetPortValue())
+		url := fmt.Sprintf("%s://127.0.0.1:%s/uploadpic", protocol, serverPort)
 
 		resp, err := postImageToServer(base64Image, url)
 		if err != nil {

@@ -64,7 +64,7 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 			log.Println("通过GetMessageIDByUseridOrGroupid函数获取的message_id:", messageID)
 		}
 		log.Println("频道发信息messageText:", messageText)
-		log.Println("foundItems:", foundItems)
+		//log.Println("foundItems:", foundItems)
 		// 优先发送文本信息
 		var err error
 		if messageText != "" {
