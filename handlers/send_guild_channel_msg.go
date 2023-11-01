@@ -61,7 +61,7 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 		// 如果messageID为空，通过函数获取
 		if messageID == "" {
 			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), channelID)
-			log.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
+			log.Println("通过GetMessageIDByUseridOrGroupid函数获取的message_id:", messageID)
 		}
 		log.Println("频道发信息messageText:", messageText)
 		log.Println("foundItems:", foundItems)

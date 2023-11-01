@@ -235,7 +235,11 @@ func GetMessageIDByUseridOrGroupid(appID string, userID interface{}) string {
 		// 可能需要处理其他类型或报错
 		return ""
 	}
-
-	key := appID + "_" + userIDStr
+	//将真实id转为int
+	userid64, err := idmap.StoreIDv2(userIDStr)
+	if err != nil {
+		log.Fatalf("Error storing ID 241: %v", err)
+	}
+	key := appID + "_" + fmt.Sprint(userid64)
 	return echo.GetMsgIDByKey(key)
 }
