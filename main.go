@@ -9,14 +9,18 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/hoshinonyaruko/gensokyo/Processor"
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/handlers"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/server"
+	"github.com/hoshinonyaruko/gensokyo/sys"
+	"github.com/hoshinonyaruko/gensokyo/template"
 	"github.com/hoshinonyaruko/gensokyo/url"
 	"github.com/hoshinonyaruko/gensokyo/webui"
 	"github.com/hoshinonyaruko/gensokyo/wsclient"
@@ -35,7 +39,17 @@ var p *Processor.Processors
 
 func main() {
 	if _, err := os.Stat("config.yml"); os.IsNotExist(err) {
-		err = os.WriteFile("config.yml", []byte(configTemplate), 0644)
+		// 获取内网IP地址
+		ip, err := sys.GetLocalIP()
+		if err != nil {
+			log.Println("Error retrieving the local IP address:", err)
+			return
+		}
+		// 将 <YOUR_SERVER_DIR> 替换成实际的内网IP地址 确保初始状态webui能够被访问
+		configData := strings.Replace(template.ConfigTemplate, "<YOUR_SERVER_DIR>", ip, -1)
+
+		// 将修改后的配置写入 config.yml
+		err = os.WriteFile("config.yml", []byte(configData), 0644)
 		if err != nil {
 			log.Println("Error writing config.yml:", err)
 			return
@@ -53,119 +67,145 @@ func main() {
 	if err != nil {
 		log.Fatalf("error: %v", err)
 	}
-	//获取bot的token
-	token := token.BotToken(conf.Settings.AppID, conf.Settings.ClientSecret, conf.Settings.Token, token.TypeQQBot)
+	webuiURL := config.ComposeWebUIURL()     // 调用函数获取URL
+	webuiURLv2 := config.ComposeWebUIURLv2() // 调用函数获取URL
 
-	ctx := context.Background()
-	if err := token.InitToken(ctx); err != nil {
-		log.Fatalln(err)
-	}
+	var api openapi.OpenAPI
+	var apiV2 openapi.OpenAPI
+	var wsClients []*wsclient.WebSocketClient
+	var nologin bool
 
-	//读取intent
-	if len(conf.Settings.TextIntent) == 0 {
-		// 如果 TextIntent 数组为空，抛出错误
-		panic(errors.New("TextIntent is empty, at least one intent should be specified"))
-	}
+	if conf.Settings.AppID == 12345 {
+		// 输出天蓝色文本
+		cyan := color.New(color.FgCyan)
+		cyan.Printf("欢迎来到Gensokyo, 控制台地址: %s\n", webuiURL)
+		log.Println("请完成机器人配置后重启框架。")
 
-	// 创建 v1 版本的 OpenAPI 实例
-	if err := botgo.SelectOpenAPIVersion(openapi.APIv1); err != nil {
-		log.Fatalln(err)
-	}
-	api := botgo.NewOpenAPI(token).WithTimeout(3 * time.Second)
+	} else {
+		//获取bot的token
+		token := token.BotToken(conf.Settings.AppID, conf.Settings.ClientSecret, conf.Settings.Token, token.TypeQQBot)
 
-	// 创建 v2 版本的 OpenAPI 实例
-	if err := botgo.SelectOpenAPIVersion(openapi.APIv2); err != nil {
-		log.Fatalln(err)
-	}
-	apiV2 := botgo.NewOpenAPI(token).WithTimeout(3 * time.Second)
-
-	// 执行API请求 显示机器人信息
-	me, err := api.Me(ctx) // Adjusted to pass only the context
-	if err != nil {
-		log.Printf("Error fetching bot details: %v\n", err)
-		return
-	}
-	log.Printf("Bot details: %+v\n", me)
-
-	//初始化handlers
-	handlers.BotID = me.ID
-	//handlers.BotID = "1234"
-	handlers.AppID = fmt.Sprintf("%d", conf.Settings.AppID)
-
-	// 获取 websocket 信息 这里用哪一个api获取就是用哪一个api去连接ws
-	// 测试群时候用api2 并且要注释掉api.me
-	//似乎正式场景都可以用apiv2(群)的方式获取ws连接,包括频道的机器人
-	//疑问: 为什么无法用apiv2的方式调用频道的getme接口,会报错
-	wsInfo, err := apiV2.WS(ctx, nil, "")
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	// 定义和初始化intent变量
-	var intent dto.Intent = 0
-
-	//动态订阅intent
-	for _, handlerName := range conf.Settings.TextIntent {
-		handler, ok := getHandlerByName(handlerName)
-		if !ok {
-			log.Printf("Unknown handler: %s\n", handlerName)
-			continue
-		}
-
-		//多次位与 并且订阅事件
-		intent |= websocket.RegisterHandlers(handler)
-	}
-
-	log.Printf("注册 intents: %v\n", intent)
-
-	// 启动session manager以管理websocket连接
-	// 指定需要启动的分片数为 2 的话可以手动修改 wsInfo
-	go func() {
-		wsInfo.Shards = 1
-		if err = botgo.NewSessionManager().Start(wsInfo, token, &intent); err != nil {
+		ctx := context.Background()
+		if err := token.InitToken(ctx); err != nil {
 			log.Fatalln(err)
 		}
-	}()
 
-	// 启动多个WebSocket客户端
-	wsClients := []*wsclient.WebSocketClient{}
-	wsClientChan := make(chan *wsclient.WebSocketClient, len(conf.Settings.WsAddress))
-	errorChan := make(chan error, len(conf.Settings.WsAddress))
-
-	for _, wsAddr := range conf.Settings.WsAddress {
-		go func(address string) {
-			wsClient, err := wsclient.NewWebSocketClient(address, conf.Settings.AppID, api, apiV2)
-			if err != nil {
-				log.Printf("Error creating WebSocketClient for address %s: %v\n", address, err)
-				errorChan <- err
-				return
-			}
-			wsClientChan <- wsClient
-		}(wsAddr)
-	}
-
-	// 获取连接成功后的wsClient
-	for i := 0; i < len(conf.Settings.WsAddress); i++ {
-		select {
-		case wsClient := <-wsClientChan:
-			wsClients = append(wsClients, wsClient)
-		case err := <-errorChan:
-			log.Printf("Error encountered while initializing WebSocketClient: %v\n", err)
+		//读取intent
+		if len(conf.Settings.TextIntent) == 0 {
+			// 如果 TextIntent 数组为空，抛出错误
+			panic(errors.New("TextIntent is empty, at least one intent should be specified"))
 		}
+
+		// 创建 v1 版本的 OpenAPI 实例
+		if err := botgo.SelectOpenAPIVersion(openapi.APIv1); err != nil {
+			log.Fatalln(err)
+		}
+		api = botgo.NewOpenAPI(token).WithTimeout(3 * time.Second)
+
+		// 创建 v2 版本的 OpenAPI 实例
+		if err := botgo.SelectOpenAPIVersion(openapi.APIv2); err != nil {
+			log.Fatalln(err)
+		}
+		apiV2 = botgo.NewOpenAPI(token).WithTimeout(3 * time.Second)
+
+		// 执行API请求 显示机器人信息
+		me, err := api.Me(ctx) // Adjusted to pass only the context
+		if err != nil {
+			log.Printf("Error fetching bot details: %v\n", err)
+			//return
+			nologin = true
+		}
+		log.Printf("Bot details: %+v\n", me)
+		if !nologin {
+			//初始化handlers
+			handlers.BotID = me.ID
+			//handlers.BotID = "1234"
+			handlers.AppID = fmt.Sprintf("%d", conf.Settings.AppID)
+
+			// 获取 websocket 信息 这里用哪一个api获取就是用哪一个api去连接ws
+			// 测试群时候用api2 并且要注释掉api.me
+			//似乎正式场景都可以用apiv2(群)的方式获取ws连接,包括频道的机器人
+			//疑问: 为什么无法用apiv2的方式调用频道的getme接口,会报错
+			wsInfo, err := apiV2.WS(ctx, nil, "")
+			if err != nil {
+				log.Fatalln(err)
+			}
+
+			// 定义和初始化intent变量
+			var intent dto.Intent = 0
+
+			//动态订阅intent
+			for _, handlerName := range conf.Settings.TextIntent {
+				handler, ok := getHandlerByName(handlerName)
+				if !ok {
+					log.Printf("Unknown handler: %s\n", handlerName)
+					continue
+				}
+
+				//多次位与 并且订阅事件
+				intent |= websocket.RegisterHandlers(handler)
+			}
+
+			log.Printf("注册 intents: %v\n", intent)
+
+			// 启动session manager以管理websocket连接
+			// 指定需要启动的分片数为 2 的话可以手动修改 wsInfo
+			go func() {
+				wsInfo.Shards = 1
+				if err = botgo.NewSessionManager().Start(wsInfo, token, &intent); err != nil {
+					log.Fatalln(err)
+				}
+			}()
+
+			// 启动多个WebSocket客户端
+			wsClientChan := make(chan *wsclient.WebSocketClient, len(conf.Settings.WsAddress))
+			errorChan := make(chan error, len(conf.Settings.WsAddress))
+
+			for _, wsAddr := range conf.Settings.WsAddress {
+				go func(address string) {
+					wsClient, err := wsclient.NewWebSocketClient(address, conf.Settings.AppID, api, apiV2)
+					if err != nil {
+						log.Printf("Error creating WebSocketClient for address %s: %v\n", address, err)
+						errorChan <- err
+						return
+					}
+					wsClientChan <- wsClient
+				}(wsAddr)
+			}
+
+			// 获取连接成功后的wsClient
+			for i := 0; i < len(conf.Settings.WsAddress); i++ {
+				select {
+				case wsClient := <-wsClientChan:
+					wsClients = append(wsClients, wsClient)
+				case err := <-errorChan:
+					log.Printf("Error encountered while initializing WebSocketClient: %v\n", err)
+				}
+			}
+
+			// 确保所有wsClients都已初始化
+			if len(wsClients) != len(conf.Settings.WsAddress) {
+				log.Println("Error: Not all wsClients are initialized!")
+				log.Fatalln("Failed to initialize all WebSocketClients.")
+			} else {
+				log.Println("All wsClients are successfully initialized.")
+				p = Processor.NewProcessor(api, apiV2, &conf.Settings, wsClients)
+			}
+		} else {
+			// 设置颜色为红色
+			red := color.New(color.FgRed)
+			// 输出红色文本
+			red.Println("请设置正确的appid、token、clientsecret再试")
+		}
+
 	}
 
-	// 确保所有wsClients都已初始化
-	if len(wsClients) != len(conf.Settings.WsAddress) {
-		log.Println("Error: Not all wsClients are initialized!")
-		log.Fatalln("Failed to initialize all WebSocketClients.")
-	} else {
-		log.Println("All wsClients are successfully initialized.")
-		p = Processor.NewProcessor(api, apiV2, &conf.Settings, wsClients)
-	}
-
-	//创建idmap服务器
+	//创建idmap服务器 数据库
 	idmap.InitializeDB()
+	//创建webui数据库
+	webui.InitializeDB()
 	defer idmap.CloseDB()
+	defer webui.CloseDB()
 
 	//图片上传 调用次数限制
 	rateLimiter := server.NewRateLimiter()
@@ -188,12 +228,17 @@ func main() {
 		webuiGroup := r.Group("/webui")
 		{
 			webuiGroup.GET("/*filepath", webui.CombinedMiddleware)
+			webuiGroup.POST("/*filepath", webui.CombinedMiddleware)
 			webuiGroup.PUT("/*filepath", webui.CombinedMiddleware)
+			webuiGroup.DELETE("/*filepath", webui.CombinedMiddleware)
+			webuiGroup.PATCH("/*filepath", webui.CombinedMiddleware)
 		}
 		//r.GET("/webui/api/serverdata", getServerDataHandler)
 		//r.GET("/webui/api/logdata", getLogDataHandler)
 		//正向ws
-		r.GET("/ws", server.WsHandlerWithDependencies(api, apiV2, p))
+		if conf.Settings.AppID != 12345 {
+			r.GET("/ws", server.WsHandlerWithDependencies(api, apiV2, p))
+		}
 		r.POST("/url", url.CreateShortURLHandler)
 		r.GET("/url/:shortURL", url.RedirectFromShortURLHandler)
 		if config.GetIdentifyFile() {
@@ -248,6 +293,11 @@ func main() {
 			}()
 		}
 	}
+	// 使用color库输出天蓝色的文本
+	cyan := color.New(color.FgCyan)
+	cyan.Printf("欢迎来到Gensokyo, 控制台地址: %s\n", webuiURL)
+	cyan.Printf("%s\n", template.Logo)
+	cyan.Printf("欢迎来到Gensokyo, 公网控制台地址(需开放端口): %s\n", webuiURLv2)
 
 	// 使用通道来等待信号
 	sigCh := make(chan os.Signal, 1)

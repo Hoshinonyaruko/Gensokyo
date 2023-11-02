@@ -1,13 +1,16 @@
-// config/config.go
-
 package config
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/hoshinonyaruko/gensokyo/mylog"
+	"github.com/hoshinonyaruko/gensokyo/sys"
+	"github.com/hoshinonyaruko/gensokyo/template"
 	"gopkg.in/yaml.v3"
 )
 
@@ -41,6 +44,8 @@ type Settings struct {
 	Crt                    string   `yaml:"crt"`
 	Key                    string   `yaml:"key"`
 	DeveloperLog           bool     `yaml:"developer_log"`
+	Username               string   `yaml:"server_user_name"`
+	Password               string   `yaml:"server_user_password"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -63,6 +68,79 @@ func LoadConfig(path string) (*Config, error) {
 	mu.Unlock()
 
 	return conf, nil
+}
+
+// UpdateConfig 将配置写入文件
+func UpdateConfig(conf *Config, path string) error {
+	data, err := yaml.Marshal(conf)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0644)
+}
+
+// WriteYAMLToFile 将YAML格式的字符串写入到指定的文件路径
+func WriteYAMLToFile(yamlContent string) error {
+	// 获取当前执行的可执行文件的路径
+	exePath, err := os.Executable()
+	if err != nil {
+		log.Println("Error getting executable path:", err)
+		return err
+	}
+
+	// 获取可执行文件所在的目录
+	exeDir := filepath.Dir(exePath)
+
+	// 构建config.yml的完整路径
+	configPath := filepath.Join(exeDir, "config.yml")
+
+	// 写入文件
+	os.WriteFile(configPath, []byte(yamlContent), 0644)
+
+	sys.RestartApplication()
+	return nil
+}
+
+// DeleteConfig 删除配置文件并创建一个新的配置文件模板
+func DeleteConfig() error {
+	// 获取当前执行的可执行文件的路径
+	exePath, err := os.Executable()
+	if err != nil {
+		mylog.Println("Error getting executable path:", err)
+		return err
+	}
+
+	// 获取可执行文件所在的目录
+	exeDir := filepath.Dir(exePath)
+
+	// 构建config.yml的完整路径
+	configPath := filepath.Join(exeDir, "config.yml")
+
+	// 删除配置文件
+	if err := os.Remove(configPath); err != nil {
+		mylog.Println("Error removing config file:", err)
+		return err
+	}
+
+	// 获取内网IP地址
+	ip, err := sys.GetLocalIP()
+	if err != nil {
+		mylog.Println("Error retrieving the local IP address:", err)
+		return err
+	}
+
+	// 将 <YOUR_SERVER_DIR> 替换成实际的内网IP地址
+	configData := strings.Replace(template.ConfigTemplate, "<YOUR_SERVER_DIR>", ip, -1)
+
+	// 创建一个新的配置文件模板 写到配置
+	if err := os.WriteFile(configPath, []byte(configData), 0644); err != nil {
+		mylog.Println("Error writing config.yml:", err)
+		return err
+	}
+
+	sys.RestartApplication()
+
+	return nil
 }
 
 // 获取ws地址数组
@@ -233,4 +311,59 @@ func GetDeveloperLog() bool {
 		return false
 	}
 	return instance.Settings.DeveloperLog
+}
+
+// ComposeWebUIURL 组合webui的完整访问地址
+func ComposeWebUIURL() string {
+	serverDir := GetServer_dir()
+	port := GetPortValue()
+
+	// 判断端口是不是443，如果是，则使用https协议
+	protocol := "http"
+	if port == "443" {
+		protocol = "https"
+	}
+
+	// 组合出完整的URL
+	return fmt.Sprintf("%s://%s:%s/webui", protocol, serverDir, port)
+}
+
+// ComposeWebUIURL 组合webui的完整访问地址
+func ComposeWebUIURLv2() string {
+	ip, _ := sys.GetPublicIP()
+
+	port := GetPortValue()
+
+	// 判断端口是不是443，如果是，则使用https协议
+	protocol := "http"
+	if port == "443" {
+		protocol = "https"
+	}
+
+	// 组合出完整的URL
+	return fmt.Sprintf("%s://%s:%s/webui", protocol, ip, port)
+}
+
+// GetServerUserName 获取服务器用户名
+func GetServerUserName() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get server user name.")
+		return ""
+	}
+	return instance.Settings.Username
+}
+
+// GetServerUserPassword 获取服务器用户密码
+func GetServerUserPassword() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get server user password.")
+		return ""
+	}
+	return instance.Settings.Password
 }
