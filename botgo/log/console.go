@@ -2,6 +2,7 @@ package log
 
 import (
 	"fmt"
+	"log"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -65,5 +66,5 @@ func output(level string, v ...interface{}) {
 
 	logFormat := "[%s] %s %s:%d:%s " + fmt.Sprint(v...) + "\n"
 	date := time.Now().Format("2006-01-02 15:04:05")
-	fmt.Printf(logFormat, level, date, file, line, funcName)
+	log.Printf(logFormat, level, date, file, line, funcName)
 }

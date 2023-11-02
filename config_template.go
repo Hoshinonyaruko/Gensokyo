@@ -41,8 +41,8 @@ settings:
   master_id : ["1","2"]     #群场景尚未开放获取管理员和列表能力,手动从日志中获取需要设置为管理,的user_id并填入(适用插件有权限判断场景)
   enable_ws_server: true    #是否启用正向ws服务器 监听server_dir:port/ws
   ws_server_token : "12345" #正向ws的token 不启动正向ws可忽略
-  ws_server_token : "12345" #正向ws的token 不启动正向ws可忽略
   identify_file: true  #自动生成域名校验文件,在q.qq.com配置信息URL,在server_dir填入自己已备案域名,正确解析到机器人所在服务器ip地址,机器人即可发送链接
   crt: "" #证书路径 从你的域名服务商或云服务商申请签发SSL证书(qq要求SSL) 
   key: "" #密钥路径 Apache（crt文件、key文件）示例: "C:\\123.key" \需要双写成\\
+  developer_log : false    #开启开发者日志 默认关闭
 `

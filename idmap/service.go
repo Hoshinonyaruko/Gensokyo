@@ -12,6 +12,7 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/hoshinonyaruko/gensokyo/config"
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 )
 
 const (
@@ -86,8 +87,14 @@ func StoreIDv2(id string) (int64, error) {
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
 
+		// 根据portValue确定协议
+		protocol := "http"
+		if portValue == "443" {
+			protocol = "https"
+		}
+
 		// 构建请求URL
-		url := fmt.Sprintf("http://%s:%s/getid?type=1&id=%s", serverDir, portValue, id)
+		url := fmt.Sprintf("%s://%s:%s/getid?type=1&id=%s", protocol, serverDir, portValue, id)
 		resp, err := http.Get(url)
 		if err != nil {
 			return 0, fmt.Errorf("failed to send request: %v", err)
@@ -136,13 +143,19 @@ func RetrieveRowByID(rowid string) (string, error) {
 
 // RetrieveRowByIDv2 根据b得到a
 func RetrieveRowByIDv2(rowid string) (string, error) {
+	// 根据portValue确定协议
+	protocol := "http"
+	portValue := config.GetPortValue()
+	if portValue == "443" {
+		protocol = "https"
+	}
+
 	if config.GetLotusValue() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
-		portValue := config.GetPortValue()
 
 		// 构建请求URL
-		url := fmt.Sprintf("http://%s:%s/getid?type=2&id=%s", serverDir, portValue, rowid)
+		url := fmt.Sprintf("%s://%s:%s/getid?type=2&id=%s", protocol, serverDir, portValue, rowid)
 		resp, err := http.Get(url)
 		if err != nil {
 			return "", fmt.Errorf("failed to send request: %v", err)
@@ -175,17 +188,17 @@ func WriteConfig(sectionName, keyName, value string) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b, err := tx.CreateBucketIfNotExists([]byte(ConfigBucket))
 		if err != nil {
-			log.Printf("Error creating or accessing bucket: %v", err)
+			mylog.Printf("Error creating or accessing bucket: %v", err)
 			return fmt.Errorf("failed to access or create bucket %s: %w", ConfigBucket, err)
 		}
 
 		key := joinSectionAndKey(sectionName, keyName)
 		err = b.Put(key, []byte(value))
 		if err != nil {
-			log.Printf("Error putting data into bucket with key %s: %v", key, err)
+			mylog.Printf("Error putting data into bucket with key %s: %v", key, err)
 			return fmt.Errorf("failed to put data into bucket with key %s: %w", key, err)
 		}
-		//log.Printf("Data saved successfully with key %s,value %s", key, value)
+		//mylog.Printf("Data saved successfully with key %s,value %s", key, value)
 		return nil
 	})
 }
@@ -197,8 +210,15 @@ func WriteConfigv2(sectionName, keyName, value string) error {
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
 
+		// 根据portValue确定协议
+		protocol := "http"
+		if portValue == "443" {
+			protocol = "https"
+		}
+
 		// 构建请求URL和参数
-		baseURL := fmt.Sprintf("http://%s:%s/getid", serverDir, portValue)
+		baseURL := fmt.Sprintf("%s://%s:%s/getid", protocol, serverDir, portValue)
+
 		params := url.Values{}
 		params.Add("type", "3")
 		params.Add("id", sectionName)
@@ -247,13 +267,19 @@ func ReadConfig(sectionName, keyName string) (string, error) {
 
 // ReadConfigv2 根据a和b取出c
 func ReadConfigv2(sectionName, keyName string) (string, error) {
+	// 根据portValue确定协议
+	protocol := "http"
+	portValue := config.GetPortValue()
+	if portValue == "443" {
+		protocol = "https"
+	}
+
 	if config.GetLotusValue() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
-		portValue := config.GetPortValue()
 
 		// 构建请求URL和参数
-		baseURL := fmt.Sprintf("http://%s:%s/getid", serverDir, portValue)
+		baseURL := fmt.Sprintf("%s://%s:%s/getid", protocol, serverDir, portValue)
 		params := url.Values{}
 		params.Add("type", "4")
 		params.Add("id", sectionName)

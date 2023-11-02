@@ -3,8 +3,8 @@ package callapi
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/tencent-connect/botgo/openapi"
 )
 
@@ -147,7 +147,7 @@ func RegisterHandler(action string, handler HandlerFunc) {
 func CallAPIFromDict(client Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message ActionMessage) {
 	handler, ok := handlers[message.Action]
 	if !ok {
-		log.Println("Unsupported action:", message.Action)
+		mylog.Println("Unsupported action:", message.Action)
 		return
 	}
 	handler(client, api, apiv2, message)

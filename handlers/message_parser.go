@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"fmt"
-	"log"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -10,6 +8,7 @@ import (
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/hoshinonyaruko/gensokyo/url"
 	"github.com/tencent-connect/botgo/dto"
 	"mvdan.cc/xurls" //xurls是一个从文本提取url的库 适用于多种场景
@@ -52,11 +51,11 @@ func SendResponse(client callapi.Client, err error, message *callapi.ActionMessa
 
 	sendErr := client.SendMessage(outputMap)
 	if sendErr != nil {
-		log.Printf("Error sending message via client: %v", sendErr)
+		mylog.Printf("Error sending message via client: %v", sendErr)
 		return sendErr
 	}
 
-	log.Printf("发送成功回执: %+v", outputMap)
+	mylog.Printf("发送成功回执: %+v", outputMap)
 	return nil
 }
 
@@ -66,11 +65,11 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 
 	switch message := paramsMessage.Message.(type) {
 	case string:
-		fmt.Printf("params.message is a string\n")
+		mylog.Printf("params.message is a string\n")
 		messageText = message
 	case []interface{}:
 		//多个映射组成的切片
-		fmt.Printf("params.message is a slice (segment_type_koishi)\n")
+		mylog.Printf("params.message is a slice (segment_type_koishi)\n")
 		for _, segment := range message {
 			segmentMap, ok := segment.(map[string]interface{})
 			if !ok {
@@ -101,7 +100,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 		}
 	case map[string]interface{}:
 		//单个映射
-		fmt.Printf("params.message is a map (segment_type_trss)\n")
+		mylog.Printf("params.message is a map (segment_type_trss)\n")
 		messageType, _ := message["type"].(string)
 		switch messageType {
 		case "text":
@@ -117,7 +116,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 			messageText = "[CQ:at,qq=" + qqNumber + "]"
 		}
 	default:
-		log.Println("Unsupported message format: params.message field is not a string, map or slice")
+		mylog.Println("Unsupported message format: params.message field is not a string, map or slice")
 	}
 
 	// 正则表达式部分
@@ -168,7 +167,7 @@ func transformMessageText(messageText string) string {
 		if len(submatches) > 1 {
 			realUserID, err := idmap.RetrieveRowByIDv2(submatches[1])
 			if err != nil {
-				log.Printf("Error retrieving user ID: %v", err)
+				mylog.Printf("Error retrieving user ID: %v", err)
 				return m // 如果出错，返回原始匹配
 			}
 			return "<@!" + realUserID + ">"

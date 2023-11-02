@@ -1,7 +1,7 @@
 package apitest
 
 import (
-	"fmt"
+	"log"
 	"testing"
 
 	"github.com/tencent-connect/botgo/dto/keyboard"
@@ -85,7 +85,7 @@ func TestMessage(t *testing.T) {
 			}
 
 			message, err := api.Message(ctx, testChannelID, index[0])
-			fmt.Println(message)
+			log.Println(message)
 		},
 	)
 }

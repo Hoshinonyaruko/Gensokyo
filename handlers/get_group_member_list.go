@@ -2,11 +2,11 @@ package handlers
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/openapi"
 )
@@ -37,16 +37,16 @@ func getGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 
 	msgType, err := idmap.ReadConfigv2(message.Params.GroupID.(string), "type")
 	if err != nil {
-		log.Printf("Error reading config: %v", err)
+		mylog.Printf("Error reading config: %v", err)
 		return
 	}
 
 	switch msgType {
 	case "group":
-		log.Printf("getGroupMemberList(频道): 目前暂未开放该能力")
+		mylog.Printf("getGroupMemberList(频道): 目前暂未开放该能力")
 		return
 	case "private":
-		log.Printf("getGroupMemberList(频道): 目前暂未适配私聊虚拟群场景获取虚拟群列表能力")
+		mylog.Printf("getGroupMemberList(频道): 目前暂未适配私聊虚拟群场景获取虚拟群列表能力")
 		return
 	case "guild":
 		//要把group_id还原成guild_id
@@ -55,12 +55,12 @@ func getGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		// 使用RetrieveRowByIDv2还原真实的ChannelID
 		RChannelID, err := idmap.RetrieveRowByIDv2(message.Params.ChannelID)
 		if err != nil {
-			log.Printf("error retrieving real ChannelID: %v", err)
+			mylog.Printf("error retrieving real ChannelID: %v", err)
 		}
 		//读取ini 通过ChannelID取回之前储存的guild_id
 		value, err := idmap.ReadConfigv2(RChannelID, "guild_id")
 		if err != nil {
-			log.Printf("Error reading config: %v", err)
+			mylog.Printf("Error reading config: %v", err)
 			return
 		}
 		pager := &dto.GuildMembersPager{
@@ -68,20 +68,20 @@ func getGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		}
 		membersFromAPI, err := api.GuildMembers(context.TODO(), value, pager)
 		if err != nil {
-			log.Printf("Failed to fetch group members for guild %s: %v", value, err)
+			mylog.Printf("Failed to fetch group members for guild %s: %v", value, err)
 			return
 		}
 
-		// log.Println("Number of members in membersFromAPI:", len(membersFromAPI))
+		// mylog.Println("Number of members in membersFromAPI:", len(membersFromAPI))
 		// for i, member := range membersFromAPI {
-		// 	log.Printf("Member %d: %+v\n", i+1, *member)
+		// 	mylog.Printf("Member %d: %+v\n", i+1, *member)
 		// }
 
 		var members []MemberList
 		for _, memberFromAPI := range membersFromAPI {
 			joinedAtTime, err := memberFromAPI.JoinedAt.Time()
 			if err != nil {
-				log.Println("Error parsing JoinedAt timestamp:", err)
+				mylog.Println("Error parsing JoinedAt timestamp:", err)
 				continue
 			}
 			joinedAtStr := joinedAtTime.Format(time.RFC3339) // or any other format
@@ -108,17 +108,17 @@ func getGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			members = append(members, member)
 		}
 
-		log.Printf("member message.Echors: %+v\n", message.Echo)
+		mylog.Printf("member message.Echors: %+v\n", message.Echo)
 
 		responseJSON := buildResponse(members, message.Echo) // assume echoValue is your echo data
-		log.Printf("getGroupMemberList(频道): %s\n", responseJSON)
+		mylog.Printf("getGroupMemberList(频道): %s\n", responseJSON)
 
 		err = client.SendMessage(responseJSON) //发回去
 		if err != nil {
-			log.Printf("Error sending message via client: %v", err)
+			mylog.Printf("Error sending message via client: %v", err)
 		}
 	default:
-		log.Printf("Unknown msgType: %s", msgType)
+		mylog.Printf("Unknown msgType: %s", msgType)
 	}
 }
 
@@ -146,19 +146,19 @@ func buildResponse(members []MemberList, echoValue interface{}) map[string]inter
 	// Set echo based on the type of echoValue
 	switch v := echoValue.(type) {
 	case int:
-		log.Printf("Setting echo as int: %d", v)
+		mylog.Printf("Setting echo as int: %d", v)
 		response["echo"] = v
 	case string:
-		log.Printf("Setting echo as string: %s", v)
+		mylog.Printf("Setting echo as string: %s", v)
 		response["echo"] = v
 	case []interface{}:
-		log.Printf("Setting echo as array: %v", v)
+		mylog.Printf("Setting echo as array: %v", v)
 		response["echo"] = v
 	case map[string]interface{}:
-		log.Printf("Setting echo as object: %v", v)
+		mylog.Printf("Setting echo as object: %v", v)
 		response["echo"] = v
 	default:
-		log.Printf("Unknown type for echo: %T", v)
+		mylog.Printf("Unknown type for echo: %T", v)
 	}
 
 	return response

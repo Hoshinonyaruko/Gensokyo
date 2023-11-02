@@ -18,6 +18,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hoshinonyaruko/gensokyo/config"
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 )
 
 const (
@@ -49,11 +50,11 @@ func UploadBase64ImageHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 
 		base64Image := c.PostForm("base64Image")
 		// Print the length of the received base64 data
-		fmt.Println("Received base64 data length:", len(base64Image), "characters")
+		mylog.Println("Received base64 data length:", len(base64Image), "characters")
 
 		imageBytes, err := base64.StdEncoding.DecodeString(base64Image)
 		if err != nil {
-			fmt.Println("Error while decoding base64:", err) // Print error while decoding
+			mylog.Println("Error while decoding base64:", err) // Print error while decoding
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid base64 data"})
 			return
 		}
@@ -95,8 +96,15 @@ func UploadBase64ImageHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 			return
 		}
 
-		imageURL := fmt.Sprintf("http://%s:%s/channel_temp/%s", serverAddress, serverPort, fileName)
+		// 根据serverPort确定协议
+		protocol := "http"
+		if serverPort == "443" {
+			protocol = "https"
+		}
+
+		imageURL := fmt.Sprintf("%s://%s:%s/channel_temp/%s", protocol, serverAddress, serverPort, fileName)
 		c.JSON(http.StatusOK, gin.H{"url": imageURL})
+
 	}
 }
 
@@ -117,17 +125,17 @@ func (rl *RateLimiter) CheckAndUpdateRateLimit(ipAddress string) bool {
 // 获取图片类型
 func getImageFormat(data []byte) (format string, err error) {
 	// Print the size of the data to check if it's being read correctly
-	fmt.Println("Received data size:", len(data), "bytes")
+	mylog.Println("Received data size:", len(data), "bytes")
 
 	_, format, err = image.DecodeConfig(bytes.NewReader(data))
 	if err != nil {
 		// Print additional error information
-		fmt.Println("Error while trying to decode image config:", err)
+		mylog.Println("Error while trying to decode image config:", err)
 		return "", fmt.Errorf("error decoding image config: %w", err)
 	}
 
 	// Print the detected format
-	fmt.Println("Detected image format:", format)
+	mylog.Println("Detected image format:", format)
 
 	if format == "" {
 		return "", errors.New("undefined picture format")

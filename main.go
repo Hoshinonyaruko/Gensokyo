@@ -18,6 +18,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/server"
 	"github.com/hoshinonyaruko/gensokyo/url"
+	"github.com/hoshinonyaruko/gensokyo/webui"
 	"github.com/hoshinonyaruko/gensokyo/wsclient"
 
 	"github.com/gin-gonic/gin"
@@ -36,12 +37,12 @@ func main() {
 	if _, err := os.Stat("config.yml"); os.IsNotExist(err) {
 		err = os.WriteFile("config.yml", []byte(configTemplate), 0644)
 		if err != nil {
-			fmt.Println("Error writing config.yml:", err)
+			log.Println("Error writing config.yml:", err)
 			return
 		}
 
-		fmt.Println("请配置config.yml然后再次运行.")
-		fmt.Print("按下 Enter 继续...")
+		log.Println("请配置config.yml然后再次运行.")
+		log.Print("按下 Enter 继续...")
 		bufio.NewReader(os.Stdin).ReadBytes('\n')
 		os.Exit(0)
 	}
@@ -81,10 +82,10 @@ func main() {
 	// 执行API请求 显示机器人信息
 	me, err := api.Me(ctx) // Adjusted to pass only the context
 	if err != nil {
-		fmt.Printf("Error fetching bot details: %v\n", err)
+		log.Printf("Error fetching bot details: %v\n", err)
 		return
 	}
-	fmt.Printf("Bot details: %+v\n", me)
+	log.Printf("Bot details: %+v\n", me)
 
 	//初始化handlers
 	handlers.BotID = me.ID
@@ -107,7 +108,7 @@ func main() {
 	for _, handlerName := range conf.Settings.TextIntent {
 		handler, ok := getHandlerByName(handlerName)
 		if !ok {
-			fmt.Printf("Unknown handler: %s\n", handlerName)
+			log.Printf("Unknown handler: %s\n", handlerName)
 			continue
 		}
 
@@ -115,7 +116,7 @@ func main() {
 		intent |= websocket.RegisterHandlers(handler)
 	}
 
-	fmt.Printf("注册 intents: %v\n", intent)
+	log.Printf("注册 intents: %v\n", intent)
 
 	// 启动session manager以管理websocket连接
 	// 指定需要启动的分片数为 2 的话可以手动修改 wsInfo
@@ -135,7 +136,7 @@ func main() {
 		go func(address string) {
 			wsClient, err := wsclient.NewWebSocketClient(address, conf.Settings.AppID, api, apiV2)
 			if err != nil {
-				fmt.Printf("Error creating WebSocketClient for address %s: %v\n", address, err)
+				log.Printf("Error creating WebSocketClient for address %s: %v\n", address, err)
 				errorChan <- err
 				return
 			}
@@ -149,16 +150,16 @@ func main() {
 		case wsClient := <-wsClientChan:
 			wsClients = append(wsClients, wsClient)
 		case err := <-errorChan:
-			fmt.Printf("Error encountered while initializing WebSocketClient: %v\n", err)
+			log.Printf("Error encountered while initializing WebSocketClient: %v\n", err)
 		}
 	}
 
 	// 确保所有wsClients都已初始化
 	if len(wsClients) != len(conf.Settings.WsAddress) {
-		fmt.Println("Error: Not all wsClients are initialized!")
+		log.Println("Error: Not all wsClients are initialized!")
 		log.Fatalln("Failed to initialize all WebSocketClients.")
 	} else {
-		fmt.Println("All wsClients are successfully initialized.")
+		log.Println("All wsClients are successfully initialized.")
 		p = Processor.NewProcessor(api, apiV2, &conf.Settings, wsClients)
 	}
 
@@ -173,10 +174,25 @@ func main() {
 	//如果连接到其他gensokyo,则不需要启动服务器
 	var httpServer *http.Server
 	if shouldStartServer {
-		r := gin.Default()
+		var r *gin.Engine
+		if config.GetDeveloperLog() { // 我假设这个函数是从您提供的例子中来的
+			r = gin.Default()
+		} else {
+			r = gin.New()
+			r.Use(gin.Recovery()) // 添加恢复中间件，但不添加日志中间件
+		}
 		r.GET("/getid", server.GetIDHandler)
 		r.POST("/uploadpic", server.UploadBase64ImageHandler(rateLimiter))
 		r.Static("/channel_temp", "./channel_temp")
+		//webui和它的api
+		webuiGroup := r.Group("/webui")
+		{
+			webuiGroup.GET("/*filepath", webui.CombinedMiddleware)
+			webuiGroup.PUT("/*filepath", webui.CombinedMiddleware)
+		}
+		//r.GET("/webui/api/serverdata", getServerDataHandler)
+		//r.GET("/webui/api/logdata", getLogDataHandler)
+		//正向ws
 		r.GET("/ws", server.WsHandlerWithDependencies(api, apiV2, p))
 		r.POST("/url", url.CreateShortURLHandler)
 		r.GET("/url/:shortURL", url.RedirectFromShortURLHandler)
@@ -189,12 +205,13 @@ func main() {
 				c.String(200, content)
 			})
 		}
-		// 创建一个http.Server实例
-		httpServer = &http.Server{
+		// 创建一个http.Server实例（主服务器）
+		httpServer := &http.Server{
 			Addr:    "0.0.0.0:" + conf.Settings.Port,
 			Handler: r,
 		}
-		// 在一个新的goroutine中启动Gin服务器
+
+		// 在一个新的goroutine中启动主服务器
 		go func() {
 			if conf.Settings.Port == "443" {
 				// 使用HTTPS
@@ -214,6 +231,22 @@ func main() {
 				}
 			}
 		}()
+
+		// 如果主服务器使用443端口，同时在一个新的goroutine中启动444端口的HTTP服务器 todo 更优解
+		if conf.Settings.Port == "443" {
+			go func() {
+				// 创建另一个http.Server实例（用于444端口）
+				httpServer444 := &http.Server{
+					Addr:    "0.0.0.0:444",
+					Handler: r,
+				}
+
+				// 启动444端口的HTTP服务器
+				if err := httpServer444.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+					log.Fatalf("listen (HTTP 444): %s\n", err)
+				}
+			}()
+		}
 	}
 
 	// 使用通道来等待信号
@@ -228,7 +261,7 @@ func main() {
 	for _, client := range wsClients {
 		err := client.Close()
 		if err != nil {
-			fmt.Printf("Error closing WebSocket connection: %v\n", err)
+			log.Printf("Error closing WebSocket connection: %v\n", err)
 		}
 	}
 
@@ -275,7 +308,7 @@ func ATMessageEventHandler() event.ATMessageEventHandler {
 // GuildEventHandler 处理频道事件
 func GuildEventHandler() event.GuildEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSGuildData) error {
-		fmt.Println(data)
+		log.Println(data)
 		return nil
 	}
 }
@@ -283,7 +316,7 @@ func GuildEventHandler() event.GuildEventHandler {
 // ChannelEventHandler 处理子频道事件
 func ChannelEventHandler() event.ChannelEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSChannelData) error {
-		fmt.Println(data)
+		log.Println(data)
 		return nil
 	}
 }
@@ -291,7 +324,7 @@ func ChannelEventHandler() event.ChannelEventHandler {
 // MemberEventHandler 处理成员变更事件
 func MemberEventHandler() event.GuildMemberEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSGuildMemberData) error {
-		fmt.Println(data)
+		log.Println(data)
 		return nil
 	}
 }
@@ -306,7 +339,7 @@ func DirectMessageHandler() event.DirectMessageEventHandler {
 // CreateMessageHandler 处理消息事件 私域的事件 不at信息
 func CreateMessageHandler() event.MessageEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSMessageData) error {
-		fmt.Println("收到私域信息", data)
+		log.Println("收到私域信息", data)
 		return p.ProcessGuildNormalMessage(data)
 	}
 }
@@ -314,7 +347,7 @@ func CreateMessageHandler() event.MessageEventHandler {
 // InteractionHandler 处理内联交互事件
 func InteractionHandler() event.InteractionEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSInteractionData) error {
-		fmt.Println(data)
+		log.Println(data)
 		return p.ProcessInlineSearch(data)
 	}
 }
@@ -361,7 +394,7 @@ func getHandlerByName(handlerName string) (interface{}, bool) {
 	case "C2CMessageEventHandler": //群私聊
 		return C2CMessageEventHandler(), true
 	default:
-		fmt.Printf("Unknown handler: %s\n", handlerName)
+		log.Printf("Unknown handler: %s\n", handlerName)
 		return nil, false
 	}
 }

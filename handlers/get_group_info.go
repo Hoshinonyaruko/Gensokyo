@@ -3,11 +3,10 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"log"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/openapi"
@@ -31,13 +30,13 @@ func ConvertGuildToGroupInfo(guild *dto.Guild, GroupId string) *OnebotGroupInfo 
 	// 使用idmap.StoreIDv2映射GroupId到一个int64的值
 	groupid64, err := idmap.StoreIDv2(GroupId)
 	if err != nil {
-		log.Printf("Error storing GroupID: %v", err)
+		mylog.Printf("Error storing GroupID: %v", err)
 		return nil
 	}
 
 	ts, err := guild.JoinedAt.Time()
 	if err != nil {
-		log.Printf("转换JoinedAt失败: %v", err)
+		mylog.Printf("转换JoinedAt失败: %v", err)
 		return nil
 	}
 	groupCreateTime := uint32(ts.Unix())
@@ -61,20 +60,20 @@ func handleGetGroupInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 	// 使用RetrieveRowByIDv2还原真实的ChannelID
 	RChannelID, err := idmap.RetrieveRowByIDv2(ChannelID.(string))
 	if err != nil {
-		fmt.Printf("error retrieving real ChannelID: %v", err)
+		mylog.Printf("error retrieving real ChannelID: %v", err)
 	}
 	//读取ini 通过ChannelID取回之前储存的guild_id
 	value, err := idmap.ReadConfigv2(RChannelID, "guild_id")
 	if err != nil {
-		log.Printf("handleGetGroupInfo:Error reading config: %v\n", err)
+		mylog.Printf("handleGetGroupInfo:Error reading config: %v\n", err)
 		return
 	}
 	//最后获取到guildID
 	guildID := value
-	log.Printf("调试,准备groupInfoMap(频道)guildID:%v", guildID)
+	mylog.Printf("调试,准备groupInfoMap(频道)guildID:%v", guildID)
 	guild, err := api.Guild(context.TODO(), guildID)
 	if err != nil {
-		log.Printf("获取频道信息失败: %v", err)
+		mylog.Printf("获取频道信息失败: %v", err)
 		return
 	}
 
@@ -82,11 +81,11 @@ func handleGetGroupInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 	groupInfoMap := structToMap(groupInfo)
 
 	// 打印groupInfoMap的内容
-	log.Printf("groupInfoMap(频道): %+v\n", groupInfoMap)
+	mylog.Printf("groupInfoMap(频道): %+v\n", groupInfoMap)
 
 	err = client.SendMessage(groupInfoMap) //发回去
 	if err != nil {
-		log.Printf("error sending group info via wsclient: %v", err)
+		mylog.Printf("error sending group info via wsclient: %v", err)
 	}
 }
 

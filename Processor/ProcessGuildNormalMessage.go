@@ -3,7 +3,6 @@ package Processor
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/handlers"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/websocket/client"
 )
@@ -34,7 +34,7 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 		//映射str的userid到int
 		userid64, err := idmap.StoreIDv2(data.Author.ID)
 		if err != nil {
-			log.Printf("Error storing ID: %v", err)
+			mylog.Printf("Error storing ID: %v", err)
 			return nil
 		}
 		// 如果在Array模式下, 则处理Message为Segment格式
@@ -108,7 +108,7 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 		//将channelid写入ini,可取出guild_id
 		ChannelID64, err := idmap.StoreIDv2(data.ChannelID)
 		if err != nil {
-			log.Printf("Error storing ID: %v", err)
+			mylog.Printf("Error storing ID: %v", err)
 			return nil
 		}
 		//转成int再互转
@@ -122,14 +122,14 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 		//映射str的userid到int
 		userid64, err := idmap.StoreIDv2(data.Author.ID)
 		if err != nil {
-			log.Printf("Error storing ID: %v", err)
+			mylog.Printf("Error storing ID: %v", err)
 			return nil
 		}
 		//userid := int(userid64)
 		//映射str的messageID到int
 		messageID64, err := idmap.StoreIDv2(data.ID)
 		if err != nil {
-			log.Printf("Error storing ID: %v", err)
+			mylog.Printf("Error storing ID: %v", err)
 			return nil
 		}
 		messageID := int(messageID64)

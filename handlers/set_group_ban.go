@@ -2,11 +2,11 @@ package handlers
 
 import (
 	"context"
-	"log"
 	"strconv"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/openapi"
 )
@@ -23,30 +23,30 @@ func setGroupBan(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenA
 	//读取ini 通过ChannelID取回之前储存的guild_id
 	guildID, err := idmap.ReadConfigv2(groupID, "guild_id")
 	if err != nil {
-		log.Printf("Error reading config: %v", err)
+		mylog.Printf("Error reading config: %v", err)
 		return
 	}
 	// 根据UserID读取真实的userid
 	realUserID, err := idmap.RetrieveRowByIDv2(receivedUserID)
 	if err != nil {
-		log.Printf("Error reading real userID: %v", err)
+		mylog.Printf("Error reading real userID: %v", err)
 		return
 	}
 
 	// 读取消息类型
 	msgType, err := idmap.ReadConfigv2(groupID, "type")
 	if err != nil {
-		log.Printf("Error reading config for message type: %v", err)
+		mylog.Printf("Error reading config for message type: %v", err)
 		return
 	}
 
 	// 根据消息类型进行操作
 	switch msgType {
 	case "group":
-		log.Printf("setGroupBan(频道): 目前暂未开放该能力")
+		mylog.Printf("setGroupBan(频道): 目前暂未开放该能力")
 		return
 	case "private":
-		log.Printf("setGroupBan(频道): 目前暂未适配私聊虚拟群场景的禁言能力")
+		mylog.Printf("setGroupBan(频道): 目前暂未适配私聊虚拟群场景的禁言能力")
 		return
 	case "guild":
 		duration := strconv.Itoa(message.Params.Duration)
@@ -56,7 +56,7 @@ func setGroupBan(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenA
 		}
 		err := api.MemberMute(context.TODO(), guildID, realUserID, mute)
 		if err != nil {
-			log.Printf("Error muting member: %v", err)
+			mylog.Printf("Error muting member: %v", err)
 		}
 		return
 	}

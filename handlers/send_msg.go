@@ -11,6 +11,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/openapi"
 )
@@ -31,10 +32,10 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 	if msgType == "" {
 		appID := config.GetAppIDStr()
 		groupID := message.Params.GroupID
-		fmt.Printf("appID: %s, GroupID: %v\n", appID, groupID)
+		mylog.Printf("appID: %s, GroupID: %v\n", appID, groupID)
 
 		msgType = GetMessageTypeByGroupid(appID, groupID)
-		fmt.Printf("msgType: %s\n", msgType)
+		mylog.Printf("msgType: %s\n", msgType)
 	}
 
 	//如果获取不到 就用user_id获取信息类型
@@ -51,24 +52,21 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 		var messageID string
 		if echoStr, ok := message.Echo.(string); ok {
 			messageID = echo.GetMsgIDByKey(echoStr)
-			log.Println("echo取群组发信息对应的message_id:", messageID)
+			mylog.Println("echo取群组发信息对应的message_id:", messageID)
 		}
-		log.Println("群组发信息messageText:", messageText)
-		log.Println("foundItems:", foundItems)
-		// 如果messageID为空，通过函数获取
-		if messageID == "" {
-			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), message.Params.GroupID)
-			log.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
-		}
-
+		mylog.Println("群组发信息messageText:", messageText)
 		//通过bolt数据库还原真实的GroupID
 		originalGroupID, err := idmap.RetrieveRowByIDv2(message.Params.GroupID.(string))
 		if err != nil {
-			log.Printf("Error retrieving original GroupID: %v", err)
+			mylog.Printf("Error retrieving original GroupID: %v", err)
 			return
 		}
 		message.Params.GroupID = originalGroupID
-
+		// 如果messageID为空，通过函数获取
+		if messageID == "" {
+			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), message.Params.GroupID)
+			mylog.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
+		}
 		// 优先发送文本信息
 		if messageText != "" {
 			groupReply := generateGroupMessage(messageID, nil, messageText)
@@ -76,14 +74,14 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 			// 进行类型断言
 			groupMessage, ok := groupReply.(*dto.MessageToCreate)
 			if !ok {
-				log.Println("Error: Expected MessageToCreate type.")
+				mylog.Println("Error: Expected MessageToCreate type.")
 				return // 或其他错误处理
 			}
 
 			groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
 			_, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 			if err != nil {
-				log.Printf("发送文本群组信息失败: %v", err)
+				mylog.Printf("发送文本群组信息失败: %v", err)
 			}
 			//发送成功回执
 			SendResponse(client, err, &message)
@@ -99,14 +97,14 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 			// 进行类型断言
 			richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
 			if !ok {
-				log.Printf("Error: Expected RichMediaMessage type for key %s.", key)
+				mylog.Printf("Error: Expected RichMediaMessage type for key %s.", key)
 				continue // 跳过这个项，继续下一个
 			}
 
-			fmt.Printf("richMediaMessage: %+v\n", richMediaMessage)
+			mylog.Printf("richMediaMessage: %+v\n", richMediaMessage)
 			_, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), richMediaMessage)
 			if err != nil {
-				log.Printf("发送 %s 信息失败_send_msg: %v", key, err)
+				mylog.Printf("发送 %s 信息失败_send_msg: %v", key, err)
 			}
 			//发送成功回执
 			SendResponse(client, err, &message)
@@ -117,7 +115,7 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 		// 使用RetrieveRowByIDv2还原真实的ChannelID
 		RChannelID, err := idmap.RetrieveRowByIDv2(message.Params.ChannelID)
 		if err != nil {
-			log.Printf("error retrieving real UserID: %v", err)
+			mylog.Printf("error retrieving real UserID: %v", err)
 		}
 		message.Params.ChannelID = RChannelID
 		handleSendGuildChannelMsg(client, api, apiv2, message)
@@ -137,12 +135,12 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 			if value, err := idmap.ReadConfigv2(*channelIDPtr, "guild_id"); err == nil && value != "" {
 				GuildidPtr = &value
 			} else {
-				log.Printf("Error reading config: %v", err)
+				mylog.Printf("Error reading config: %v", err)
 			}
 		}
 
 		if channelIDPtr == nil || GuildidPtr == nil {
-			log.Printf("Value or ChannelID is empty or in error. Value: %v, ChannelID: %v", GuildidPtr, channelIDPtr)
+			mylog.Printf("Value or ChannelID is empty or in error. Value: %v, ChannelID: %v", GuildidPtr, channelIDPtr)
 		}
 
 		handleSendGuildChannelPrivateMsg(client, api, apiv2, message, GuildidPtr, channelIDPtr)
@@ -152,7 +150,7 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 		//还原真实的userid
 		UserID, err := idmap.RetrieveRowByIDv2(message.Params.UserID.(string))
 		if err != nil {
-			log.Printf("Error reading config: %v", err)
+			mylog.Printf("Error reading config: %v", err)
 			return
 		}
 
@@ -163,15 +161,15 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 		var messageID string
 		if echoStr, ok := message.Echo.(string); ok {
 			messageID = echo.GetMsgIDByKey(echoStr)
-			log.Println("echo取私聊发信息对应的message_id:", messageID)
+			mylog.Println("echo取私聊发信息对应的message_id:", messageID)
 		}
 		// 如果messageID为空，通过函数获取
 		if messageID == "" {
 			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), UserID)
-			log.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
+			mylog.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
 		}
-		log.Println("私聊发信息messageText:", messageText)
-		log.Println("foundItems:", foundItems)
+		mylog.Println("私聊发信息messageText:", messageText)
+		//mylog.Println("foundItems:", foundItems)
 
 		// 优先发送文本信息
 		if messageText != "" {
@@ -180,14 +178,14 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 			// 进行类型断言
 			groupMessage, ok := groupReply.(*dto.MessageToCreate)
 			if !ok {
-				log.Println("Error: Expected MessageToCreate type.")
+				mylog.Println("Error: Expected MessageToCreate type.")
 				return
 			}
 
 			groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
 			_, err = apiv2.PostC2CMessage(context.TODO(), UserID, groupMessage)
 			if err != nil {
-				log.Printf("发送文本私聊信息失败: %v", err)
+				mylog.Printf("发送文本私聊信息失败: %v", err)
 			}
 			//发送成功回执
 			SendResponse(client, err, &message)
@@ -203,18 +201,18 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 			// 进行类型断言
 			richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
 			if !ok {
-				log.Printf("Error: Expected RichMediaMessage type for key %s.", key)
+				mylog.Printf("Error: Expected RichMediaMessage type for key %s.", key)
 				continue
 			}
 			_, err = apiv2.PostC2CMessage(context.TODO(), UserID, richMediaMessage)
 			if err != nil {
-				log.Printf("发送 %s 私聊信息失败: %v", key, err)
+				mylog.Printf("发送 %s 私聊信息失败: %v", key, err)
 			}
 			//发送成功回执
 			SendResponse(client, err, &message)
 		}
 	default:
-		log.Printf("1Unknown message type: %s", msgType)
+		mylog.Printf("1Unknown message type: %s", msgType)
 	}
 }
 

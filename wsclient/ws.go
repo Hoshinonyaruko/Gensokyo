@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"sync"
@@ -13,6 +12,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/config"
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/tencent-connect/botgo/openapi"
 )
 
@@ -22,23 +22,28 @@ type WebSocketClient struct {
 	apiv2          openapi.OpenAPI
 	botID          uint64
 	urlStr         string
-	cancel         context.CancelFunc // Add this
-	mutex          sync.Mutex         // Mutex for reconnecting
+	cancel         context.CancelFunc
+	mutex          sync.Mutex // 用于同步写入和重连操作的互斥锁
 	isReconnecting bool
 }
 
 // 发送json信息给onebot应用端
 func (c *WebSocketClient) SendMessage(message map[string]interface{}) error {
+	c.mutex.Lock()         // 在写操作之前锁定
+	defer c.mutex.Unlock() // 确保在函数返回时解锁
+
 	msgBytes, err := json.Marshal(message)
 	if err != nil {
-		log.Println("Error marshalling message:", err)
+		mylog.Println("Error marshalling message:", err)
 		return err
 	}
+
 	err = c.conn.WriteMessage(websocket.TextMessage, msgBytes)
 	if err != nil {
-		log.Println("Error sending message:", err)
+		mylog.Println("Error sending message:", err)
 		return err
 	}
+
 	return nil
 }
 
@@ -47,7 +52,7 @@ func (c *WebSocketClient) handleIncomingMessages(ctx context.Context, cancel con
 	for {
 		_, msg, err := c.conn.ReadMessage()
 		if err != nil {
-			log.Println("WebSocket connection closed:", err)
+			mylog.Println("WebSocket connection closed:", err)
 			cancel() // cancel heartbeat goroutine
 
 			if !c.isReconnecting {
@@ -84,10 +89,10 @@ func (client *WebSocketClient) Reconnect() {
 			client.apiv2 = newClient.apiv2
 			client.cancel = newClient.cancel // Update cancel function
 
-			log.Println("Successfully reconnected to WebSocket.")
+			mylog.Println("Successfully reconnected to WebSocket.")
 			return
 		}
-		log.Println("Failed to reconnect to WebSocket. Retrying in 5 seconds...")
+		mylog.Println("Failed to reconnect to WebSocket. Retrying in 5 seconds...")
 	}
 }
 
@@ -96,11 +101,11 @@ func (c *WebSocketClient) recvMessage(msg []byte) {
 	var message callapi.ActionMessage
 	err := json.Unmarshal(msg, &message)
 	if err != nil {
-		log.Printf("Error unmarshalling message: %v, Original message: %s", err, string(msg))
+		mylog.Printf("Error unmarshalling message: %v, Original message: %s", err, string(msg))
 		return
 	}
 
-	fmt.Println("Received from onebotv11 server:", TruncateMessage(message, 500))
+	mylog.Println("Received from onebotv11 server:", TruncateMessage(message, 500))
 	// 调用callapi
 	callapi.CallAPIFromDict(c, c.api, c.apiv2, message)
 }
@@ -170,7 +175,7 @@ func NewWebSocketClient(urlStr string, botID uint64, api openapi.OpenAPI, apiv2 
 	if token != "" {
 		headers["Authorization"] = []string{"Token " + token}
 	}
-	fmt.Printf("准备使用token[%s]连接到[%s]\n", token, urlStr)
+	mylog.Printf("准备使用token[%s]连接到[%s]\n", token, urlStr)
 	dialer := websocket.Dialer{
 		Proxy:            http.ProxyFromEnvironment,
 		HandshakeTimeout: 45 * time.Second,
@@ -181,19 +186,19 @@ func NewWebSocketClient(urlStr string, botID uint64, api openapi.OpenAPI, apiv2 
 
 	retryCount := 0
 	for {
-		fmt.Println("Dialing URL:", urlStr)
+		mylog.Println("Dialing URL:", urlStr)
 		conn, _, err = dialer.Dial(urlStr, headers)
 		if err != nil {
 			retryCount++
 			if retryCount > maxRetryAttempts {
-				log.Printf("Exceeded maximum retry attempts for WebSocket[%v]: %v\n", urlStr, err)
+				mylog.Printf("Exceeded maximum retry attempts for WebSocket[%v]: %v\n", urlStr, err)
 				return nil, err
 			}
-			fmt.Printf("Failed to connect to WebSocket[%v]: %v, retrying in 5 seconds...\n", urlStr, err)
+			mylog.Printf("Failed to connect to WebSocket[%v]: %v, retrying in 5 seconds...\n", urlStr, err)
 			time.Sleep(5 * time.Second) // sleep for 5 seconds before retrying
 		} else {
-			fmt.Printf("Successfully connected to %s.\n", urlStr) // 输出连接成功提示
-			break                                                 // successfully connected, break the loop
+			mylog.Printf("Successfully connected to %s.\n", urlStr) // 输出连接成功提示
+			break                                                   // successfully connected, break the loop
 		}
 	}
 
@@ -214,12 +219,12 @@ func NewWebSocketClient(urlStr string, botID uint64, api openapi.OpenAPI, apiv2 
 		"time":            int(time.Now().Unix()),
 	}
 
-	fmt.Printf("Message: %+v\n", message)
+	mylog.Printf("Message: %+v\n", message)
 
 	err = client.SendMessage(message)
 	if err != nil {
 		// handle error
-		fmt.Printf("Error sending message: %v\n", err)
+		mylog.Printf("Error sending message: %v\n", err)
 	}
 
 	// Starting goroutine for heartbeats and another for listening to messages
@@ -243,7 +248,7 @@ func getParamsFromURI(uriStr string) map[string]string {
 
 	u, err := url.Parse(uriStr)
 	if err != nil {
-		fmt.Printf("Error parsing the URL: %v\n", err)
+		mylog.Printf("Error parsing the URL: %v\n", err)
 		return params
 	}
 

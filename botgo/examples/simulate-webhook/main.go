@@ -3,8 +3,8 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -16,7 +16,7 @@ import (
 )
 
 var handler event.PlainEventHandler = func(payload *dto.WSPayload, message []byte) error {
-	fmt.Println(payload, message)
+	log.Println(payload, message)
 	return nil
 }
 
@@ -68,7 +68,7 @@ func simulateRequest() {
 		RawMessage: nil,
 	}
 	payload, _ = json.Marshal(dispatchEvent)
-	fmt.Println(string(payload))
+	log.Println(string(payload))
 	send(payload)
 }
 
@@ -78,14 +78,14 @@ func send(payload []byte) {
 
 	sig, err := signature.Generate(webhook.DefaultGetSecretFunc(), header, payload)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	header.Set(signature.HeaderSig, sig)
 
 	req, err := http.NewRequest("POST", url, bytes.NewReader(payload))
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	req.Header = header.Clone()
@@ -93,11 +93,11 @@ func send(payload []byte) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 
 	defer resp.Body.Close()
 	r, _ := io.ReadAll(resp.Body)
-	fmt.Printf("receive resp: %s", string(r))
+	log.Printf("receive resp: %s", string(r))
 }
