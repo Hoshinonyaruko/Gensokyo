@@ -58,7 +58,8 @@ func (atoken *AuthTokenInfo) StartRefreshAccessToken(ctx context.Context, tokenU
 	// 首先，立即获取一次AccessToken
 	tokenInfo, err := queryAccessToken(ctx, tokenURL, appID, clientSecrent)
 	if err != nil {
-		return err
+		log.Errorf("无法获取AccessToken: %v", err)
+		//return err
 	}
 	atoken.setAuthToken(tokenInfo)
 	log.Info("获取到的token是: %s\n", tokenInfo.Token) // 输出获取到的token
@@ -69,9 +70,9 @@ func (atoken *AuthTokenInfo) StartRefreshAccessToken(ctx context.Context, tokenU
 	atoken.once.Do(func() {
 		go func() { // 启动一个新的goroutine
 			for {
-				// 如果tokenTTL为0或负数，将其设置为1
+				// 如果tokenTTL为0或负数，将其设置为15
 				if tokenTTL <= 0 {
-					tokenTTL = 1
+					tokenTTL = 15
 				}
 				select {
 				case <-time.NewTimer(time.Duration(tokenTTL) * time.Second).C: // 当token过期时
@@ -89,6 +90,7 @@ func (atoken *AuthTokenInfo) StartRefreshAccessToken(ctx context.Context, tokenU
 					tokenTTL = tokenInfo.ExpiresIn
 				} else {
 					log.Errorf("queryAccessToken err:%v", err)
+					log.Errorf("请在config.yml或网页控制台的默认机器人中设置正确的appid和密钥信息")
 				}
 			}
 		}()
@@ -130,61 +132,107 @@ type queryTokenRsp struct {
 	ExpiresIn   string `json:"expires_in"`
 }
 
-func queryAccessToken(ctx context.Context, tokenURL, appID, clientSecrent string) (AccessTokenInfo, error) {
-	method := "POST"
+// func queryAccessToken(ctx context.Context, tokenURL, appID, clientSecrent string) (AccessTokenInfo, error) {
+// 	method := "POST"
 
-	defer func() {
-		if err := recover(); err != nil {
-			log.Errorf("queryAccessToken err:%v", err)
-		}
-	}()
+// 	defer func() {
+// 		if err := recover(); err != nil {
+// 			log.Errorf("queryAccessToken err:%v", err)
+// 		}
+// 	}()
+// 	if tokenURL == "" {
+// 		tokenURL = getAccessTokenURL
+// 	}
+
+// 	queryReq := queryTokenReq{
+// 		AppID:        appID,
+// 		ClientSecret: clientSecrent,
+// 	}
+// 	data, err := json.Marshal(queryReq)
+// 	if err != nil {
+// 		return AccessTokenInfo{}, err
+// 	}
+// 	payload := bytes.NewReader(data)
+// 	log.Infof("reqdata:%v", string(data))
+// 	client := &http.Client{
+// 		Timeout: 10 * time.Second,
+// 	}
+// 	log.Infof("tokenURL:%v", tokenURL)
+// 	req, err := http.NewRequest(method, tokenURL, payload)
+// 	if err != nil {
+// 		log.Errorf("NewRequest err:%v", err)
+// 		return AccessTokenInfo{}, err
+// 	}
+// 	req.Header.Add("Content-Type", "application/json")
+// 	res, err := client.Do(req)
+// 	if err != nil {
+// 		log.Errorf("http do err:%v", err)
+// 		return AccessTokenInfo{}, err
+// 	}
+// 	defer res.Body.Close()
+
+// 	body, err := ioutil.ReadAll(res.Body)
+// 	if err != nil {
+// 		log.Errorf("ReadAll do err:%v", err)
+// 		return AccessTokenInfo{}, err
+// 	}
+// 	log.Infof("accesstoken:%v", string(body))
+// 	queryRsp := queryTokenRsp{}
+// 	if err = json.Unmarshal(body, &queryRsp); err != nil {
+// 		log.Errorf("Unmarshal err:%v", err)
+// 		return AccessTokenInfo{}, err
+// 	}
+
+// 	rdata := AccessTokenInfo{
+// 		Token:  queryRsp.AccessToken,
+// 		UpTime: time.Now(),
+// 	}
+// 	rdata.ExpiresIn, _ = strconv.ParseInt(queryRsp.ExpiresIn, 10, 64)
+// 	return rdata, err
+// }
+
+// queryAccessToken retrieves a new AccessToken.
+func queryAccessToken(ctx context.Context, tokenURL, appID, clientSecret string) (AccessTokenInfo, error) {
 	if tokenURL == "" {
-		tokenURL = getAccessTokenURL
+		tokenURL = getAccessTokenURL // Assumes getAccessTokenURL is declared elsewhere
 	}
 
-	queryReq := queryTokenReq{
+	reqBody := queryTokenReq{
 		AppID:        appID,
-		ClientSecret: clientSecrent,
+		ClientSecret: clientSecret,
 	}
-	data, err := json.Marshal(queryReq)
+	reqData, err := json.Marshal(reqBody)
 	if err != nil {
 		return AccessTokenInfo{}, err
 	}
-	payload := bytes.NewReader(data)
-	log.Infof("reqdata:%v", string(data))
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-	}
-	log.Infof("tokenURL:%v", tokenURL)
-	req, err := http.NewRequest(method, tokenURL, payload)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, bytes.NewReader(reqData))
 	if err != nil {
-		log.Errorf("NewRequest err:%v", err)
 		return AccessTokenInfo{}, err
 	}
 	req.Header.Add("Content-Type", "application/json")
-	res, err := client.Do(req)
-	if err != nil {
-		log.Errorf("http do err:%v", err)
-		return AccessTokenInfo{}, err
-	}
-	defer res.Body.Close()
 
-	body, err := ioutil.ReadAll(res.Body)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Errorf("ReadAll do err:%v", err)
 		return AccessTokenInfo{}, err
 	}
-	log.Infof("accesstoken:%v", string(body))
-	queryRsp := queryTokenRsp{}
-	if err = json.Unmarshal(body, &queryRsp); err != nil {
-		log.Errorf("Unmarshal err:%v", err)
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
 		return AccessTokenInfo{}, err
 	}
 
-	rdata := AccessTokenInfo{
-		Token:  queryRsp.AccessToken,
-		UpTime: time.Now(),
+	var respData queryTokenRsp
+	if err := json.Unmarshal(body, &respData); err != nil {
+		return AccessTokenInfo{}, err
 	}
-	rdata.ExpiresIn, _ = strconv.ParseInt(queryRsp.ExpiresIn, 10, 64)
-	return rdata, err
+
+	expiresIn, _ := strconv.ParseInt(respData.ExpiresIn, 10, 64) // Ignoring error can be dangerous, handle it as needed
+
+	return AccessTokenInfo{
+		Token:     respData.AccessToken,
+		ExpiresIn: expiresIn,
+		UpTime:    time.Now(),
+	}, nil
 }

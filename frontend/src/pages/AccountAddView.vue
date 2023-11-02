@@ -1,0 +1,75 @@
+<template>
+  <q-page class="row justify-center">
+    <q-card class="col-12 col-xs-8 col-sm-6 col-md-4 shadow q-pa-md self-center">
+      <q-card-section>
+        <div class="text-h5">
+          <q-icon name="person" color="accent" />添加机器人
+        </div>
+      </q-card-section>
+      <q-separator />
+      <q-form
+        autocorrect="off"
+        autocapitalize="off"
+        autocomplete="off"
+        spellcheck="false"
+        @submit="addAccount"
+        @reset="clearForm"
+      >
+        <q-card-section class="q-gutter-md">
+          <q-input
+            v-model.number="uin"
+            autofocus
+            filled
+            counter
+            clearable
+            label="Appid"
+            :rules="[(v) => +v >= 1e4 || '请输入机器人Appid']"
+          >
+            <template v-slot:prepend><q-icon name="badge" /></template>
+          </q-input>
+          <!-- Password and Protocol inputs removed -->
+        </q-card-section>
+        <q-separator />
+        <q-card-actions class="justify-center">
+          <q-btn flat color="positive" type="submit" icon="add">提交</q-btn>
+          <q-btn flat color="negative" type="reset" icon="clear">清除</q-btn>
+        </q-card-actions>
+      </q-form>
+    </q-card>
+  </q-page>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue';
+import { useQuasar } from 'quasar';
+import { useRouter } from 'vue-router';
+import { api } from 'src/boot/axios';
+
+const $q = useQuasar(),
+      $router = useRouter();
+
+const uin = ref<number>();
+
+async function addAccount() {
+  if (!uin.value) return;
+  try {
+    $q.loading.show();
+    await api.createAccountApiUinPut(uin.value, {
+      // Ensure password and protocol are not included or set to undefined
+    });
+    void $router.push(`/accounts/${uin.value}`);
+  } catch (err) {
+    $q.notify({
+      color: 'negative',
+      message: (err as Error).message,
+    });
+  } finally {
+    $q.loading.hide();
+  }
+}
+
+function clearForm() {
+  uin.value = undefined;
+  // No need to clear password and protocol as they are not present
+}
+</script>

@@ -45,6 +45,7 @@ func generateHashedString(url string) string {
 	return hex.EncodeToString(hash[:3]) // 取前3个字节，得到6个字符的16进制表示
 }
 
+// 这里的数据库是在init创建的
 func init() {
 	var err error
 	db, err = bolt.Open("gensokyo.db", 0600, nil)
