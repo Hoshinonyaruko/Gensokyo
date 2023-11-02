@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/event"
@@ -10,7 +10,7 @@ import (
 // ThreadEventHandler 论坛主贴事件
 func ThreadEventHandler() event.ThreadEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSThreadData) error {
-		fmt.Println(event, data)
+		log.Println(event, data)
 		return nil
 	}
 }

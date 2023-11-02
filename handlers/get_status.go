@@ -1,9 +1,8 @@
 package handlers
 
 import (
-	"log"
-
 	"github.com/hoshinonyaruko/gensokyo/callapi"
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/tencent-connect/botgo/openapi"
 )
 
@@ -69,10 +68,10 @@ func getStatus(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI
 
 	outputMap := structToMap(response)
 
-	log.Printf("get_status: %+v\n", outputMap)
+	mylog.Printf("get_status: %+v\n", outputMap)
 
 	err := client.SendMessage(outputMap)
 	if err != nil {
-		log.Printf("Error sending message via client: %v", err)
+		mylog.Printf("Error sending message via client: %v", err)
 	}
 }

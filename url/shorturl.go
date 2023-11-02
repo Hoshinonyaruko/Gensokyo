@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math/rand"
 	"net"
 	"net/http"
@@ -18,6 +17,7 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/gin-gonic/gin"
 	"github.com/hoshinonyaruko/gensokyo/config"
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 )
 
 const (
@@ -135,32 +135,32 @@ func GenerateShortURL(longURL string) string {
 		payload := map[string]string{"longURL": longURL}
 		jsonPayload, err := json.Marshal(payload)
 		if err != nil {
-			log.Printf("Error marshaling payload: %v", err)
+			mylog.Printf("Error marshaling payload: %v", err)
 			return ""
 		}
 
 		resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonPayload))
 		if err != nil {
-			log.Printf("Error while generating short URL: %v", err)
+			mylog.Printf("Error while generating short URL: %v", err)
 			return ""
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
-			log.Printf("Received non-200 status code: %d from server: %v", resp.StatusCode, url)
+			mylog.Printf("Received non-200 status code: %d from server: %v", resp.StatusCode, url)
 			return ""
 		}
 
 		var response map[string]interface{}
 		err = json.NewDecoder(resp.Body).Decode(&response)
 		if err != nil {
-			log.Println("Error decoding response")
+			mylog.Println("Error decoding response")
 			return ""
 		}
 
 		shortURL, ok := response["shortURL"].(string)
 		if !ok {
-			log.Println("shortURL not found or not a string in the response")
+			mylog.Println("shortURL not found or not a string in the response")
 			return ""
 		}
 
@@ -171,7 +171,7 @@ func GenerateShortURL(longURL string) string {
 
 		exists, err := existsInDB(shortURL)
 		if err != nil {
-			log.Printf("Error checking if shortURL exists in DB: %v", err)
+			mylog.Printf("Error checking if shortURL exists in DB: %v", err)
 			return "" // 如果有错误, 返回空的短链接
 		}
 		if exists {
@@ -179,7 +179,7 @@ func GenerateShortURL(longURL string) string {
 				shortURL = generateRandomString()
 				exists, err := existsInDB(shortURL)
 				if err != nil {
-					log.Printf("Error checking if shortURL exists in DB: %v", err)
+					mylog.Printf("Error checking if shortURL exists in DB: %v", err)
 					return "" // 如果有错误, 返回空的短链接
 				}
 				if !exists {
@@ -191,7 +191,7 @@ func GenerateShortURL(longURL string) string {
 		// 存储短URL和对应的长URL
 		err = storeURL(shortURL, longURL)
 		if err != nil {
-			log.Printf("Error storing URL in DB: %v", err)
+			mylog.Printf("Error storing URL in DB: %v", err)
 			return ""
 		}
 
@@ -210,7 +210,7 @@ func existsInDB(shortURL string) (bool, error) {
 		return nil
 	})
 	if err != nil {
-		log.Printf("Error accessing the database: %v", err) // 记录错误
+		mylog.Printf("Error accessing the database: %v", err) // 记录错误
 		return false, err
 	}
 	return exists, nil
@@ -236,7 +236,7 @@ func getLongURLFromDB(shortURL string) (string, error) {
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
-			log.Printf("Received non-200 status code: %d while fetching long URL from server: %v", resp.StatusCode, url)
+			mylog.Printf("Received non-200 status code: %d while fetching long URL from server: %v", resp.StatusCode, url)
 			return "", fmt.Errorf("error fetching long URL from remote server with status code: %d", resp.StatusCode)
 		}
 

@@ -1,7 +1,7 @@
 package event
 
 import (
-	"fmt"
+	"log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -22,7 +22,7 @@ func TestRegisterHandlers(t *testing.T) {
 	t.Run(
 		"test intent", func(t *testing.T) {
 			i := RegisterHandlers(guild, message, audio)
-			fmt.Println(i)
+			log.Println(i)
 			assert.Equal(t, dto.IntentGuildMessages, i&dto.IntentGuildMessages)
 			assert.Equal(t, dto.IntentGuilds, i&dto.IntentGuilds)
 			assert.Equal(t, dto.IntentAudio, i&dto.IntentAudio)

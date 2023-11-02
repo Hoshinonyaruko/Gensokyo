@@ -1,9 +1,8 @@
 package handlers
 
 import (
-	"log"
-
 	"github.com/hoshinonyaruko/gensokyo/callapi"
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/tencent-connect/botgo/openapi"
 )
 
@@ -32,10 +31,10 @@ func getGuildChannelList(client callapi.Client, api openapi.OpenAPI, apiv2 opena
 	// Convert the members slice to a map
 	outputMap := structToMap(response)
 
-	log.Printf("get_guild_channel_list: %s", outputMap)
+	mylog.Printf("get_guild_channel_list: %s", outputMap)
 
 	err := client.SendMessage(outputMap) //发回去
 	if err != nil {
-		log.Printf("Error sending message via client: %v", err)
+		mylog.Printf("Error sending message via client: %v", err)
 	}
 }

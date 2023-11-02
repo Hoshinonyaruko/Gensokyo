@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/openapi"
 )
@@ -32,10 +32,10 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 	if msgType == "" {
 		appID := config.GetAppIDStr()
 		groupID := message.Params.GroupID
-		fmt.Printf("appID: %s, GroupID: %v\n", appID, groupID)
+		mylog.Printf("appID: %s, GroupID: %v\n", appID, groupID)
 
 		msgType = GetMessageTypeByGroupid(appID, groupID)
-		fmt.Printf("msgType: %s\n", msgType)
+		mylog.Printf("msgType: %s\n", msgType)
 	}
 
 	//如果获取不到 就用user_id获取信息类型
@@ -49,7 +49,7 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		//还原真实的userid
 		UserID, err := idmap.RetrieveRowByIDv2(message.Params.UserID.(string))
 		if err != nil {
-			log.Printf("Error reading config: %v", err)
+			mylog.Printf("Error reading config: %v", err)
 			return
 		}
 
@@ -60,16 +60,16 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		var messageID string
 		if echoStr, ok := message.Echo.(string); ok {
 			messageID = echo.GetMsgIDByKey(echoStr)
-			log.Println("echo取私聊发信息对应的message_id:", messageID)
+			mylog.Println("echo取私聊发信息对应的message_id:", messageID)
 		}
 		// 如果messageID仍然为空，尝试使用config.GetAppID和UserID的组合来获取messageID
 		// 如果messageID为空，通过函数获取
 		if messageID == "" {
 			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), UserID)
-			log.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
+			mylog.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
 		}
-		log.Println("私聊发信息messageText:", messageText)
-		//log.Println("foundItems:", foundItems)
+		mylog.Println("私聊发信息messageText:", messageText)
+		//mylog.Println("foundItems:", foundItems)
 
 		// 优先发送文本信息
 		if messageText != "" {
@@ -78,14 +78,14 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			// 进行类型断言
 			groupMessage, ok := groupReply.(*dto.MessageToCreate)
 			if !ok {
-				log.Println("Error: Expected MessageToCreate type.")
+				mylog.Println("Error: Expected MessageToCreate type.")
 				return
 			}
 
 			groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
 			_, err := apiv2.PostC2CMessage(context.TODO(), UserID, groupMessage)
 			if err != nil {
-				log.Printf("发送文本私聊信息失败: %v", err)
+				mylog.Printf("发送文本私聊信息失败: %v", err)
 			}
 			//发送成功回执
 			SendResponse(client, err, &message)
@@ -101,12 +101,12 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			// 进行类型断言
 			richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
 			if !ok {
-				log.Printf("Error: Expected RichMediaMessage type for key %s.", key)
+				mylog.Printf("Error: Expected RichMediaMessage type for key %s.", key)
 				continue
 			}
 			_, err := apiv2.PostC2CMessage(context.TODO(), UserID, richMediaMessage)
 			if err != nil {
-				log.Printf("发送 %s 私聊信息失败: %v", key, err)
+				mylog.Printf("发送 %s 私聊信息失败: %v", key, err)
 			}
 			//发送成功回执
 			SendResponse(client, err, &message)
@@ -115,7 +115,7 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		//当收到发私信调用 并且来源是频道
 		handleSendGuildChannelPrivateMsg(client, api, apiv2, message, nil, nil)
 	default:
-		log.Printf("Unknown message type: %s", msgType)
+		mylog.Printf("Unknown message type: %s", msgType)
 	}
 }
 
@@ -166,7 +166,7 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 		//默认私信场景 通过仅有的userid来还原频道私信需要的guildid
 		guildID, channelID, err = getGuildIDFromMessage(message)
 		if err != nil {
-			log.Printf("获取 guild_id 和 channel_id 出错: %v", err)
+			mylog.Printf("获取 guild_id 和 channel_id 出错: %v", err)
 			return
 		}
 	}
@@ -175,14 +175,14 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 	var messageID string
 	if echoStr, ok := message.Echo.(string); ok {
 		messageID = echo.GetMsgIDByKey(echoStr)
-		log.Println("echo取私聊发信息对应的message_id:", messageID)
+		mylog.Println("echo取私聊发信息对应的message_id:", messageID)
 	}
-	log.Println("私聊信息messageText:", messageText)
-	//log.Println("foundItems:", foundItems)
+	mylog.Println("私聊信息messageText:", messageText)
+	//mylog.Println("foundItems:", foundItems)
 	// 如果messageID为空，通过函数获取
 	if messageID == "" {
 		messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), message.Params.UserID)
-		log.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
+		mylog.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
 	}
 
 	timestamp := time.Now().Unix()
@@ -199,7 +199,7 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 	if messageText != "" {
 		textMsg, _ := generateReplyMessage(messageID, nil, messageText)
 		if _, err = apiv2.PostDirectMessage(context.TODO(), dm, textMsg); err != nil {
-			log.Printf("发送文本信息失败: %v", err)
+			mylog.Printf("发送文本信息失败: %v", err)
 		}
 		//发送成功回执
 		SendResponse(client, err, &message)
@@ -216,7 +216,7 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 			// 将base64内容从reply的Content转换回字节
 			fileImageData, err := base64.StdEncoding.DecodeString(reply.Content)
 			if err != nil {
-				log.Printf("Base64 解码失败: %v", err)
+				mylog.Printf("Base64 解码失败: %v", err)
 				return // 或其他的错误处理方式
 			}
 
@@ -225,13 +225,13 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 
 			// 使用Multipart方法发送
 			if _, err = api.PostDirectMessageMultipart(context.TODO(), dm, reply, fileImageData); err != nil {
-				log.Printf("使用multipart发送 %s 信息失败: %v message_id %v", key, err, messageID)
+				mylog.Printf("使用multipart发送 %s 信息失败: %v message_id %v", key, err, messageID)
 			}
 			//发送成功回执
 			SendResponse(client, err, &message)
 		} else {
 			if _, err = api.PostDirectMessage(context.TODO(), dm, reply); err != nil {
-				log.Printf("发送 %s 信息失败: %v", key, err)
+				mylog.Printf("发送 %s 信息失败: %v", key, err)
 			}
 			//发送成功回执
 			SendResponse(client, err, &message)

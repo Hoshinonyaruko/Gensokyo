@@ -50,7 +50,7 @@ func (o *openAPI) TraceID() string {
 // Setup 生成一个实例
 func (o *openAPI) Setup(token *token.Token, inSandbox bool) openapi.OpenAPI {
 	// 打印传入的令牌以进行调试
-	//fmt.Printf("Setup called with token: %+v\n", token)
+	//log.Printf("Setup called with token: %+v\n", token)
 
 	api := &openAPI{
 		token:   token,

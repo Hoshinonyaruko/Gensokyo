@@ -44,4 +44,5 @@ settings:
   identify_file: true  #自动生成域名校验文件,在q.qq.com配置信息URL,在server_dir填入自己已备案域名,正确解析到机器人所在服务器ip地址,机器人即可发送链接
   crt: "" #证书路径 从你的域名服务商或云服务商申请签发SSL证书(qq要求SSL) 
   key: "" #密钥路径 Apache（crt文件、key文件）示例: "C:\\123.key" \需要双写成\\
+  developer_log : false    #开启开发者日志 默认关闭
 `

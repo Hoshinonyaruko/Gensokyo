@@ -12,6 +12,7 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/hoshinonyaruko/gensokyo/config"
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 )
 
 const (
@@ -187,17 +188,17 @@ func WriteConfig(sectionName, keyName, value string) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b, err := tx.CreateBucketIfNotExists([]byte(ConfigBucket))
 		if err != nil {
-			log.Printf("Error creating or accessing bucket: %v", err)
+			mylog.Printf("Error creating or accessing bucket: %v", err)
 			return fmt.Errorf("failed to access or create bucket %s: %w", ConfigBucket, err)
 		}
 
 		key := joinSectionAndKey(sectionName, keyName)
 		err = b.Put(key, []byte(value))
 		if err != nil {
-			log.Printf("Error putting data into bucket with key %s: %v", key, err)
+			mylog.Printf("Error putting data into bucket with key %s: %v", key, err)
 			return fmt.Errorf("failed to put data into bucket with key %s: %w", key, err)
 		}
-		//log.Printf("Data saved successfully with key %s,value %s", key, value)
+		//mylog.Printf("Data saved successfully with key %s,value %s", key, value)
 		return nil
 	})
 }

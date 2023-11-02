@@ -4,10 +4,10 @@ package config
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"sync"
 
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"gopkg.in/yaml.v3"
 )
 
@@ -40,6 +40,7 @@ type Settings struct {
 	IdentifyFile           bool     `yaml:"identify_file"`              // 域名校验文件
 	Crt                    string   `yaml:"crt"`
 	Key                    string   `yaml:"key"`
+	DeveloperLog           bool     `yaml:"developer_log"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -80,7 +81,7 @@ func GetServer_dir() string {
 	defer mu.Unlock()
 
 	if instance == nil {
-		log.Println("Warning: instance is nil when trying to get upload directory.")
+		mylog.Println("Warning: instance is nil when trying to get upload directory.")
 		return ""
 	}
 	return instance.Settings.Server_dir
@@ -92,7 +93,7 @@ func GetLotusValue() bool {
 	defer mu.Unlock()
 
 	if instance == nil {
-		log.Println("Warning: instance is nil when trying to get lotus value.")
+		mylog.Println("Warning: instance is nil when trying to get lotus value.")
 		return false
 	}
 	return instance.Settings.Lotus
@@ -104,7 +105,7 @@ func GetPortValue() string {
 	defer mu.Unlock()
 
 	if instance == nil {
-		log.Println("Warning: instance is nil when trying to get port value.")
+		mylog.Println("Warning: instance is nil when trying to get port value.")
 		return ""
 	}
 	return instance.Settings.Port
@@ -116,7 +117,7 @@ func GetArrayValue() bool {
 	defer mu.Unlock()
 
 	if instance == nil {
-		log.Println("Warning: instance is nil when trying to get array value.")
+		mylog.Println("Warning: instance is nil when trying to get array value.")
 		return false
 	}
 	return instance.Settings.Array
@@ -168,7 +169,7 @@ func GetEnableWsServer() bool {
 	defer mu.Unlock()
 
 	if instance == nil {
-		log.Println("Warning: instance is nil when trying to get port value.")
+		mylog.Println("Warning: instance is nil when trying to get port value.")
 		return false
 	}
 	return instance.Settings.EnableWsServer
@@ -180,7 +181,7 @@ func GetWsServerToken() string {
 	defer mu.Unlock()
 
 	if instance == nil {
-		log.Println("Warning: instance is nil when trying to get WsServerToken value.")
+		mylog.Println("Warning: instance is nil when trying to get WsServerToken value.")
 		return ""
 	}
 	return instance.Settings.WsServerToken
@@ -192,7 +193,7 @@ func GetIdentifyFile() bool {
 	defer mu.Unlock()
 
 	if instance == nil {
-		log.Println("Warning: instance is nil when trying to get identify file name.")
+		mylog.Println("Warning: instance is nil when trying to get identify file name.")
 		return false
 	}
 	return instance.Settings.IdentifyFile
@@ -204,7 +205,7 @@ func GetCrtPath() string {
 	defer mu.Unlock()
 
 	if instance == nil {
-		log.Println("Warning: instance is nil when trying to get crt path.")
+		mylog.Println("Warning: instance is nil when trying to get crt path.")
 		return ""
 	}
 	return instance.Settings.Crt
@@ -216,8 +217,20 @@ func GetKeyPath() string {
 	defer mu.Unlock()
 
 	if instance == nil {
-		log.Println("Warning: instance is nil when trying to get key path.")
+		mylog.Println("Warning: instance is nil when trying to get key path.")
 		return ""
 	}
 	return instance.Settings.Key
+}
+
+// 开发者日志
+func GetDeveloperLog() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get developer log status.")
+		return false
+	}
+	return instance.Settings.DeveloperLog
 }

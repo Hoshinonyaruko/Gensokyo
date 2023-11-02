@@ -108,7 +108,7 @@ func ATMessageEventHandler() event.ATMessageEventHandler {
 // GuildEventHandler 处理频道事件
 func GuildEventHandler() event.GuildEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSGuildData) error {
-		fmt.Println(data)
+		log.Println(data)
 		return nil
 	}
 }
@@ -116,7 +116,7 @@ func GuildEventHandler() event.GuildEventHandler {
 // ChannelEventHandler 处理子频道事件
 func ChannelEventHandler() event.ChannelEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSChannelData) error {
-		fmt.Println(data)
+		log.Println(data)
 		return nil
 	}
 }
@@ -124,7 +124,7 @@ func ChannelEventHandler() event.ChannelEventHandler {
 // MemberEventHandler 处理成员变更事件
 func MemberEventHandler() event.GuildMemberEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSGuildMemberData) error {
-		fmt.Println(data)
+		log.Println(data)
 		return nil
 	}
 }
@@ -132,7 +132,7 @@ func MemberEventHandler() event.GuildMemberEventHandler {
 // DirectMessageHandler 处理私信事件
 func DirectMessageHandler() event.DirectMessageEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSDirectMessageData) error {
-		fmt.Println(data)
+		log.Println(data)
 		return nil
 	}
 }
@@ -140,7 +140,7 @@ func DirectMessageHandler() event.DirectMessageEventHandler {
 // CreateMessageHandler 处理消息事件
 func CreateMessageHandler() event.MessageEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSMessageData) error {
-		fmt.Println(data)
+		log.Println(data)
 		return nil
 	}
 }
@@ -148,7 +148,7 @@ func CreateMessageHandler() event.MessageEventHandler {
 // InteractionHandler 处理内联交互事件
 func InteractionHandler() event.InteractionEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSInteractionData) error {
-		fmt.Println(data)
+		log.Println(data)
 		return processor.ProcessInlineSearch(data)
 	}
 }

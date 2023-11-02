@@ -61,7 +61,7 @@ func (atoken *AuthTokenInfo) StartRefreshAccessToken(ctx context.Context, tokenU
 		return err
 	}
 	atoken.setAuthToken(tokenInfo)
-	fmt.Printf("获取到的token是: %s\n", tokenInfo.Token) // 输出获取到的token
+	log.Info("获取到的token是: %s\n", tokenInfo.Token) // 输出获取到的token
 
 	// 获取token的有效期（通常以秒为单位）
 	tokenTTL := tokenInfo.ExpiresIn
@@ -85,7 +85,7 @@ func (atoken *AuthTokenInfo) StartRefreshAccessToken(ctx context.Context, tokenU
 				tokenInfo, err := queryAccessToken(ctx, tokenURL, appID, clientSecrent)
 				if err == nil {
 					atoken.setAuthToken(tokenInfo)
-					fmt.Printf("获取到的token是: %s\n", tokenInfo.Token) // 输出获取到的token
+					log.Info("获取到的token是: %s\n", tokenInfo.Token) // 输出获取到的token
 					tokenTTL = tokenInfo.ExpiresIn
 				} else {
 					log.Errorf("queryAccessToken err:%v", err)

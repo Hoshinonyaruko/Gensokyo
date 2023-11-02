@@ -2,10 +2,10 @@ package handlers
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/config"
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/tencent-connect/botgo/openapi"
 )
 
@@ -46,13 +46,13 @@ func getLoginInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 	// Convert the members slice to a map
 	outputMap := structToMap(response)
 
-	log.Printf("get_login_info: %+v\n", outputMap)
+	mylog.Printf("get_login_info: %+v\n", outputMap)
 
 	err := client.SendMessage(outputMap)
 	if err != nil {
-		log.Printf("Error sending message via client: %v", err)
+		mylog.Printf("Error sending message via client: %v", err)
 	} else {
-		log.Printf("响应get_login_info: %+v", outputMap)
+		mylog.Printf("响应get_login_info: %+v", outputMap)
 	}
 
 	return

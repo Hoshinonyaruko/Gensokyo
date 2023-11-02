@@ -3,13 +3,12 @@ package handlers
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
-	"log"
 	"os"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 
 	"github.com/hoshinonyaruko/gensokyo/echo"
 
@@ -38,10 +37,10 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 	if msgType == "" {
 		appID := config.GetAppIDStr()
 		groupID := message.Params.GroupID
-		fmt.Printf("appID: %s, GroupID: %v\n", appID, groupID)
+		mylog.Printf("appID: %s, GroupID: %v\n", appID, groupID)
 
 		msgType = GetMessageTypeByGroupid(appID, groupID)
-		fmt.Printf("msgType: %s\n", msgType)
+		mylog.Printf("msgType: %s\n", msgType)
 	}
 
 	switch msgType {
@@ -51,26 +50,26 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 		messageText, foundItems := parseMessageContent(params)
 
 		channelID := params.ChannelID
-		log.Printf("发送文本信息失败: %v,%v", channelID, channelID)
+		//mylog.Printf("发送文本信息失败: %v,%v", channelID, channelID)
 		// 使用 echo 获取消息ID
 		var messageID string
 		if echoStr, ok := message.Echo.(string); ok {
 			messageID = echo.GetMsgIDByKey(echoStr)
-			log.Println("echo取频道发信息对应的message_id:", messageID)
+			mylog.Println("echo取频道发信息对应的message_id:", messageID)
 		}
 		// 如果messageID为空，通过函数获取
 		if messageID == "" {
 			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), channelID)
-			log.Println("通过GetMessageIDByUseridOrGroupid函数获取的message_id:", messageID)
+			mylog.Println("通过GetMessageIDByUseridOrGroupid函数获取的message_id:", messageID)
 		}
-		log.Println("频道发信息messageText:", messageText)
-		//log.Println("foundItems:", foundItems)
+		mylog.Println("频道发信息messageText:", messageText)
+		//mylog.Println("foundItems:", foundItems)
 		// 优先发送文本信息
 		var err error
 		if messageText != "" {
 			textMsg, _ := generateReplyMessage(messageID, nil, messageText)
 			if _, err = api.PostMessage(context.TODO(), channelID, textMsg); err != nil {
-				log.Printf("发送文本信息失败: %v", err)
+				mylog.Printf("发送文本信息失败: %v", err)
 			}
 			//发送成功回执
 			SendResponse(client, err, &message)
@@ -87,7 +86,7 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 				// 将base64内容从reply的Content转换回字节
 				fileImageData, err := base64.StdEncoding.DecodeString(reply.Content)
 				if err != nil {
-					log.Printf("Base64 解码失败: %v", err)
+					mylog.Printf("Base64 解码失败: %v", err)
 					return // 或其他的错误处理方式
 				}
 
@@ -96,13 +95,13 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 
 				// 使用Multipart方法发送
 				if _, err = api.PostMessageMultipart(context.TODO(), channelID, reply, fileImageData); err != nil {
-					log.Printf("使用multipart发送 %s 信息失败: %v message_id %v", key, err, messageID)
+					mylog.Printf("使用multipart发送 %s 信息失败: %v message_id %v", key, err, messageID)
 				}
 				//发送成功回执
 				SendResponse(client, err, &message)
 			} else {
 				if _, err = api.PostMessage(context.TODO(), channelID, reply); err != nil {
-					log.Printf("发送 %s 信息失败: %v", key, err)
+					mylog.Printf("发送 %s 信息失败: %v", key, err)
 				}
 				//发送成功回执
 				SendResponse(client, err, &message)
@@ -117,11 +116,11 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 		// 使用RetrieveRowByIDv2还原真实的ChannelID
 		RChannelID, err := idmap.RetrieveRowByIDv2(channelID)
 		if err != nil {
-			log.Printf("error retrieving real UserID: %v", err)
+			mylog.Printf("error retrieving real UserID: %v", err)
 		}
 		handleSendGuildChannelPrivateMsg(client, api, apiv2, message, &guildID, &RChannelID)
 	default:
-		log.Printf("2Unknown message type: %s", msgType)
+		mylog.Printf("2Unknown message type: %s", msgType)
 	}
 }
 
@@ -135,7 +134,7 @@ func generateReplyMessage(id string, foundItems map[string][]string, messageText
 		imageData, err := os.ReadFile(imageURLs[0])
 		if err != nil {
 			// 读入文件,如果是本地图,应用端和gensokyo需要在一台电脑
-			log.Printf("Error reading the image from path %s: %v", imageURLs[0], err)
+			mylog.Printf("Error reading the image from path %s: %v", imageURLs[0], err)
 			// 发文本信息，提示图片文件不存在
 			reply = dto.MessageToCreate{
 				Content: "错误: 图片文件不存在",

@@ -39,7 +39,7 @@ func main() {
 
     // 监听哪类事件就需要实现哪类的 handler，定义：websocket/event_handler.go
     var atMessage websocket.ATMessageEventHandler = func(event *dto.WSPayload, data *dto.WSATMessageData) error {
-        fmt.Println(event, data)
+        log.Println(event, data)
         return nil
     }
     intent := websocket.RegisterHandlers(atMessage)

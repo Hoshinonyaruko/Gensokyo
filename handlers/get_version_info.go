@@ -1,9 +1,8 @@
 package handlers
 
 import (
-	"log"
-
 	"github.com/hoshinonyaruko/gensokyo/callapi"
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/tencent-connect/botgo/openapi"
 )
 
@@ -64,10 +63,10 @@ func getVersionInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Op
 	// Convert the members slice to a map
 	outputMap := structToMap(response)
 
-	log.Printf("get_version_info: %+v/n", outputMap)
+	mylog.Printf("get_version_info: %+v/n", outputMap)
 
 	err := client.SendMessage(outputMap)
 	if err != nil {
-		log.Printf("Error sending message via client: %v", err)
+		mylog.Printf("Error sending message via client: %v", err)
 	}
 }

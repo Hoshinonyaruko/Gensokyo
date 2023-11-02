@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"encoding/json"
-	"log"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/tencent-connect/botgo/openapi"
 )
 
@@ -50,14 +50,14 @@ func handleGetFriendList(client callapi.Client, api openapi.OpenAPI, apiv2 opena
 	// Send the map
 	err := client.SendMessage(outputMap) //发回去
 	if err != nil {
-		log.Printf("error sending friend list via wsclient: %v", err)
+		mylog.Printf("error sending friend list via wsclient: %v", err)
 	}
 
 	result, err := json.Marshal(output)
 	if err != nil {
-		log.Printf("Error marshaling data: %v", err)
+		mylog.Printf("Error marshaling data: %v", err)
 		return
 	}
 
-	log.Printf("get_friend_list: %s", result)
+	mylog.Printf("get_friend_list: %s", result)
 }

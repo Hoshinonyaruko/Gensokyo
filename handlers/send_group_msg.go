@@ -3,8 +3,6 @@ package handlers
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"time"
@@ -14,6 +12,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/images"
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/openapi"
 )
@@ -49,21 +48,21 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		var messageID string
 		if echoStr, ok := message.Echo.(string); ok {
 			messageID = echo.GetMsgIDByKey(echoStr)
-			log.Println("echo取群组发信息对应的message_id:", messageID)
+			mylog.Println("echo取群组发信息对应的message_id:", messageID)
 		}
 		//通过bolt数据库还原真实的GroupID
 		originalGroupID, err := idmap.RetrieveRowByIDv2(message.Params.GroupID.(string))
 		if err != nil {
-			log.Printf("Error retrieving original GroupID: %v", err)
+			mylog.Printf("Error retrieving original GroupID: %v", err)
 			return
 		}
 		message.Params.GroupID = originalGroupID
-		log.Println("群组发信息messageText:", messageText)
-		//log.Println("foundItems:", foundItems)
+		mylog.Println("群组发信息messageText:", messageText)
+		//mylog.Println("foundItems:", foundItems)
 		// 如果messageID为空，通过函数获取
 		if messageID == "" {
 			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), message.Params.GroupID)
-			log.Println("通过GetMessageIDByUseridOrGroupid函数获取的message_id:", message.Params.GroupID, messageID)
+			mylog.Println("通过GetMessageIDByUseridOrGroupid函数获取的message_id:", message.Params.GroupID, messageID)
 		}
 
 		// 优先发送文本信息
@@ -73,7 +72,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			// 进行类型断言
 			groupMessage, ok := groupReply.(*dto.MessageToCreate)
 			if !ok {
-				log.Println("Error: Expected MessageToCreate type.")
+				mylog.Println("Error: Expected MessageToCreate type.")
 				return // 或其他错误处理
 			}
 
@@ -81,7 +80,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			//重新为err赋值
 			_, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 			if err != nil {
-				log.Printf("发送文本群组信息失败: %v", err)
+				mylog.Printf("发送文本群组信息失败: %v", err)
 			}
 			//发送成功回执
 			SendResponse(client, err, &message)
@@ -97,13 +96,13 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			// 进行类型断言
 			richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
 			if !ok {
-				log.Printf("Error: Expected RichMediaMessage type for key %s.", key)
+				mylog.Printf("Error: Expected RichMediaMessage type for key %s.", key)
 				continue // 跳过这个项，继续下一个
 			}
-			fmt.Printf("richMediaMessage: %+v\n", richMediaMessage)
+			mylog.Printf("richMediaMessage: %+v\n", richMediaMessage)
 			_, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), richMediaMessage)
 			if err != nil {
-				log.Printf("发送 %s 信息失败_send_group_msg: %v", key, err)
+				mylog.Printf("发送 %s 信息失败_send_group_msg: %v", key, err)
 			}
 			//发送成功回执
 			SendResponse(client, err, &message)
@@ -114,7 +113,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		// 使用RetrieveRowByIDv2还原真实的ChannelID
 		RChannelID, err := idmap.RetrieveRowByIDv2(message.Params.ChannelID)
 		if err != nil {
-			log.Printf("error retrieving real UserID: %v", err)
+			mylog.Printf("error retrieving real UserID: %v", err)
 		}
 		message.Params.ChannelID = RChannelID
 		//这一句是group_private的逻辑,发频道信息用的是channelid
@@ -126,12 +125,12 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		// 使用RetrieveRowByIDv2还原真实的ChannelID
 		RChannelID, err := idmap.RetrieveRowByIDv2(message.Params.ChannelID)
 		if err != nil {
-			log.Printf("error retrieving real ChannelID: %v", err)
+			mylog.Printf("error retrieving real ChannelID: %v", err)
 		}
 		//读取ini 通过ChannelID取回之前储存的guild_id
 		value, err := idmap.ReadConfigv2(RChannelID, "guild_id")
 		if err != nil {
-			log.Printf("Error reading config: %v", err)
+			mylog.Printf("Error reading config: %v", err)
 			return
 		}
 		handleSendGuildChannelPrivateMsg(client, api, apiv2, message, &value, &message.Params.ChannelID)
@@ -140,7 +139,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		message.Params.UserID = message.Params.GroupID.(string)
 		handleSendPrivateMsg(client, api, apiv2, message)
 	default:
-		log.Printf("Unknown message type: %s", msgType)
+		mylog.Printf("Unknown message type: %s", msgType)
 	}
 }
 
@@ -151,7 +150,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 		imageData, err := os.ReadFile(imageURLs[0])
 		if err != nil {
 			// 读入文件失败
-			log.Printf("Error reading the image from path %s: %v", imageURLs[0], err)
+			mylog.Printf("Error reading the image from path %s: %v", imageURLs[0], err)
 			// 返回文本信息，提示图片文件不存在
 			return &dto.MessageToCreate{
 				Content: "错误: 图片文件不存在",
@@ -166,7 +165,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 		// 上传base64编码的图片并获取其URL
 		imageURL, err := images.UploadBase64ImageToServer(base64Encoded)
 		if err != nil {
-			log.Printf("Error uploading base64 encoded image: %v", err)
+			mylog.Printf("Error uploading base64 encoded image: %v", err)
 			// 如果上传失败，也返回文本信息，提示上传失败
 			return &dto.MessageToCreate{
 				Content: "错误: 上传图片失败",
@@ -202,13 +201,13 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 			// 解码base64图片数据
 			fileImageData, err := base64.StdEncoding.DecodeString(base64Image[0])
 			if err != nil {
-				log.Printf("failed to decode base64 image: %v", err)
+				mylog.Printf("failed to decode base64 image: %v", err)
 				return nil
 			}
 			// 将解码的图片数据转换回base64格式并上传
 			imageURL, err := images.UploadBase64ImageToServer(base64.StdEncoding.EncodeToString(fileImageData))
 			if err != nil {
-				log.Printf("failed to upload base64 image: %v", err)
+				mylog.Printf("failed to upload base64 image: %v", err)
 				return nil
 			}
 			// 创建RichMediaMessage并返回

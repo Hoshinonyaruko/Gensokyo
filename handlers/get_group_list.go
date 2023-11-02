@@ -3,11 +3,11 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"strconv"
 	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/openapi"
 )
@@ -55,7 +55,7 @@ func getGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 
 	guilds, err := api.MeGuilds(context.TODO(), pager)
 	if err != nil {
-		log.Println("Error fetching guild list:", err)
+		mylog.Println("Error fetching guild list:", err)
 		// 创建虚拟的Group
 		virtualGroup := Group{
 			GroupCreateTime: time.Now().Format(time.RFC3339),
@@ -83,20 +83,20 @@ func getGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 
 			outputMap := structToMap(groupList)
 
-			log.Printf("getGroupList(频道): %+v\n", outputMap)
+			mylog.Printf("getGroupList(频道): %+v\n", outputMap)
 
 			err = client.SendMessage(outputMap)
 			if err != nil {
-				log.Printf("error sending group info via wsclient: %v", err)
+				mylog.Printf("error sending group info via wsclient: %v", err)
 			}
 
 			result, err := json.Marshal(groupList)
 			if err != nil {
-				log.Printf("Error marshaling data: %v", err)
+				mylog.Printf("Error marshaling data: %v", err)
 				return
 			}
 
-			log.Printf("get_group_list: %s", result)
+			mylog.Printf("get_group_list: %s", result)
 			return
 		}
 	}
@@ -105,7 +105,7 @@ func getGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 	for _, guild := range guilds {
 		joinedAtTime, err := guild.JoinedAt.Time()
 		if err != nil {
-			log.Println("Error parsing JoinedAt timestamp:", err)
+			mylog.Println("Error parsing JoinedAt timestamp:", err)
 			continue
 		}
 		joinedAtStr := joinedAtTime.Format(time.RFC3339) // or any other format you prefer
@@ -136,19 +136,19 @@ func getGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 
 		outputMap := structToMap(groupList)
 
-		log.Printf("getGroupList(频道): %+v\n", outputMap)
+		mylog.Printf("getGroupList(频道): %+v\n", outputMap)
 
 		err = client.SendMessage(outputMap)
 		if err != nil {
-			log.Printf("error sending group info via wsclient: %v", err)
+			mylog.Printf("error sending group info via wsclient: %v", err)
 		}
 
 		result, err := json.Marshal(groupList)
 		if err != nil {
-			log.Printf("Error marshaling data: %v", err)
+			mylog.Printf("Error marshaling data: %v", err)
 			return
 		}
 
-		log.Printf("get_group_list: %s", result)
+		mylog.Printf("get_group_list: %s", result)
 	}
 }

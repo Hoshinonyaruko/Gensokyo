@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/config"
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/hoshinonyaruko/gensokyo/wsclient"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/openapi"
@@ -140,7 +141,7 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 // 	context.Background(), dm, toCreate,
 // )
 // if err != nil {
-// 	log.Println("Error sending default reply:", err)
+// 	mylog.Println("Error sending default reply:", err)
 // 	return nil
 // }
 
@@ -157,7 +158,7 @@ func PrintStructWithFieldNames(v interface{}) {
 
 	// 确保我们传入的是一个结构体
 	if typ.Kind() != reflect.Struct {
-		fmt.Println("Input is not a struct")
+		mylog.Println("Input is not a struct")
 		return
 	}
 
@@ -165,7 +166,7 @@ func PrintStructWithFieldNames(v interface{}) {
 	for i := 0; i < typ.NumField(); i++ {
 		field := typ.Field(i)
 		value := val.Field(i)
-		fmt.Printf("%s: %v\n", field.Name, value.Interface())
+		mylog.Printf("%s: %v\n", field.Name, value.Interface())
 	}
 }
 
