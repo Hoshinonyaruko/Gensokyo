@@ -46,6 +46,7 @@ type Settings struct {
 	DeveloperLog           bool     `yaml:"developer_log"`
 	Username               string   `yaml:"server_user_name"`
 	Password               string   `yaml:"server_user_password"`
+	ImageLimit             int      `yaml:"image_sizelimit"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -366,4 +367,17 @@ func GetServerUserPassword() string {
 		return ""
 	}
 	return instance.Settings.Password
+}
+
+// GetImageLimit 返回 ImageLimit 的值
+func GetImageLimit() int {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get image limit value.")
+		return 0 // 或者返回一个默认的 ImageLimit 值
+	}
+
+	return instance.Settings.ImageLimit
 }

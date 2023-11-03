@@ -73,7 +73,7 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 
 		// 优先发送文本信息
 		if messageText != "" {
-			groupReply := generatePrivateMessage(messageID, nil, messageText)
+			groupReply := generateGroupMessage(messageID, nil, messageText)
 
 			// 进行类型断言
 			groupMessage, ok := groupReply.(*dto.MessageToCreate)
@@ -96,7 +96,8 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			var singleItem = make(map[string][]string)
 			singleItem[key] = urls
 
-			groupReply := generatePrivateMessage(messageID, singleItem, "")
+			//先试试用群里一样的处理逻辑,看看能跑不
+			groupReply := generateGroupMessage(messageID, singleItem, "")
 
 			// 进行类型断言
 			richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
@@ -119,6 +120,7 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 	}
 }
 
+// 这里是只有群私聊会用到
 func generatePrivateMessage(id string, foundItems map[string][]string, messageText string) interface{} {
 	if imageURLs, ok := foundItems["local_image"]; ok && len(imageURLs) > 0 {
 		// 本地发图逻辑 todo 适配base64图片

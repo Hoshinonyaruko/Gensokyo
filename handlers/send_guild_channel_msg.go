@@ -8,6 +8,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
+	"github.com/hoshinonyaruko/gensokyo/images"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 
 	"github.com/hoshinonyaruko/gensokyo/echo"
@@ -143,9 +144,18 @@ func generateReplyMessage(id string, foundItems map[string][]string, messageText
 			}
 			return &reply, false
 		}
-
+		// 首先压缩图片
+		compressedData, err := images.CompressSingleImage(imageData)
+		if err != nil {
+			mylog.Printf("Error compressing image: %v", err)
+			return &dto.MessageToCreate{
+				Content: "错误: 压缩图片失败",
+				MsgID:   id,
+				MsgType: 0, // 默认文本类型
+			}, false
+		}
 		//base64编码
-		base64Encoded := base64.StdEncoding.EncodeToString(imageData)
+		base64Encoded := base64.StdEncoding.EncodeToString(compressedData)
 
 		// 当作base64图来处理
 		reply = dto.MessageToCreate{

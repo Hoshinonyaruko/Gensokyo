@@ -158,9 +158,19 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 				MsgType: 0, // 默认文本类型
 			}
 		}
+		// 首先压缩图片 默认不压缩
+		compressedData, err := images.CompressSingleImage(imageData)
+		if err != nil {
+			mylog.Printf("Error compressing image: %v", err)
+			return &dto.MessageToCreate{
+				Content: "错误: 压缩图片失败",
+				MsgID:   id,
+				MsgType: 0, // 默认文本类型
+			}
+		}
 
 		// base64编码
-		base64Encoded := base64.StdEncoding.EncodeToString(imageData)
+		base64Encoded := base64.StdEncoding.EncodeToString(compressedData)
 
 		// 上传base64编码的图片并获取其URL
 		imageURL, err := images.UploadBase64ImageToServer(base64Encoded)
@@ -204,8 +214,18 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 				mylog.Printf("failed to decode base64 image: %v", err)
 				return nil
 			}
+			// 首先压缩图片 默认不压缩
+			compressedData, err := images.CompressSingleImage(fileImageData)
+			if err != nil {
+				mylog.Printf("Error compressing image: %v", err)
+				return &dto.MessageToCreate{
+					Content: "错误: 压缩图片失败",
+					MsgID:   id,
+					MsgType: 0, // 默认文本类型
+				}
+			}
 			// 将解码的图片数据转换回base64格式并上传
-			imageURL, err := images.UploadBase64ImageToServer(base64.StdEncoding.EncodeToString(fileImageData))
+			imageURL, err := images.UploadBase64ImageToServer(base64.StdEncoding.EncodeToString(compressedData))
 			if err != nil {
 				mylog.Printf("failed to upload base64 image: %v", err)
 				return nil
