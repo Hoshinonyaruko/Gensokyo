@@ -42,7 +42,6 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 		mylog.Printf("Error storing ID: %v", err)
 		return nil
 	}
-
 	//映射str的messageID到int
 	messageID64, err := idmap.StoreIDv2(data.ID)
 	if err != nil {
@@ -100,7 +99,6 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 	//储存当前群或频道号的类型
 	idmap.WriteConfigv2(fmt.Sprint(GroupID64), "type", "group")
 	echo.AddMsgType(AppIDString, GroupID64, "group")
-
 	// 调试
 	PrintStructWithFieldNames(groupMsg)
 
