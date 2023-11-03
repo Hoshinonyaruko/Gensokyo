@@ -1,7 +1,6 @@
 package url
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
@@ -131,42 +130,51 @@ func GenerateShortURL(longURL string) string {
 
 	if config.GetLotusValue() {
 		serverDir := config.GetServer_dir()
-		url := fmt.Sprintf("%s://%s:%s/url", protocol, serverDir, portValue)
+		requestURL := fmt.Sprintf("%s://%s:%s/url", protocol, serverDir, portValue) // 改变变量名以避免冲突
 
-		payload := map[string]string{"longURL": longURL}
-		jsonPayload, err := json.Marshal(payload)
+		// 使用 url.Values 构造请求数据
+		formData := url.Values{}
+		formData.Set("url", (longURL))
+
+		// 创建请求
+		req, err := http.NewRequest("POST", requestURL, strings.NewReader(formData.Encode()))
 		if err != nil {
-			mylog.Printf("Error marshaling payload: %v", err)
+			mylog.Printf("Error creating new request: %v", err)
 			return ""
 		}
 
-		resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonPayload))
+		// 设置Content-Type为表单形式
+		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+		// 发送请求
+		client := &http.Client{}
+		resp, err := client.Do(req)
 		if err != nil {
 			mylog.Printf("Error while generating short URL: %v", err)
 			return ""
 		}
 		defer resp.Body.Close()
 
+		// 处理响应
 		if resp.StatusCode != http.StatusOK {
-			mylog.Printf("Received non-200 status code: %d from server: %v", resp.StatusCode, url)
+			mylog.Printf("Received non-200 status code: %d from server: %v", resp.StatusCode, requestURL)
 			return ""
 		}
 
-		var response map[string]interface{}
+		var response map[string]string // 这里我们假设响应是一个简单的字符串到字符串的映射
 		err = json.NewDecoder(resp.Body).Decode(&response)
 		if err != nil {
-			mylog.Println("Error decoding response")
+			mylog.Printf("Error decoding response body: %v", err)
 			return ""
 		}
 
-		shortURL, ok := response["shortURL"].(string)
+		shortURL, ok := response["shortURL"]
 		if !ok {
 			mylog.Println("shortURL not found or not a string in the response")
 			return ""
 		}
 
 		return shortURL
-
 	} else {
 		shortURL := generateHashedString(longURL)
 

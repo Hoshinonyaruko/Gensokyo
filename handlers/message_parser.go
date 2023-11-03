@@ -165,6 +165,10 @@ func transformMessageText(messageText string) string {
 	// 首先，将AppID替换为BotID
 	messageText = strings.ReplaceAll(messageText, AppID, BotID)
 
+	// 去除所有[CQ:reply,id=数字] todo 更好的处理办法
+	replyRE := regexp.MustCompile(`\[CQ:reply,id=\d+\]`)
+	messageText = replyRE.ReplaceAllString(messageText, "")
+
 	// 使用正则表达式来查找所有[CQ:at,qq=数字]的模式
 	re := regexp.MustCompile(`\[CQ:at,qq=(\d+)\]`)
 	messageText = re.ReplaceAllStringFunc(messageText, func(m string) string {
@@ -184,8 +188,7 @@ func transformMessageText(messageText string) string {
 	// 使用xurls来查找和替换所有的URL
 	messageText = xurls.Relaxed.ReplaceAllStringFunc(messageText, func(originalURL string) string {
 		shortURL := url.GenerateShortURL(originalURL)
-		// 使用getBaseURL函数来获取baseUrl并与shortURL组合
-		return url.GetBaseURL() + "/url/" + shortURL
+		return shortURL
 	})
 	return messageText
 }
