@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
+	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/hoshinonyaruko/gensokyo/url"
@@ -217,20 +218,34 @@ func RevertTransformedText(data interface{}) string {
 	messageText = re.ReplaceAllStringFunc(messageText, func(m string) string {
 		submatches := re.FindStringSubmatch(m)
 		if len(submatches) > 1 {
-			//映射用户id
-			userID64, err := idmap.StoreIDv2(submatches[1])
+			userID := submatches[1]
+			// 检查是否是 BotID，如果是则直接返回，不进行映射
+			if userID == AppID {
+				return "[CQ:at,qq=" + AppID + "]"
+			}
+
+			// 不是 BotID，进行正常映射
+			userID64, err := idmap.StoreIDv2(userID)
 			if err != nil {
 				//如果储存失败(数据库损坏)返回原始值
 				mylog.Printf("Error storing ID: %v", err)
-				return "[CQ:at,qq=" + submatches[1] + "]"
+				return "[CQ:at,qq=" + userID + "]"
 			}
-			//类型转换
+			// 类型转换
 			userIDStr := strconv.FormatInt(userID64, 10)
-			//经过转换的cq码
+			// 经过转换的cq码
 			return "[CQ:at,qq=" + userIDStr + "]"
 		}
 		return m
 	})
+
+	// 检查是否需要移除前缀
+	if config.GetRemovePrefixValue() {
+		// 移除消息内容中第一次出现的 "/"
+		if idx := strings.Index(messageText, "/"); idx != -1 {
+			messageText = messageText[:idx] + messageText[idx+1:]
+		}
+	}
 
 	// 处理图片附件
 	for _, attachment := range msg.Attachments {

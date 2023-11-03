@@ -48,6 +48,7 @@ settings:
   server_user_name : "useradmin"    #默认网页面板用户名
   server_user_password : "admin"    #默认网页面板密码
   image_sizelimit : 0   #代表kb 腾讯api要求图片1500ms完成传输 如果图片发不出 请提升上行或设置此值 默认为0 不压缩
+  remove_prefix : false  #是否忽略公域机器人指令前第一个/
 `
 const Logo = `
 '                                                                                                      
