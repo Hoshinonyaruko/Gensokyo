@@ -27,7 +27,7 @@ type EnhancedLogEntry struct {
 }
 
 // 我们的日志频道，所有的 WebSocket 客户端都会在此监听日志事件
-var logChannel = make(chan EnhancedLogEntry, 100)
+var logChannel = make(chan EnhancedLogEntry, 1000)
 
 func Println(v ...interface{}) {
 	log.Println(v...)
@@ -47,7 +47,14 @@ func emitLog(level, message string) {
 		Level:   level,
 		Message: message,
 	}
-	logChannel <- entry
+	// 非阻塞发送，如果通道满了就尝试备份日志。
+	select {
+	case logChannel <- entry:
+		// 日志成功发送到通道。
+	default:
+		// 通道满了，备份日志到文件或数据库。
+		//backupLog(entry)
+	}
 }
 
 // 返回日志通道，以便我们的 WebSocket 服务端可以监听和广播日志事件
@@ -75,7 +82,7 @@ func WsHandlerWithDependencies(c *gin.Context) {
 	lock.Unlock()
 
 	// 输出新的 WebSocket 客户端连接信息
-	fmt.Println("新的WebSocket客户端已连接!")
+	fmt.Println("新的webui用户已连接!")
 
 	// Start a goroutine for heartbeats
 	go func() {
@@ -86,66 +93,91 @@ func WsHandlerWithDependencies(c *gin.Context) {
 	}()
 
 	go client.writePump()
+	go client.readPump()
 
 	for logEntry := range LogChannel() {
 		lock.RLock()
-		if len(wsClients) == 0 {
-			lock.RUnlock()
-			continue
-		}
-
+		// 去掉对wsClients长度的检查，已经在emitLog里面做了防阻塞处理
 		for client := range wsClients {
-			client.send <- logEntry
+			select {
+			case client.send <- logEntry:
+				// 成功发送日志到客户端
+			default:
+				// 客户端的send通道满了，可以选择断开客户端连接或者其他处理
+			}
 		}
 		lock.RUnlock()
+	}
+}
+
+func (c *Client) readPump() {
+	defer func() {
+		lock.Lock()
+		delete(wsClients, c) // 从客户端集合中移除当前客户端
+		lock.Unlock()
+		c.conn.Close() // 关闭WebSocket连接
+	}()
+
+	// 设置读取超时时间
+	c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(60 * time.Second)); return nil })
+
+	for {
+		_, message, err := c.conn.ReadMessage()
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				fmt.Printf("websocket closed unexpectedly: %v", err)
+			} else {
+				fmt.Println("读取websocket出错:", err)
+			}
+			break
+		}
+
+		// 检查收到的消息是否为心跳
+		if string(message) == "heartbeat" {
+			//fmt.Println("收到心跳，客户端活跃")
+			c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+			// 更新客户端的活跃时间，或执行其它心跳相关逻辑
+		}
 	}
 }
 
 func (c *Client) writePump() {
 	defer func() {
 		lock.Lock()
-		delete(wsClients, c)
+		delete(wsClients, c) // 从客户端集合中移除当前客户端
 		lock.Unlock()
-		c.conn.Close()
+		c.conn.Close() // 关闭WebSocket连接
 	}()
 
-	ticker := time.NewTicker(30 * time.Second) // 每30秒发送一次心跳
-	defer ticker.Stop()
-
-	lastActiveTime := time.Now() // 上次活跃的时间
+	// 设置心跳发送间隔
+	heartbeatTicker := time.NewTicker(10 * time.Second)
+	defer heartbeatTicker.Stop()
 
 	for {
 		select {
 		case message, ok := <-c.send:
 			if !ok {
-				// 如果send通道已经关闭，那么直接返回
+				// 如果send通道已经关闭，那么直接退出
 				return
 			}
+			// 更新写入超时时间
+			c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 			err := c.conn.WriteJSON(message)
 			if err != nil {
+				// 如果写入websocket出错，输出错误并退出
 				fmt.Println("发送到websocket出错:", err)
 				return
-			} else {
-				// 输出消息发送成功的信息
-				fmt.Printf("消息成功发送给客户端: %s\n", message)
 			}
-
-		case <-ticker.C: // 定时器触发
-			if time.Since(lastActiveTime) > 1*time.Minute {
-				// 如果超过1分钟没有收到Pong消息，则关闭连接
+		case <-heartbeatTicker.C:
+			// 发送心跳消息
+			c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				// 如果写入心跳失败，输出错误并退出
+				fmt.Println("发送心跳失败:", err)
 				return
 			}
-			c.conn.WriteMessage(websocket.PingMessage, nil)
-
-		default:
-			messageType, _, err := c.conn.ReadMessage()
-			if err != nil {
-				return
-			}
-			if messageType == websocket.PongMessage {
-				// 更新上次活跃的时间
-				lastActiveTime = time.Now()
-			}
+			//fmt.Println("发送心跳，维持连接活跃")
 		}
 	}
 }
