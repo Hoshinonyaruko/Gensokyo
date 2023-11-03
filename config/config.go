@@ -149,8 +149,8 @@ func getMissingSettingsByReflection(currentConfig, defaultConfig *Config) (map[s
 	for i := 0; i < currentVal.NumField(); i++ {
 		field := currentVal.Type().Field(i)
 		yamlTag := field.Tag.Get("yaml")
-		if yamlTag == "" {
-			continue
+		if yamlTag == "" || field.Type.Kind() == reflect.Int || field.Type.Kind() == reflect.Bool {
+			continue // 跳过没有yaml标签的字段，或者字段类型为int或bool
 		}
 		yamlKeyName := strings.SplitN(yamlTag, ",", 2)[0]
 		if isZeroOfUnderlyingType(currentVal.Field(i).Interface()) && !isZeroOfUnderlyingType(defaultVal.Field(i).Interface()) {
