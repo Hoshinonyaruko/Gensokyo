@@ -1,10 +1,12 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 
@@ -48,6 +50,7 @@ type Settings struct {
 	Password               string   `yaml:"server_user_password"`
 	ImageLimit             int      `yaml:"image_sizelimit"`
 	RemovePrefix           bool     `yaml:"remove_prefix"`
+	BackupPort             string   `yaml:"backup_port"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -63,13 +66,144 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, err
 	}
 
-	mu.Lock()
-	if instance == nil {
-		instance = conf
+	// 确保配置完整性
+	if err := ensureConfigComplete(conf, path); err != nil {
+		return nil, err
 	}
-	mu.Unlock()
 
 	return conf, nil
+}
+
+func ensureConfigComplete(conf *Config, path string) error {
+	// 读取配置文件到缓冲区
+	configData, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	// 将现有的配置解析到结构体中
+	currentConfig := &Config{}
+	err = yaml.Unmarshal(configData, currentConfig)
+	if err != nil {
+		return err
+	}
+
+	// 解析默认配置模板到结构体中
+	defaultConfig := &Config{}
+	err = yaml.Unmarshal([]byte(template.ConfigTemplate), defaultConfig)
+	if err != nil {
+		return err
+	}
+
+	// 使用反射比较现有配置和默认配置
+	missingSettings, err := getMissingSettings(&currentConfig.Settings, &defaultConfig.Settings)
+	if err != nil {
+		return err
+	}
+
+	if len(missingSettings) > 0 {
+		// 如果存在缺失的设置，从默认配置模板中提取缺失的字段及其注释
+		fmt.Println("缺失的设置:", missingSettings)
+		missingConfigLines, err := extractMissingConfigLines(missingSettings, template.ConfigTemplate)
+		if err != nil {
+			return err
+		}
+
+		// 将缺失的配置追加到现有配置文件
+		err = appendToConfigFile(path, missingConfigLines)
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("检测到配置文件缺少项。已经更新配置文件，正在重启程序以应用新的配置。")
+		sys.RestartApplication()
+	}
+
+	return nil
+}
+
+func getMissingSettings(current, defaultConf interface{}) (map[string]string, error) {
+	missingSettings := make(map[string]string)
+
+	// Ensure we are dealing with pointers and get the underlying element.
+	currentVal := reflect.ValueOf(current)
+	if currentVal.Kind() != reflect.Ptr {
+		return nil, errors.New("current config is not a pointer")
+	}
+	currentVal = currentVal.Elem()
+
+	defaultVal := reflect.ValueOf(defaultConf)
+	if defaultVal.Kind() != reflect.Ptr {
+		return nil, errors.New("default config is not a pointer")
+	}
+	defaultVal = defaultVal.Elem()
+
+	for i := 0; i < currentVal.NumField(); i++ {
+		fieldInfo := currentVal.Type().Field(i) // 获取字段信息
+		yamlTag := fieldInfo.Tag.Get("yaml")    // 从字段信息中获取 yaml 标签
+		if yamlTag == "" {
+			continue // 如果没有 yaml 标签，则跳过
+		}
+
+		// 使用strings来处理可能的逗号分隔的选项，例如 "fieldname,omitempty"
+		yamlKeyName := strings.Split(yamlTag, ",")[0] // 获取标签前的实际 YAML 键名
+
+		if isZeroOfUnderlyingType(currentVal.Field(i).Interface()) &&
+			!isZeroOfUnderlyingType(defaultVal.Field(i).Interface()) {
+			missingSettings[fieldInfo.Name] = yamlKeyName
+		}
+	}
+
+	return missingSettings, nil
+}
+
+func extractMissingConfigLines(missingSettings map[string]string, configTemplate string) ([]string, error) {
+	var missingConfigLines []string
+
+	// Split the configuration template into lines.
+	lines := strings.Split(configTemplate, "\n")
+	for _, yamlKey := range missingSettings {
+		found := false
+		for _, line := range lines {
+			// Check if the line contains the YAML key.
+			if strings.Contains(line, yamlKey) {
+				missingConfigLines = append(missingConfigLines, line)
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, fmt.Errorf("missing configuration for key: %s", yamlKey)
+		}
+	}
+
+	return missingConfigLines, nil
+}
+
+func appendToConfigFile(path string, lines []string) error {
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		fmt.Println("打开文件错误:", err)
+		return err
+	}
+	defer file.Close()
+
+	// 写入缺失的配置项
+	for _, line := range lines {
+		if _, err := file.WriteString("\n" + line); err != nil {
+			fmt.Println("写入配置错误:", err)
+			return err
+		}
+	}
+
+	// 输出写入状态
+	fmt.Println("配置已更新，写入到文件:", path)
+
+	return nil
+}
+
+func isZeroOfUnderlyingType(x interface{}) bool {
+	return reflect.DeepEqual(x, reflect.Zero(reflect.TypeOf(x)).Interface())
 }
 
 // UpdateConfig 将配置写入文件
@@ -316,9 +450,16 @@ func GetDeveloperLog() bool {
 }
 
 // ComposeWebUIURL 组合webui的完整访问地址
-func ComposeWebUIURL() string {
+// 参数 useBackupPort 控制是否使用备用端口
+func ComposeWebUIURL(useBackupPort bool) string {
 	serverDir := GetServer_dir()
-	port := GetPortValue()
+
+	var port string
+	if useBackupPort {
+		port = GetBackupPort()
+	} else {
+		port = GetPortValue()
+	}
 
 	// 判断端口是不是443，如果是，则使用https协议
 	protocol := "http"
@@ -330,11 +471,17 @@ func ComposeWebUIURL() string {
 	return fmt.Sprintf("%s://%s:%s/webui", protocol, serverDir, port)
 }
 
-// ComposeWebUIURL 组合webui的完整访问地址
-func ComposeWebUIURLv2() string {
+// ComposeWebUIURLv2 组合webui的完整访问地址
+// 参数 useBackupPort 控制是否使用备用端口
+func ComposeWebUIURLv2(useBackupPort bool) string {
 	ip, _ := sys.GetPublicIP()
 
-	port := GetPortValue()
+	var port string
+	if useBackupPort {
+		port = GetBackupPort()
+	} else {
+		port = GetPortValue()
+	}
 
 	// 判断端口是不是443，如果是，则使用https协议
 	protocol := "http"
@@ -393,4 +540,17 @@ func GetRemovePrefixValue() bool {
 		return false // 或者可能是默认值，取决于您的应用程序逻辑
 	}
 	return instance.Settings.RemovePrefix
+}
+
+// GetLotusPort retrieves the LotusPort setting from your singleton instance.
+func GetBackupPort() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get LotusPort.")
+		return ""
+	}
+
+	return instance.Settings.BackupPort
 }

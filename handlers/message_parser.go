@@ -186,10 +186,20 @@ func transformMessageText(messageText string) string {
 	})
 
 	// 使用xurls来查找和替换所有的URL
-	messageText = xurls.Relaxed.ReplaceAllStringFunc(messageText, func(originalURL string) string {
-		shortURL := url.GenerateShortURL(originalURL)
-		return shortURL
-	})
+	if config.GetLotusValue() {
+		// 连接到另一个gensokyo
+		messageText = xurls.Relaxed.ReplaceAllStringFunc(messageText, func(originalURL string) string {
+			shortURL := url.GenerateShortURL(originalURL)
+			return shortURL
+		})
+	} else {
+		// Lotus is false, prepend the base URL to the shortURL
+		messageText = xurls.Relaxed.ReplaceAllStringFunc(messageText, func(originalURL string) string {
+			shortURL := url.GenerateShortURL(originalURL)
+			// 使用getBaseURL函数来获取baseUrl并与shortURL组合
+			return url.GetBaseURL() + "/url/" + shortURL
+		})
+	}
 	return messageText
 }
 
