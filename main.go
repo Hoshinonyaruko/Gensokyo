@@ -67,8 +67,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("error: %v", err)
 	}
-	webuiURL := config.ComposeWebUIURL()     // 调用函数获取URL
-	webuiURLv2 := config.ComposeWebUIURLv2() // 调用函数获取URL
+
+	webuiURL := config.ComposeWebUIURL(conf.Settings.Lotus)     // 调用函数获取URL
+	webuiURLv2 := config.ComposeWebUIURLv2(conf.Settings.Lotus) // 调用函数获取URL
 
 	var api openapi.OpenAPI
 	var apiV2 openapi.OpenAPI
@@ -209,90 +210,92 @@ func main() {
 
 	//图片上传 调用次数限制
 	rateLimiter := server.NewRateLimiter()
-	//是否启动服务器
-	shouldStartServer := !conf.Settings.Lotus || conf.Settings.EnableWsServer
-	//如果连接到其他gensokyo,则不需要启动服务器
-	var httpServer *http.Server
-	if shouldStartServer {
-		var r *gin.Engine
-		if config.GetDeveloperLog() { // 我假设这个函数是从您提供的例子中来的
-			r = gin.Default()
-		} else {
-			r = gin.New()
-			r.Use(gin.Recovery()) // 添加恢复中间件，但不添加日志中间件
-		}
-		r.GET("/getid", server.GetIDHandler)
-		r.POST("/uploadpic", server.UploadBase64ImageHandler(rateLimiter))
-		r.Static("/channel_temp", "./channel_temp")
-		//webui和它的api
-		webuiGroup := r.Group("/webui")
-		{
-			webuiGroup.GET("/*filepath", webui.CombinedMiddleware)
-			webuiGroup.POST("/*filepath", webui.CombinedMiddleware)
-			webuiGroup.PUT("/*filepath", webui.CombinedMiddleware)
-			webuiGroup.DELETE("/*filepath", webui.CombinedMiddleware)
-			webuiGroup.PATCH("/*filepath", webui.CombinedMiddleware)
-		}
-		//r.GET("/webui/api/serverdata", getServerDataHandler)
-		//r.GET("/webui/api/logdata", getLogDataHandler)
-		//正向ws
-		if conf.Settings.AppID != 12345 {
-			r.GET("/ws", server.WsHandlerWithDependencies(api, apiV2, p))
-		}
-		r.POST("/url", url.CreateShortURLHandler)
-		r.GET("/url/:shortURL", url.RedirectFromShortURLHandler)
-		if config.GetIdentifyFile() {
-			appIDStr := config.GetAppIDStr()
-			fileName := appIDStr + ".json"
-			r.GET("/"+fileName, func(c *gin.Context) {
-				content := fmt.Sprintf(`{"bot_appid":%d}`, config.GetAppID())
-				c.Header("Content-Type", "application/json")
-				c.String(200, content)
-			})
-		}
-		// 创建一个http.Server实例（主服务器）
-		httpServer := &http.Server{
-			Addr:    "0.0.0.0:" + conf.Settings.Port,
-			Handler: r,
-		}
+	// 根据 lotus 的值选择端口
+	var serverPort string
+	if conf.Settings.Lotus {
+		serverPort = conf.Settings.Port
+	} else {
+		serverPort = conf.Settings.BackupPort
+	}
+	var r *gin.Engine
+	if config.GetDeveloperLog() { // 我假设这个函数是从您提供的例子中来的
+		r = gin.Default()
+	} else {
+		r = gin.New()
+		r.Use(gin.Recovery()) // 添加恢复中间件，但不添加日志中间件
+	}
+	r.GET("/getid", server.GetIDHandler)
+	r.POST("/uploadpic", server.UploadBase64ImageHandler(rateLimiter))
+	r.Static("/channel_temp", "./channel_temp")
+	//webui和它的api
+	webuiGroup := r.Group("/webui")
+	{
+		webuiGroup.GET("/*filepath", webui.CombinedMiddleware)
+		webuiGroup.POST("/*filepath", webui.CombinedMiddleware)
+		webuiGroup.PUT("/*filepath", webui.CombinedMiddleware)
+		webuiGroup.DELETE("/*filepath", webui.CombinedMiddleware)
+		webuiGroup.PATCH("/*filepath", webui.CombinedMiddleware)
+	}
+	//r.GET("/webui/api/serverdata", getServerDataHandler)
+	//r.GET("/webui/api/logdata", getLogDataHandler)
+	//正向ws
+	if conf.Settings.AppID != 12345 {
+		r.GET("/ws", server.WsHandlerWithDependencies(api, apiV2, p))
+	}
+	r.POST("/url", url.CreateShortURLHandler)
+	r.GET("/url/:shortURL", url.RedirectFromShortURLHandler)
+	if config.GetIdentifyFile() {
+		appIDStr := config.GetAppIDStr()
+		fileName := appIDStr + ".json"
+		r.GET("/"+fileName, func(c *gin.Context) {
+			content := fmt.Sprintf(`{"bot_appid":%d}`, config.GetAppID())
+			c.Header("Content-Type", "application/json")
+			c.String(200, content)
+		})
+	}
+	// 创建一个http.Server实例（主服务器）
+	httpServer := &http.Server{
+		Addr:    "0.0.0.0:" + serverPort,
+		Handler: r,
+	}
 
-		// 在一个新的goroutine中启动主服务器
+	// 在一个新的goroutine中启动主服务器
+	go func() {
+		if serverPort == "443" {
+			// 使用HTTPS
+			crtPath := config.GetCrtPath()
+			keyPath := config.GetKeyPath()
+			if crtPath == "" || keyPath == "" {
+				log.Fatalf("crt or key path is missing for HTTPS")
+				return
+			}
+			if err := httpServer.ListenAndServeTLS(crtPath, keyPath); err != nil && err != http.ErrServerClosed {
+				log.Fatalf("listen (HTTPS): %s\n", err)
+			}
+		} else {
+			// 使用HTTP
+			if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				log.Fatalf("listen: %s\n", err)
+			}
+		}
+	}()
+
+	// 如果主服务器使用443端口，同时在一个新的goroutine中启动444端口的HTTP服务器 todo 更优解
+	if serverPort == "443" {
 		go func() {
-			if conf.Settings.Port == "443" {
-				// 使用HTTPS
-				crtPath := config.GetCrtPath()
-				keyPath := config.GetKeyPath()
-				if crtPath == "" || keyPath == "" {
-					log.Fatalf("crt or key path is missing for HTTPS")
-					return
-				}
-				if err := httpServer.ListenAndServeTLS(crtPath, keyPath); err != nil && err != http.ErrServerClosed {
-					log.Fatalf("listen (HTTPS): %s\n", err)
-				}
-			} else {
-				// 使用HTTP
-				if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-					log.Fatalf("listen: %s\n", err)
-				}
+			// 创建另一个http.Server实例（用于444端口）
+			httpServer444 := &http.Server{
+				Addr:    "0.0.0.0:444",
+				Handler: r,
+			}
+
+			// 启动444端口的HTTP服务器
+			if err := httpServer444.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				log.Fatalf("listen (HTTP 444): %s\n", err)
 			}
 		}()
-
-		// 如果主服务器使用443端口，同时在一个新的goroutine中启动444端口的HTTP服务器 todo 更优解
-		if conf.Settings.Port == "443" {
-			go func() {
-				// 创建另一个http.Server实例（用于444端口）
-				httpServer444 := &http.Server{
-					Addr:    "0.0.0.0:444",
-					Handler: r,
-				}
-
-				// 启动444端口的HTTP服务器
-				if err := httpServer444.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-					log.Fatalf("listen (HTTP 444): %s\n", err)
-				}
-			}()
-		}
 	}
+
 	// 使用color库输出天蓝色的文本
 	cyan := color.New(color.FgCyan)
 	cyan.Printf("欢迎来到Gensokyo, 控制台地址: %s\n", webuiURL)
