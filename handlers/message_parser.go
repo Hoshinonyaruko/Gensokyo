@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
@@ -160,6 +161,9 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 
 // at处理和链接处理
 func transformMessageText(messageText string) string {
+	// 首先，将AppID替换为BotID
+	messageText = strings.ReplaceAll(messageText, AppID, BotID)
+
 	// 使用正则表达式来查找所有[CQ:at,qq=数字]的模式
 	re := regexp.MustCompile(`\[CQ:at,qq=(\d+)\]`)
 	messageText = re.ReplaceAllStringFunc(messageText, func(m string) string {
@@ -167,8 +171,9 @@ func transformMessageText(messageText string) string {
 		if len(submatches) > 1 {
 			realUserID, err := idmap.RetrieveRowByIDv2(submatches[1])
 			if err != nil {
+				// 如果出错，也替换成相应的格式，但使用原始QQ号
 				mylog.Printf("Error retrieving user ID: %v", err)
-				return m // 如果出错，返回原始匹配
+				return "<@!" + submatches[1] + ">"
 			}
 			return "<@!" + realUserID + ">"
 		}
@@ -208,11 +213,21 @@ func RevertTransformedText(data interface{}) string {
 
 	// 使用正则表达式来查找所有<@!数字>的模式
 	re := regexp.MustCompile(`<@!(\d+)>`)
-	// 使用正则表达式来替换找到的模式为[CQ:at,qq=数字]
+	// 使用正则表达式来替换找到的模式为[CQ:at,qq=用户ID]
 	messageText = re.ReplaceAllStringFunc(messageText, func(m string) string {
 		submatches := re.FindStringSubmatch(m)
 		if len(submatches) > 1 {
-			return "[CQ:at,qq=" + submatches[1] + "]"
+			//映射用户id
+			userID64, err := idmap.StoreIDv2(submatches[1])
+			if err != nil {
+				//如果储存失败(数据库损坏)返回原始值
+				mylog.Printf("Error storing ID: %v", err)
+				return "[CQ:at,qq=" + submatches[1] + "]"
+			}
+			//类型转换
+			userIDStr := strconv.FormatInt(userID64, 10)
+			//经过转换的cq码
+			return "[CQ:at,qq=" + userIDStr + "]"
 		}
 		return m
 	})
