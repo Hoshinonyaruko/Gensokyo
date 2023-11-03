@@ -134,18 +134,36 @@ func (c *WebSocketClient) sendHeartbeat(ctx context.Context, botID uint64) {
 			return
 		case <-time.After(10 * time.Second):
 			message := map[string]interface{}{
-				"meta_event_type": "heartbeat",
 				"post_type":       "meta_event",
-				"self_id":         botID,
-				"status":          "ok",
+				"meta_event_type": "heartbeat",
 				"time":            int(time.Now().Unix()),
+				"self_id":         botID,
+				"status": map[string]interface{}{
+					"app_enabled":     true,
+					"app_good":        true,
+					"app_initialized": true,
+					"good":            true,
+					"online":          true,
+					"plugins_good":    nil,
+					"stat": map[string]int{
+						"packet_received":   34933,
+						"packet_sent":       8513,
+						"packet_lost":       0,
+						"message_received":  24674,
+						"message_sent":      1663,
+						"disconnect_times":  0,
+						"lost_times":        0,
+						"last_message_time": int(time.Now().Unix()) - 10, // 假设最后一条消息是10秒前收到的
+					},
+				},
+				"interval": 10000, // 以毫秒为单位
 			}
 			c.SendMessage(message)
 		}
 	}
 }
 
-const maxRetryAttempts = 5
+const maxRetryAttempts = 30
 
 // NewWebSocketClient 创建 WebSocketClient 实例，接受 WebSocket URL、botID 和 openapi.OpenAPI 实例
 func NewWebSocketClient(urlStr string, botID uint64, api openapi.OpenAPI, apiv2 openapi.OpenAPI) (*WebSocketClient, error) {

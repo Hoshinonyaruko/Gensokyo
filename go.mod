@@ -15,6 +15,7 @@ require (
 	github.com/google/uuid v1.4.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mvdan/xurls v1.1.0 // indirect
+	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
 )
 
 replace github.com/tencent-connect/botgo => ./botgo

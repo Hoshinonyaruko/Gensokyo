@@ -186,7 +186,7 @@ func main() {
 			// 确保所有wsClients都已初始化
 			if len(wsClients) != len(conf.Settings.WsAddress) {
 				log.Println("Error: Not all wsClients are initialized!")
-				log.Fatalln("Failed to initialize all WebSocketClients.")
+				//log.Fatalln("Failed to initialize all WebSocketClients.")
 			} else {
 				log.Println("All wsClients are successfully initialized.")
 				p = Processor.NewProcessor(api, apiV2, &conf.Settings, wsClients)
