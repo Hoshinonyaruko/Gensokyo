@@ -195,20 +195,45 @@ async function sendStdin() {
   }
 }
 
+let lastConnectionTime = 0;
+const connectionCooldown = 2000; // 1秒间隔
+
 async function processLog() {
+  const currentTime = Date.now();
+
+  // 如果当前时间与上次连接时间小于1秒，则不再次连接
+  if (currentTime - lastConnectionTime < connectionCooldown) {
+    return;
+  }
+
+  // 更新上次连接时间
+  lastConnectionTime = currentTime;
+
+  // 获取日志数据
   const { data } = await api.processLogsHistoryApiUinProcessLogsGet(props.uin);
   logs.value = data;
 
+  // 如果WebSocket连接已经打开，直接返回不再重新连接
+  if (logConnection.value && logConnection.value.readyState === WebSocket.OPEN) {
+    return;
+  }
+
+  // 关闭现有的WebSocket连接
   logConnection.value?.close();
 
+  // 建立新的WebSocket连接
   const wsUrl = new URL(`api/${props.uin}/process/logs`, location.href);
-  wsUrl.protocol = wsUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+  wsUrl.protocol = wsUrl.protocol.replace('http', 'ws');
 
   logConnection.value = new WebSocket(wsUrl.href);
-  logConnection.value.onmessage = ({ data }) =>
-  logs.value.push(JSON.parse(data as string) as ProcessLog);
-  logConnection.value.onclose = () => (logConnection.value = undefined);
+  logConnection.value.onmessage = ({ data }) => {
+    logs.value.push(JSON.parse(data as string) as ProcessLog);
+  };
+  logConnection.value.onclose = () => {
+    logConnection.value = undefined;
+  };
 }
+
 
 const updateTimer = window.setInterval(() => void updateStatus(), 3000);
 
