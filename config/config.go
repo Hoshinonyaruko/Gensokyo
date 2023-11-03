@@ -47,6 +47,7 @@ type Settings struct {
 	Username               string   `yaml:"server_user_name"`
 	Password               string   `yaml:"server_user_password"`
 	ImageLimit             int      `yaml:"image_sizelimit"`
+	RemovePrefix           bool     `yaml:"remove_prefix"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -380,4 +381,16 @@ func GetImageLimit() int {
 	}
 
 	return instance.Settings.ImageLimit
+}
+
+// GetRemovePrefixValue 函数用于获取 remove_prefix 的配置值
+func GetRemovePrefixValue() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get remove_prefix value.")
+		return false // 或者可能是默认值，取决于您的应用程序逻辑
+	}
+	return instance.Settings.RemovePrefix
 }
