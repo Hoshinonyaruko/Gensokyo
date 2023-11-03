@@ -1,12 +1,12 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -74,6 +74,7 @@ func LoadConfig(path string) (*Config, error) {
 	return conf, nil
 }
 
+// 确保配置完整性
 func ensureConfigComplete(conf *Config, path string) error {
 	// 读取配置文件到缓冲区
 	configData, err := os.ReadFile(path)
@@ -95,16 +96,25 @@ func ensureConfigComplete(conf *Config, path string) error {
 		return err
 	}
 
-	// 使用反射比较现有配置和默认配置
-	missingSettings, err := getMissingSettings(&currentConfig.Settings, &defaultConfig.Settings)
+	// 使用反射找出结构体中缺失的设置
+	missingSettingsByReflection, err := getMissingSettingsByReflection(currentConfig, defaultConfig)
 	if err != nil {
 		return err
 	}
 
-	if len(missingSettings) > 0 {
-		// 如果存在缺失的设置，从默认配置模板中提取缺失的字段及其注释
-		fmt.Println("缺失的设置:", missingSettings)
-		missingConfigLines, err := extractMissingConfigLines(missingSettings, template.ConfigTemplate)
+	// 使用文本比对找出缺失的设置
+	missingSettingsByText, err := getMissingSettingsByText(template.ConfigTemplate, string(configData))
+	if err != nil {
+		return err
+	}
+
+	// 合并缺失的设置
+	allMissingSettings := mergeMissingSettings(missingSettingsByReflection, missingSettingsByText)
+
+	// 如果存在缺失的设置，处理缺失的配置行
+	if len(allMissingSettings) > 0 {
+		fmt.Println("缺失的设置:", allMissingSettings)
+		missingConfigLines, err := extractMissingConfigLines(allMissingSettings, template.ConfigTemplate)
 		if err != nil {
 			return err
 		}
@@ -122,51 +132,78 @@ func ensureConfigComplete(conf *Config, path string) error {
 	return nil
 }
 
-func getMissingSettings(current, defaultConf interface{}) (map[string]string, error) {
+// mergeMissingSettings 合并由反射和文本比对找到的缺失设置
+func mergeMissingSettings(reflectionSettings, textSettings map[string]string) map[string]string {
+	for k, v := range textSettings {
+		reflectionSettings[k] = v
+	}
+	return reflectionSettings
+}
+
+// getMissingSettingsByReflection 使用反射来对比结构体并找出缺失的设置
+func getMissingSettingsByReflection(currentConfig, defaultConfig *Config) (map[string]string, error) {
 	missingSettings := make(map[string]string)
-
-	// Ensure we are dealing with pointers and get the underlying element.
-	currentVal := reflect.ValueOf(current)
-	if currentVal.Kind() != reflect.Ptr {
-		return nil, errors.New("current config is not a pointer")
-	}
-	currentVal = currentVal.Elem()
-
-	defaultVal := reflect.ValueOf(defaultConf)
-	if defaultVal.Kind() != reflect.Ptr {
-		return nil, errors.New("default config is not a pointer")
-	}
-	defaultVal = defaultVal.Elem()
+	currentVal := reflect.ValueOf(currentConfig).Elem()
+	defaultVal := reflect.ValueOf(defaultConfig).Elem()
 
 	for i := 0; i < currentVal.NumField(); i++ {
-		fieldInfo := currentVal.Type().Field(i) // 获取字段信息
-		yamlTag := fieldInfo.Tag.Get("yaml")    // 从字段信息中获取 yaml 标签
+		field := currentVal.Type().Field(i)
+		yamlTag := field.Tag.Get("yaml")
 		if yamlTag == "" {
-			continue // 如果没有 yaml 标签，则跳过
+			continue
 		}
-
-		// 使用strings来处理可能的逗号分隔的选项，例如 "fieldname,omitempty"
-		yamlKeyName := strings.Split(yamlTag, ",")[0] // 获取标签前的实际 YAML 键名
-
-		if isZeroOfUnderlyingType(currentVal.Field(i).Interface()) &&
-			!isZeroOfUnderlyingType(defaultVal.Field(i).Interface()) {
-			missingSettings[fieldInfo.Name] = yamlKeyName
+		yamlKeyName := strings.SplitN(yamlTag, ",", 2)[0]
+		if isZeroOfUnderlyingType(currentVal.Field(i).Interface()) && !isZeroOfUnderlyingType(defaultVal.Field(i).Interface()) {
+			missingSettings[yamlKeyName] = "missing"
 		}
 	}
 
 	return missingSettings, nil
 }
 
+// getMissingSettingsByText compares settings in two strings line by line, looking for missing keys.
+func getMissingSettingsByText(templateContent, currentConfigContent string) (map[string]string, error) {
+	templateKeys := extractKeysFromString(templateContent)
+	currentKeys := extractKeysFromString(currentConfigContent)
+
+	missingSettings := make(map[string]string)
+	for key := range templateKeys {
+		if _, found := currentKeys[key]; !found {
+			missingSettings[key] = "missing"
+		}
+	}
+
+	return missingSettings, nil
+}
+
+// extractKeysFromString reads a string and extracts the keys (text before the colon).
+func extractKeysFromString(content string) map[string]bool {
+	keys := make(map[string]bool)
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
+		if strings.Contains(line, ":") {
+			key := strings.TrimSpace(strings.Split(line, ":")[0])
+			keys[key] = true
+		}
+	}
+	return keys
+}
+
 func extractMissingConfigLines(missingSettings map[string]string, configTemplate string) ([]string, error) {
 	var missingConfigLines []string
 
-	// Split the configuration template into lines.
 	lines := strings.Split(configTemplate, "\n")
-	for _, yamlKey := range missingSettings {
+	for yamlKey := range missingSettings {
 		found := false
+		// Create a regex to match the line with optional spaces around the colon
+		regexPattern := fmt.Sprintf(`^\s*%s\s*:\s*`, regexp.QuoteMeta(yamlKey))
+		regex, err := regexp.Compile(regexPattern)
+		if err != nil {
+			return nil, fmt.Errorf("invalid regex pattern: %s", err)
+		}
+
 		for _, line := range lines {
-			// Check if the line contains the YAML key.
-			if strings.Contains(line, yamlKey) {
+			if regex.MatchString(line) {
 				missingConfigLines = append(missingConfigLines, line)
 				found = true
 				break
