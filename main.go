@@ -18,6 +18,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/handlers"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/hoshinonyaruko/gensokyo/server"
 	"github.com/hoshinonyaruko/gensokyo/sys"
 	"github.com/hoshinonyaruko/gensokyo/template"
@@ -212,7 +213,7 @@ func main() {
 	rateLimiter := server.NewRateLimiter()
 	// 根据 lotus 的值选择端口
 	var serverPort string
-	if conf.Settings.Lotus {
+	if !conf.Settings.Lotus {
 		serverPort = conf.Settings.Port
 	} else {
 		serverPort = conf.Settings.BackupPort
@@ -258,7 +259,7 @@ func main() {
 		Addr:    "0.0.0.0:" + serverPort,
 		Handler: r,
 	}
-
+	mylog.Printf("gin运行在%v端口", serverPort)
 	// 在一个新的goroutine中启动主服务器
 	go func() {
 		if serverPort == "443" {
