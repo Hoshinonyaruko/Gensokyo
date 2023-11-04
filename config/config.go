@@ -55,6 +55,14 @@ type Settings struct {
 
 // LoadConfig 从文件中加载配置并初始化单例配置
 func LoadConfig(path string) (*Config, error) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	// 如果单例已经被初始化了，直接返回
+	if instance != nil {
+		return instance, nil
+	}
+
 	configData, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -71,7 +79,9 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, err
 	}
 
-	return conf, nil
+	// 设置单例实例
+	instance = conf
+	return instance, nil
 }
 
 // 确保配置完整性
