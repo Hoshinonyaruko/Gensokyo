@@ -134,7 +134,7 @@ jobs:
                     -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                     -H "Content-Type: application/octet-stream" \
                     -F "file=@${file}" \  # Use the $file variable here
-                    "${{ steps.create_release.outputs.upload_url }}=${asset_name}&label=${asset_name}" 
+                    "${{ steps.create_release.outputs.upload_url }}?name=${asset_name}&label=${asset_name}" 
                 else
                   echo "Expected a file in ${dir}, but found something else."
                 fi
