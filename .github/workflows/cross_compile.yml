@@ -8,7 +8,49 @@ on:
       - '*'
 
 jobs:
-  build:
+  build_frontend:
+    runs-on: ubuntu-latest
+    outputs:
+      cache-key: ${{ steps.cache-frontend.outputs.cache-hit }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '19'
+
+      - name: Cache Node modules
+        id: cache-frontend
+        uses: actions/cache@v2
+        with:
+          path: |
+            frontend/node_modules
+            ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      
+      - name: Install Quasar CLI and dependencies
+        if: steps.cache-frontend.outputs.cache-hit != 'true'
+        run: |
+          cd frontend
+          npm install -g @quasar/cli
+          npm install
+      
+      - name: Build Quasar Project
+        run: |
+          cd frontend
+          quasar build
+      
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: frontend-build
+          path: frontend/dist
+  build_go:
+    needs: build_frontend
     name: Build on ${{ matrix.os }} for ${{ matrix.goarch }}
     runs-on: ubuntu-latest
     strategy:
@@ -32,7 +74,6 @@ jobs:
             goarch: 386
           - os: android
             goarch: arm64
-          # ... Add other combinations as needed
 
     steps:
     - name: Checkout code
@@ -42,32 +83,6 @@ jobs:
       uses: actions/setup-go@v2
       with:
         go-version: '1.21.1' # Set to specific Go version.
-
-    - name: Set up Node.js
-      uses: actions/setup-node@v2
-      with:
-        node-version: '19'
-
-    - name: Cache Node modules
-      uses: actions/cache@v2
-      with:
-        path: |
-          frontend/node_modules
-          ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
-
-    - name: Install Quasar CLI and dependencies
-      run: |
-        cd frontend
-        npm install -g @quasar/cli
-        npm install
-
-    - name: Build Quasar Project
-      run: |
-        cd frontend
-        quasar build
 
     - name: Setup Android NDK (only for Android builds)
       if: matrix.os == 'android'
