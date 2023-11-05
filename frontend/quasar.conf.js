@@ -101,7 +101,7 @@ module.exports = configure(function (ctx) {
       minify: true,
 
       distDir: './dist',
-      targetDir: '..\webui\dist',
+      targetDir: '../webui/dist',
 
       afterBuild(configs) {
         copyFolderRecursively(
