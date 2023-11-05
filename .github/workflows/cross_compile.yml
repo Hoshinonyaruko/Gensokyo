@@ -123,17 +123,23 @@ jobs:
 
       - name: Upload Release Assets
         run: |
-          for asset_path in output/*; do
-            if [ -f "$asset_path" ]; then
-              asset_name=$(basename "${asset_path}")
-              echo "Uploading ${asset_name}"
-              curl \
-                -X POST \
-                -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                -H "Content-Type: application/octet-stream" \ 
-                -F "file=@${asset_path}" \
-                "${{ steps.create_release.outputs.upload_url }}=${asset_name}&label=${asset_name}" 
+          for dir in output/*; do
+            if [ -d "$dir" ]; then  # If it's a directory
+              for file in "$dir"/*; do
+                if [ -f "$file" ]; then  # If it's a file
+                  asset_name=$(basename "$file")
+                  echo "Uploading ${asset_name}"
+                  curl \
+                    -X POST \
+                    -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                    -H "Content-Type: application/octet-stream" \
+                    -F "file=@${file}" \  # Use the $file variable here
+                    "${{ steps.create_release.outputs.upload_url }}=${asset_name}&label=${asset_name}" 
+                else
+                  echo "Expected a file in ${dir}, but found something else."
+                fi
+              done
             else
-              echo "${asset_path} does not exist or is a directory"
+              echo "Expected ${dir} to be a directory."
             fi
           done
