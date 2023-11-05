@@ -41,8 +41,10 @@ func (c *WebSocketClient) SendMessage(message map[string]interface{}) error {
 	err = c.conn.WriteMessage(websocket.TextMessage, msgBytes)
 	if err != nil {
 		mylog.Println("Error sending message:", err)
-		if !c.isReconnecting {
-			go c.Reconnect()
+		if websocket.IsUnexpectedCloseError(err) {
+			if !c.isReconnecting {
+				go c.Reconnect()
+			}
 		}
 		return err
 	}
@@ -56,12 +58,12 @@ func (c *WebSocketClient) handleIncomingMessages(ctx context.Context, cancel con
 		_, msg, err := c.conn.ReadMessage()
 		if err != nil {
 			mylog.Println("WebSocket connection closed:", err)
-			cancel() // cancel heartbeat goroutine
+			cancel() // 取消心跳 goroutine
 
 			if !c.isReconnecting {
 				go c.Reconnect()
 			}
-			return
+			return // 退出循环，不再尝试读取消息
 		}
 
 		go c.recvMessage(msg)
@@ -89,11 +91,14 @@ func (client *WebSocketClient) Reconnect() {
 
 		newClient, err := NewWebSocketClient(client.urlStr, client.botID, client.api, client.apiv2)
 		if err == nil && newClient != nil {
+			client.mutex.Lock()        // 在替换连接之前锁定
+			oldCancel := client.cancel // 保存旧的取消函数
 			client.conn = newClient.conn
 			client.api = newClient.api
 			client.apiv2 = newClient.apiv2
-			client.cancel = newClient.cancel // Update cancel function
-
+			oldCancel()                      // 停止所有相关的旧协程
+			client.cancel = newClient.cancel // 更新取消函数
+			client.mutex.Unlock()
 			mylog.Println("Successfully reconnected to WebSocket.")
 			return
 		}
@@ -262,6 +267,8 @@ func NewWebSocketClient(urlStr string, botID uint64, api openapi.OpenAPI, apiv2 
 }
 
 func (ws *WebSocketClient) Close() error {
+	ws.mutex.Lock()
+	defer ws.mutex.Unlock()
 	return ws.conn.Close()
 }
 
