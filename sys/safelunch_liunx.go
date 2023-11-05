@@ -33,6 +33,6 @@ func toHighDPI() {
 }
 
 // windows
-func setConsoleTitleWindows() {
+func setConsoleTitleWindows(title string) error {
 	// 非Windows平台下此功能不可用
 }
