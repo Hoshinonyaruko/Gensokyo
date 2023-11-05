@@ -11,9 +11,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
-	"syscall"
 	"time"
-	"unsafe"
 
 	"golang.org/x/net/html"
 )
@@ -122,27 +120,6 @@ func GetExecutableName() (string, error) {
 		return "", err
 	}
 	return strings.TrimSuffix(executable, filepath.Ext(executable)), nil
-}
-
-// windows
-func setConsoleTitleWindows(title string) error {
-	kernel32, err := syscall.LoadDLL("kernel32.dll")
-	if err != nil {
-		return err
-	}
-	proc, err := kernel32.FindProc("SetConsoleTitleW")
-	if err != nil {
-		return err
-	}
-	p0, err := syscall.UTF16PtrFromString(title)
-	if err != nil {
-		return err
-	}
-	r1, _, err := proc.Call(uintptr(unsafe.Pointer(p0)))
-	if r1 == 0 {
-		return err
-	}
-	return nil
 }
 
 // linux
