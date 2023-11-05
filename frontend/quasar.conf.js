@@ -101,7 +101,7 @@ module.exports = configure(function (ctx) {
       minify: true,
 
       distDir: './dist',
-      targetDir: 'D:\\文件共享\\网络太卡了\\快乐GO\\botgo\\gensokyo\\webui\\dist',
+      targetDir: '..\webui\dist',
 
       afterBuild(configs) {
         copyFolderRecursively(
