@@ -71,6 +71,7 @@ gensokyo兼容 [OneBot-v11](https://github.com/botuniverse/onebot-11) ，并在�
 - [x] 配合gocq-bridge连接多个ws/wss
 - [x] 将频道虚拟成群事件
 - [x] 将私信虚拟成频道或群事件
+- [x] webui,可以在webui修改配置,查看频道列表,发送信息
 
 
 ### 实现
