@@ -3,6 +3,9 @@ name: Cross Compile Go Project
 on:
   pull_request:
     types: [opened, synchronize]
+  push:
+    tags:
+      - '*'
 
 jobs:
   build:
@@ -92,24 +95,34 @@ jobs:
         name: gensokyo-${{ matrix.os }}-${{ matrix.goarch }}
         path: output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}
 
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        prerelease: false
-        draft: true
+  prepare_release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v2
+        with:
+          path: output
 
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      if: success() && startsWith(github.ref, 'refs/tags/')
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}
-        asset_name: gensokyo-${{ matrix.os }}-${{ matrix.goarch }}.zip
-        asset_content_type: application/zip
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          draft: false
+
+      - name: Upload Release Assets
+        run: |
+          for asset_path in output/*; do
+            asset_name=$(basename "${asset_path}")
+            echo "Uploading ${asset_name}"
+            curl \
+              -X POST \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Content-Type: $(file -b --mime-type "${asset_path}")" \
+              --data-binary @"${asset_path}" \
+              "${{ steps.create_release.outputs.upload_url }}?name=${asset_name}&label=${asset_name}"
+          done
