@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -39,6 +40,16 @@ import (
 var p *Processor.Processors
 
 func main() {
+	// 定义faststart命令行标志。默认为false。
+	fastStart := flag.Bool("faststart", false, "start without initialization if set")
+
+	// 解析命令行参数到定义的标志。
+	flag.Parse()
+
+	// 检查是否使用了-faststart参数
+	if !*fastStart {
+		sys.InitBase() // 如果不是faststart模式，则执行初始化
+	}
 	if _, err := os.Stat("config.yml"); os.IsNotExist(err) {
 		// 获取内网IP地址
 		ip, err := sys.GetLocalIP()
@@ -68,7 +79,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("error: %v", err)
 	}
-
+	sys.SetTitle()
 	webuiURL := config.ComposeWebUIURL(conf.Settings.Lotus)     // 调用函数获取URL
 	webuiURLv2 := config.ComposeWebUIURLv2(conf.Settings.Lotus) // 调用函数获取URL
 
@@ -231,11 +242,11 @@ func main() {
 	//webui和它的api
 	webuiGroup := r.Group("/webui")
 	{
-		webuiGroup.GET("/*filepath", webui.CombinedMiddleware)
-		webuiGroup.POST("/*filepath", webui.CombinedMiddleware)
-		webuiGroup.PUT("/*filepath", webui.CombinedMiddleware)
-		webuiGroup.DELETE("/*filepath", webui.CombinedMiddleware)
-		webuiGroup.PATCH("/*filepath", webui.CombinedMiddleware)
+		webuiGroup.GET("/*filepath", webui.CombinedMiddleware(api, apiV2))
+		webuiGroup.POST("/*filepath", webui.CombinedMiddleware(api, apiV2))
+		webuiGroup.PUT("/*filepath", webui.CombinedMiddleware(api, apiV2))
+		webuiGroup.DELETE("/*filepath", webui.CombinedMiddleware(api, apiV2))
+		webuiGroup.PATCH("/*filepath", webui.CombinedMiddleware(api, apiV2))
 	}
 	//r.GET("/webui/api/serverdata", getServerDataHandler)
 	//r.GET("/webui/api/logdata", getLogDataHandler)

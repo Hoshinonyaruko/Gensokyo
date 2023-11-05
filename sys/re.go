@@ -9,7 +9,9 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
+	"time"
 
 	"golang.org/x/net/html"
 )
@@ -118,6 +120,53 @@ func GetExecutableName() (string, error) {
 		return "", err
 	}
 	return strings.TrimSuffix(executable, filepath.Ext(executable)), nil
+}
+
+// linux
+func setConsoleTitleLinux(title string) {
+	fmt.Printf("\033]0;%s\007", title)
+}
+
+// InitBase 解析参数并检测
+//
+//	如果在 windows 下双击打开了程序，程序将在此函数释出脚本后终止；
+//	如果传入 -h 参数，程序将打印帮助后终止；
+//	如果传入 -d 参数，程序将在启动 daemon 后终止。
+func InitBase() {
+	if runtime.GOOS == "windows" {
+		if RunningByDoubleClick() {
+			err := NoMoreDoubleClick()
+			if err != nil {
+				log.Printf("遇到错误: %v", err)
+				time.Sleep(time.Second * 5)
+			}
+			os.Exit(0)
+		}
+	} else {
+		fmt.Printf("InitBase function is not implemented for %s\n", runtime.GOOS)
+	}
+}
+
+// 判断系统
+func setConsoleTitle(title string) error {
+	switch runtime.GOOS {
+	case "windows":
+		return setConsoleTitleWindows(title)
+	case "linux":
+		setConsoleTitleLinux(title)
+	default:
+		fmt.Fprintf(os.Stderr, "setConsoleTitle not implemented for %s\n", runtime.GOOS)
+	}
+	return nil
+}
+
+// SetTitle sets the window title to "Gensokyo © 2023 - [Year] Hoshinonyaruko".
+func SetTitle() {
+	title := fmt.Sprintf("Gensokyo © 2023 - %d Hoshinonyaruko", time.Now().Year())
+	err := setConsoleTitle(title)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to set title: %v\n", err)
+	}
 }
 
 // RestartApplication 封装了应用程序的重启逻辑

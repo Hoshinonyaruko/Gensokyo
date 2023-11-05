@@ -142,7 +142,6 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
-
 import ConfigFileEditor from 'src/components/ConfigFileEditor.vue';
 import type { DeviceInfo } from 'src/api';
 import { api } from 'boot/axios';

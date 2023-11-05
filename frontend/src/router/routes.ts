@@ -37,6 +37,17 @@ const routes: RouteRecordRaw[] = [
         component: () => import('pages/IndexView.vue')
       },
       {
+        path: '/list/:uin(\\d+)',
+        component: () => import('pages/GroupView.vue'),
+        props: transform({ uin: Number }),
+      },
+      {
+        path: '/list/:uin(\\d+)/:channelid',
+        component: () => import('pages/ChannelView.vue'),
+        props: true,
+        name: 'channellist',
+      },
+      {
         path: '/accounts/add',
         component: () => import('pages/AccountAddView.vue'),
       },
