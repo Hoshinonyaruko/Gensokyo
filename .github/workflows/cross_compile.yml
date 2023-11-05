@@ -122,7 +122,7 @@ jobs:
             curl \
               -X POST \
               -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-              -H "Content-Type: $(file -b --mime-type "${asset_path}")" \
-              --data-binary @"${asset_path}" \
-              "${{ steps.create_release.outputs.upload_url }}?name=${asset_name}&label=${asset_name}"
+              -H "Content-Type: multipart/form-data" \
+              -F "file=@${asset_path}" \
+              "${{ steps.create_release.outputs.upload_url }}=${asset_name}&label=${asset_name}"
           done
