@@ -41,6 +41,9 @@ func (c *WebSocketClient) SendMessage(message map[string]interface{}) error {
 	err = c.conn.WriteMessage(websocket.TextMessage, msgBytes)
 	if err != nil {
 		mylog.Println("Error sending message:", err)
+		if !c.isReconnecting {
+			go c.Reconnect()
+		}
 		return err
 	}
 
@@ -68,15 +71,17 @@ func (c *WebSocketClient) handleIncomingMessages(ctx context.Context, cancel con
 // 断线重连
 func (client *WebSocketClient) Reconnect() {
 	client.mutex.Lock()
-	defer client.mutex.Unlock()
-
-	if client.cancel != nil {
-		client.cancel() // Stop current goroutines
+	if client.isReconnecting {
+		client.mutex.Unlock()
+		return // 如果已经有其他携程在重连了，就直接返回
 	}
-
 	client.isReconnecting = true
+	client.mutex.Unlock()
+
 	defer func() {
+		client.mutex.Lock()
 		client.isReconnecting = false
+		client.mutex.Unlock()
 	}()
 
 	for {
