@@ -31,3 +31,8 @@ func getConsoleWindows() (hWnd uintptr) {
 func toHighDPI() {
 	// 非Windows平台下此功能不可用
 }
+
+// windows
+func setConsoleTitleWindows() {
+	// 非Windows平台下此功能不可用
+}
