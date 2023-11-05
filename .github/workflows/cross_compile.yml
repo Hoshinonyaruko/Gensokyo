@@ -122,18 +122,18 @@ jobs:
           draft: false
 
       - name: Upload Release Assets
-        run: |
-          for asset_path in output/*; do
-            if [ -f "$asset_path" ]; then # 确保文件存在且不是文件夹
-              asset_name=$(basename "${asset_path}")
-              echo "Uploading ${asset_name}"
-              curl \
-                -X POST \
-                -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                -H "Content-Type: application/octet-stream" \ # 确保内容类型是octet-stream
-                -F "file=@${asset_path}" \
-                "${{ steps.create_release.outputs.upload_url }}?name=${asset_name}&label=${asset_name}" # 确保URL格式正确
-            else
-              echo "${asset_path} does not exist or is a directory"
-            fi
-          done
+      run: |
+        for asset_path in output/*; do
+          if [ -f "$asset_path" ]; then # 确保文件存在且不是文件夹
+            asset_name=$(basename "${asset_path}")
+            echo "Uploading ${asset_name}"
+            curl \
+              -X POST \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Content-Type: application/octet-stream" \ # 确保内容类型是octet-stream
+              -F "file=@${asset_path}" \
+              "${{ steps.create_release.outputs.upload_url }}=${asset_name}&label=${asset_name}" # 确保URL格式正确
+          else
+            echo "${asset_path} does not exist or is a directory"
+          fi
+        done
