@@ -1,6 +1,7 @@
 package webui
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"net/http"
@@ -13,6 +14,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
+	"github.com/tencent-connect/botgo/dto"
+	"github.com/tencent-connect/botgo/openapi"
 )
 
 //go:embed dist/*
@@ -22,84 +25,248 @@ import (
 //go:embed dist/js/*
 var content embed.FS
 
-// 中间件
-func CombinedMiddleware(c *gin.Context) {
-	// 检查是否为API请求
-	//log.Print(c.Param("filepath"))
-	if strings.HasPrefix(c.Request.URL.Path, "/webui/api") {
-		// 处理API请求
-		appIDStr := config.GetAppIDStr()
-		// 检查路径是否匹配 `/api/{uin}/process/logs`
-		if strings.HasPrefix(c.Param("filepath"), "/api/") && strings.HasSuffix(c.Param("filepath"), "/process/logs") {
-			if c.GetHeader("Upgrade") == "websocket" {
-				mylog.WsHandlerWithDependencies(c)
-			} else {
-				getProcessLogs(c)
+// NewCombinedMiddleware 创建并返回一个带有依赖的中间件闭包
+func CombinedMiddleware(api openapi.OpenAPI, apiV2 openapi.OpenAPI) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if strings.HasPrefix(c.Request.URL.Path, "/webui/api") {
+			// 处理API请求
+			appIDStr := config.GetAppIDStr()
+			// 检查路径是否匹配 `/api/{uin}/process/logs`
+			if strings.HasPrefix(c.Param("filepath"), "/api/") && strings.HasSuffix(c.Param("filepath"), "/process/logs") {
+				if c.GetHeader("Upgrade") == "websocket" {
+					mylog.WsHandlerWithDependencies(c)
+				} else {
+					getProcessLogs(c)
+				}
+				return
 			}
-			return
-		}
-		// 如果请求路径与appIDStr匹配，并且请求方法为PUT
-		if c.Param("filepath") == appIDStr && c.Request.Method == http.MethodPut {
-			HandleAppIDRequest(c)
-			return
-		}
-		//获取状态
-		if c.Param("filepath") == "/api/"+appIDStr+"/process/status" {
-			HandleProcessStatusRequest(c)
-			return
-		}
-		//获取机器人列表
-		if c.Param("filepath") == "/api/accounts" {
-			HandleAccountsRequest(c)
-			return
-		}
-		//获取当前选中机器人的配置
-		if c.Param("filepath") == "/api/"+appIDStr+"/config" && c.Request.Method == http.MethodGet {
-			AccountConfigReadHandler(c)
-			return
-		}
-		//删除当前选中机器人的配置并生成新的配置
-		if c.Param("filepath") == "/api/"+appIDStr+"/config" && c.Request.Method == http.MethodDelete {
-			handleDeleteConfig(c)
-			return
-		}
-		//更新当前选中机器人的配置并重启应用(保持地址不变)
-		if c.Param("filepath") == "/api/"+appIDStr+"/config" && c.Request.Method == http.MethodPatch {
-			handlePatchConfig(c)
-			return
-		}
-		// 处理/api/login的POST请求
-		if c.Param("filepath") == "/api/login" && c.Request.Method == http.MethodPost {
-			HandleLoginRequest(c)
-			return
-		}
-		// 处理/api/check-login-status的GET请求
-		if c.Param("filepath") == "/api/check-login-status" && c.Request.Method == http.MethodGet {
-			HandleCheckLoginStatusRequest(c)
-			return
-		}
-		// 如果还有其他API端点，可以在这里继续添加...
-	} else {
-		// 否则，处理静态文件请求
-		// 如果请求是 "/webui/" ，默认为 "index.html"
-		filepathRequested := c.Param("filepath")
-		if filepathRequested == "" || filepathRequested == "/" {
-			filepathRequested = "index.html"
-		}
+			// 如果请求路径与appIDStr匹配，并且请求方法为PUT
+			if c.Param("filepath") == appIDStr && c.Request.Method == http.MethodPut {
+				HandleAppIDRequest(c)
+				return
+			}
+			//获取状态
+			if c.Param("filepath") == "/api/"+appIDStr+"/process/status" {
+				HandleProcessStatusRequest(c)
+				return
+			}
+			//获取机器人列表
+			if c.Param("filepath") == "/api/accounts" {
+				HandleAccountsRequest(c)
+				return
+			}
+			//获取当前选中机器人的配置
+			if c.Param("filepath") == "/api/"+appIDStr+"/config" && c.Request.Method == http.MethodGet {
+				AccountConfigReadHandler(c)
+				return
+			}
+			//删除当前选中机器人的配置并生成新的配置
+			if c.Param("filepath") == "/api/"+appIDStr+"/config" && c.Request.Method == http.MethodDelete {
+				handleDeleteConfig(c)
+				return
+			}
+			//更新当前选中机器人的配置并重启应用(保持地址不变)
+			if c.Param("filepath") == "/api/"+appIDStr+"/config" && c.Request.Method == http.MethodPatch {
+				handlePatchConfig(c)
+				return
+			}
+			// 处理/api/login的POST请求
+			if c.Param("filepath") == "/api/login" && c.Request.Method == http.MethodPost {
+				HandleLoginRequest(c)
+				return
+			}
+			// 处理/api/check-login-status的GET请求
+			if c.Param("filepath") == "/api/check-login-status" && c.Request.Method == http.MethodGet {
+				HandleCheckLoginStatusRequest(c)
+				return
+			}
+			// 根据api名称处理请求
+			if c.Param("filepath") == "/api/"+appIDStr+"/api" && c.Request.Method == http.MethodPost {
+				apiName := c.Query("name")
+				switch apiName {
+				case "get_guild_list":
+					// 处理获取群组列表的请求
+					handleGetGuildList(c, api, apiV2)
+				case "get_channel_list":
+					// 处理获取频道列表的请求
+					handleGetChannelList(c, api, apiV2)
+				case "send_guild_channel_message":
+					// 调用处理发送消息的函数
+					handleSendGuildChannelMessage(c, api, apiV2)
+				default:
+					// 处理其他或未知的api名称
+					c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid API name"})
+				}
+				return
+			}
+			// 如果还有其他API端点，可以在这里继续添加...
+		} else {
+			// 否则，处理静态文件请求
+			// 如果请求是 "/webui/" ，默认为 "index.html"
+			filepathRequested := c.Param("filepath")
+			if filepathRequested == "" || filepathRequested == "/" {
+				filepathRequested = "index.html"
+			}
 
-		// 使用 embed.FS 读取文件内容
-		filepathRequested = strings.TrimPrefix(filepathRequested, "/")
-		data, err := content.ReadFile("dist/" + filepathRequested)
-		if err != nil {
-			fmt.Println("Error reading file:", err)
-			c.Status(http.StatusNotFound)
-			return
+			// 使用 embed.FS 读取文件内容
+			filepathRequested = strings.TrimPrefix(filepathRequested, "/")
+			data, err := content.ReadFile("dist/" + filepathRequested)
+			if err != nil {
+				fmt.Println("Error reading file:", err)
+				c.Status(http.StatusNotFound)
+				return
+			}
+
+			mimeType := getContentType(filepathRequested)
+
+			c.Data(http.StatusOK, mimeType, data)
 		}
-
-		mimeType := getContentType(filepathRequested)
-
-		c.Data(http.StatusOK, mimeType, data)
+		// 调用c.Next()以继续处理请求链
+		c.Next()
 	}
+}
+
+// SendMessageRequest 定义了发送消息请求的数据结构
+type SendMessageRequest struct {
+	Message string `json:"message"`
+	ID      string `json:"id"`
+}
+
+// handleSendGuildChannelMessage 处理发送消息到公会频道的请求
+func handleSendGuildChannelMessage(c *gin.Context, api openapi.OpenAPI, apiV2 openapi.OpenAPI) {
+	var req SendMessageRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	// 创建MessageToCreate实例
+	msgToCreate := &dto.MessageToCreate{
+		Content: req.Message,
+		MsgType: 0,      // 文本消息
+		MsgID:   "1000", // 固定MsgID
+	}
+
+	// 假设我们有一个上下文
+	ctx := context.TODO()
+
+	// 使用提供的channelID和msgToCreate发送消息
+	message, err := api.PostMessage(ctx, req.ID, msgToCreate)
+	if err != nil {
+		// 信息发送失败，返回失败原因
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to send message",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// 如果消息发送成功，返回一个成功的响应
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Message sent successfully",
+		"data":    message,
+	})
+}
+
+// handleGetGuildList 处理获取群组列表的请求
+func handleGetGuildList(c *gin.Context, api openapi.OpenAPI, apiV2 openapi.OpenAPI) {
+	// 提取前端发来的 pager 数据
+	var pager dto.GuildPager
+	if err := c.ShouldBindJSON(&pager); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 调用后端SDK的 MeGuilds 方法
+	guilds, err := api.MeGuilds(c.Request.Context(), &pager)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	// 如果 after 是空字符串，则设置为 "0"
+	if pager.After == "" {
+		pager.After = "0"
+	}
+	// 将后端数据转换为前端需要的格式
+	guildList := make([]map[string]interface{}, len(guilds))
+	for i, guild := range guilds {
+		guildList[i] = map[string]interface{}{
+			"id":             guild.ID,
+			"name":           guild.Name,
+			"icon":           guild.Icon,
+			"owner_id":       guild.OwnerID,
+			"owner":          guild.IsOwner,
+			"member_count":   guild.MemberCount,
+			"max_members":    guild.MaxMembers,
+			"description":    guild.Desc,
+			"joined_at":      guild.JoinedAt,
+			"channels":       guild.Channels,
+			"union_world_id": guild.UnionWorldID,
+			"union_org_id":   guild.UnionOrgID,
+			// ... 其他需要的字段
+		}
+	}
+
+	// 假设可以从 somewhere 获取 totalPages
+	totalPages := 1000
+
+	// 返回数据给前端，匹配前端期望的结构
+	c.JSON(http.StatusOK, gin.H{
+		"data":       guildList,
+		"totalPages": totalPages, // 需要后端提供或计算出总页数
+	})
+}
+
+// handleGetChannelList 处理获取子频道列表的请求
+func handleGetChannelList(c *gin.Context, api openapi.OpenAPI, apiV2 openapi.OpenAPI) {
+	// 提取前端发来的 pager 数据，其中after参数作为channelID使用
+	var pager dto.GuildPager
+	if err := c.ShouldBindJSON(&pager); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 如果after是空字符串，则设置为默认值（如"0"，或者可适当调整）
+	if pager.After == "" {
+		pager.After = "0"
+	}
+
+	// 调用后端SDK的Channels方法
+	channels, err := api.Channels(c.Request.Context(), pager.After) // 这里的pager.After实际上作为guildID
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 将后端数据转换为前端需要的格式
+	channelList := make([]map[string]interface{}, len(channels))
+	for i, channel := range channels {
+		channelList[i] = map[string]interface{}{
+			"id":               channel.ID,
+			"name":             channel.Name,
+			"type":             channel.Type,
+			"position":         channel.Position,
+			"parent_id":        channel.ParentID,
+			"owner_id":         channel.OwnerID,
+			"sub_type":         channel.SubType,
+			"private_type":     channel.PrivateType,
+			"private_user_ids": channel.PrivateUserIDs,
+			"speak_permission": channel.SpeakPermission,
+			"application_id":   channel.ApplicationID,
+			"permissions":      channel.Permissions,
+			"op_user_id":       channel.OpUserID,
+			// ... 其他需要的字段
+		}
+	}
+
+	// 假设可以从 somewhere 获取 totalPages
+	totalPages := 100
+
+	// 返回数据给前端，匹配前端期望的结构
+	c.JSON(http.StatusOK, gin.H{
+		"data":       channelList,
+		"totalPages": totalPages, // 总页数可以是后端提供或计算出的
+	})
 }
 
 func getContentType(path string) string {
@@ -256,7 +423,7 @@ func HandleLoginRequest(c *gin.Context) {
 	}
 
 	if checkCredentials(json.Username, json.Password) {
-		// 如果验证成功，设置饼干
+		// 如果验证成功，设置cookie
 		cookieValue, err := GenerateCookie()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate cookie"})

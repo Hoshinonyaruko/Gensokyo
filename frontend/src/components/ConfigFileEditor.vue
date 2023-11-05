@@ -24,7 +24,8 @@ let instance: editor.IStandaloneCodeEditor;
 let preventUpdate = false; // 初始化preventUpdate
 
 onMounted(() => {
-  if (dom.value) { // 检查dom.value是否为null或undefined
+  if (dom.value) {
+    // 检查dom.value是否为null或undefined
     instance = editor.create(dom.value, {
       value: props.modelValue,
       language: props.language,
@@ -50,7 +51,8 @@ onMounted(() => {
 watch(
   () => props.modelValue,
   (newValue) => {
-    if (!preventUpdate) { // 仅在更新不是由用户输入触发时，才执行setValue
+    if (!preventUpdate) {
+      // 仅在更新不是由用户输入触发时，才执行setValue
       instance.setValue(newValue);
     }
   }

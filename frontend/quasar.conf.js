@@ -101,7 +101,7 @@ module.exports = configure(function (ctx) {
       minify: true,
 
       distDir: './dist',
-      targetDir: '../nonebot_plugin_gocqhttp/web/dist',
+      targetDir: 'D:\\文件共享\\网络太卡了\\快乐GO\\botgo\\gensokyo\\webui\\dist',
 
       afterBuild(configs) {
         copyFolderRecursively(

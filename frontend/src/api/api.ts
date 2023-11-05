@@ -731,6 +731,36 @@ export interface VersionInfo {
      */
     'sdk'?: number;
 }
+export interface GuildOrChannelInfo {
+    id: string;
+    name: string;
+    icon?: string;
+    owner_id: string;
+    owner: boolean;
+    member_count?: number;
+    max_members?: number;
+    description?: string;
+    joined_at?: string;
+    channels?: ChannelInfo[]; // 假设我们也定义了一个ChannelInfo接口
+    union_world_id?: string;
+    union_org_id?: string;
+    // ...其他字段
+}
+
+export interface ChannelInfo {
+    name?: string; // Using '?' to indicate that the property is optional
+    type?: number;
+    position?: number;
+    parentID?: string;
+    ownerID?: string;
+    subType?: number;
+    privateType?: number;
+    privateUserIDs?: string[];
+    speakPermission?: number;
+    applicationID?: string;
+    permissions?: string;
+    opUserID?: string;
+}
 
 /**
  * ApiApi - axios parameter creator

@@ -22,9 +22,11 @@ func (r *WindowsRestarter) Restart(executablePath string) error {
 	// Separate the directory and the executable name
 	execDir, execName := filepath.Split(executablePath)
 
+	// Including -faststart parameter in the script that starts the executable
 	scriptContent := "@echo off\n" +
 		"pushd " + strconv.Quote(execDir) + "\n" +
-		"start \"\" " + strconv.Quote(execName) + "\n" +
+		// Add the -faststart parameter here
+		"start \"\" " + strconv.Quote(execName) + " -faststart\n" +
 		"popd\n"
 
 	scriptName := "restart.bat"
@@ -41,5 +43,6 @@ func (r *WindowsRestarter) Restart(executablePath string) error {
 	// The current process can now exit
 	os.Exit(0)
 
+	// This return statement will never be reached
 	return nil
 }

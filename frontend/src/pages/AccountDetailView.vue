@@ -90,6 +90,12 @@
         </q-card-actions>
       </q-card>
       <message-sender class="col-12 shadow" :uin="uin" />
+      <q-btn
+        class="my-btn"
+        label="详细频道/群列表"
+        color="blue"
+        :to="`/list/${uin}`"
+      />
     </div>
     <logs-console
       class="col-12 col-md-8"
@@ -128,13 +134,14 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
-
 import { api } from 'boot/axios';
 import type { ProcessInfo, ProcessLog } from 'src/api';
-
 import RunningProcessStatus from 'components/RunningProcessStatus.vue';
 import LogsConsole from 'components/LogsConsole.vue';
 import MessageSender from 'src/components/MessageSender.vue';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
 
 const $q = useQuasar();
 
@@ -214,7 +221,10 @@ async function processLog() {
   logs.value = data;
 
   // 如果WebSocket连接已经打开，直接返回不再重新连接
-  if (logConnection.value && logConnection.value.readyState === WebSocket.OPEN) {
+  if (
+    logConnection.value &&
+    logConnection.value.readyState === WebSocket.OPEN
+  ) {
     return;
   }
 
@@ -233,7 +243,6 @@ async function processLog() {
     logConnection.value = undefined;
   };
 }
-
 
 const updateTimer = window.setInterval(() => void updateStatus(), 3000);
 
@@ -260,3 +269,11 @@ onBeforeUnmount(() => {
 
 void updateStatus();
 </script>
+
+
+<style>
+.my-btn {
+  width: 100%; /* 如果需要按钮宽度与<message-sender>相同 */
+  margin-top: 10px; /* 添加一些上边距，视视觉效果而定 */
+}
+</style>
