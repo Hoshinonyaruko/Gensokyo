@@ -111,7 +111,7 @@ jobs:
         path: output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}
 
   prepare_release:
-    needs: build
+    needs: build_go
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
