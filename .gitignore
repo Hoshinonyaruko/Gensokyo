@@ -11,4 +11,4 @@ config.yml
 channel_temp/
 
 # ignore dist
-webui/dist
+webui/dist/
