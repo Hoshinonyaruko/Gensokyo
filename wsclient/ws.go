@@ -25,6 +25,7 @@ type WebSocketClient struct {
 	cancel         context.CancelFunc
 	mutex          sync.Mutex // 用于同步写入和重连操作的互斥锁
 	isReconnecting bool
+	sendFailures   chan map[string]interface{}
 }
 
 // 发送json信息给onebot应用端
@@ -44,6 +45,10 @@ func (c *WebSocketClient) SendMessage(message map[string]interface{}) error {
 		if !c.isReconnecting {
 			go c.Reconnect()
 		}
+		// 发送失败，将消息放入channel
+		go func() {
+			c.sendFailures <- message
+		}()
 		return err
 	}
 
@@ -75,6 +80,10 @@ func (client *WebSocketClient) Reconnect() {
 		client.mutex.Unlock()
 		return // 如果已经有其他携程在重连了，就直接返回
 	}
+
+	// 暂存旧的 sendFailures channel，不要关闭它
+	oldSendFailures := client.sendFailures
+
 	client.isReconnecting = true
 	client.mutex.Unlock()
 
@@ -86,7 +95,6 @@ func (client *WebSocketClient) Reconnect() {
 
 	for {
 		time.Sleep(5 * time.Second)
-
 		newClient, err := NewWebSocketClient(client.urlStr, client.botID, client.api, client.apiv2)
 		if err == nil && newClient != nil {
 			client.mutex.Lock()        // 在替换连接之前锁定
@@ -97,10 +105,23 @@ func (client *WebSocketClient) Reconnect() {
 			oldCancel()                      // 停止所有相关的旧协程
 			client.cancel = newClient.cancel // 更新取消函数
 			client.mutex.Unlock()
+			// 重发失败的消息
+			go newClient.processFailedMessages(oldSendFailures)
 			mylog.Println("Successfully reconnected to WebSocket.")
 			return
 		}
 		mylog.Println("Failed to reconnect to WebSocket. Retrying in 5 seconds...")
+	}
+}
+
+// 处理发送失败的消息
+func (client *WebSocketClient) processFailedMessages(failuresChan chan map[string]interface{}) {
+	for failedMessage := range failuresChan {
+		err := client.SendMessage(failedMessage)
+		if err != nil {
+			// 处理重发失败的情况，比如重新放入 channel 或记录日志
+			mylog.Println("Error re-sending message:", err)
+		}
 	}
 }
 
@@ -227,13 +248,13 @@ func NewWebSocketClient(urlStr string, botID uint64, api openapi.OpenAPI, apiv2 
 			break                                                   // successfully connected, break the loop
 		}
 	}
-
 	client := &WebSocketClient{
-		conn:   conn,
-		api:    api,
-		apiv2:  apiv2,
-		botID:  botID,
-		urlStr: urlStr,
+		conn:         conn,
+		api:          api,
+		apiv2:        apiv2,
+		botID:        botID,
+		urlStr:       urlStr,
+		sendFailures: make(chan map[string]interface{}, 100),
 	}
 
 	// Sending initial message similar to your setupB function
