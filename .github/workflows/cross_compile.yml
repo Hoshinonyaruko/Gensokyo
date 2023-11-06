@@ -124,19 +124,20 @@ jobs:
       - name: Upload Release Assets
         run: |
           for dir in output/*; do
-            if [ -d "$dir" ]; then  # If it's a directory
+            if [ -d "$dir" ]; then
               for file in "$dir"/*; do
-                if [ -f "$file" ]; then  # If it's a file
+                if [ -f "$file" ]; then
                   asset_name=$(basename "$file")
                   echo "Uploading ${asset_name}"
-                  UPLOAD_URL="${{ steps.create_release.outputs.upload_url }}?name=${asset_name}&label=${asset_name}"
-                  echo "Upload URL: $UPLOAD_URL"  # 调试行，打印上传 URL
+                  GITHUB_UPLOAD_URL=${{ steps.create_release.outputs.upload_url }}
+                  GITHUB_UPLOAD_URL="${GITHUB_UPLOAD_URL%\{*}"
+                  GITHUB_UPLOAD_URL="${GITHUB_UPLOAD_URL%\?*}"
                   curl \
                     -X POST \
                     -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                    -H "Content-Type: application/octet-stream" \
-                    -F "file=@${file}" \
-                    "$UPLOAD_URL"
+                    -H "Content-Type: multipart/form-data" \
+                    -F "file=@\"${file}\";name=${asset_name}" \
+                    "${GITHUB_UPLOAD_URL}?name=${asset_name}&label=${asset_name}" 
                 else
                   echo "Expected a file in ${dir}, but found something else."
                 fi
