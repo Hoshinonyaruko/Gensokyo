@@ -133,11 +133,11 @@ jobs:
                   GITHUB_UPLOAD_URL="${GITHUB_UPLOAD_URL%\{*}"
                   GITHUB_UPLOAD_URL="${GITHUB_UPLOAD_URL%\?*}"
                   curl \
-                    -X POST \
-                    -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                    -H "Content-Type: multipart/form-data" \
-                    -F "file=@\"${file}\";name=${asset_name}" \
-                    "${GITHUB_UPLOAD_URL}?name=${asset_name}&label=${asset_name}" 
+                  -X POST \
+                  -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                  -H "Content-Type: application/octet-stream" \
+                  --data-binary @"${file}" \
+                  "${GITHUB_UPLOAD_URL}?name=${asset_name}&label=${asset_name}"
                 else
                   echo "Expected a file in ${dir}, but found something else."
                 fi

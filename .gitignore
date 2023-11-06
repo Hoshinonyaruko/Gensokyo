@@ -9,3 +9,6 @@ config.yml
 
 # Ignore channel_temp
 channel_temp/
+
+# ignore dist
+webui/dist/

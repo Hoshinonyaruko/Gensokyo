@@ -41,10 +41,8 @@ func (c *WebSocketClient) SendMessage(message map[string]interface{}) error {
 	err = c.conn.WriteMessage(websocket.TextMessage, msgBytes)
 	if err != nil {
 		mylog.Println("Error sending message:", err)
-		if websocket.IsUnexpectedCloseError(err) {
-			if !c.isReconnecting {
-				go c.Reconnect()
-			}
+		if !c.isReconnecting {
+			go c.Reconnect()
 		}
 		return err
 	}
