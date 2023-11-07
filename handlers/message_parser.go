@@ -220,6 +220,7 @@ func RevertTransformedText(data interface{}) string {
 	default:
 		return ""
 	}
+	//处理前 先去前后空
 	messageText := strings.TrimSpace(msg.Content)
 
 	// 将messageText里的BotID替换成AppID
@@ -232,9 +233,13 @@ func RevertTransformedText(data interface{}) string {
 		submatches := re.FindStringSubmatch(m)
 		if len(submatches) > 1 {
 			userID := submatches[1]
-			// 检查是否是 BotID，如果是则直接返回，不进行映射
+			// 检查是否是 BotID，如果是则直接返回，不进行映射,或根据用户需求移除
 			if userID == AppID {
-				return "[CQ:at,qq=" + AppID + "]"
+				if config.GetRemoveAt() {
+					return ""
+				} else {
+					return "[CQ:at,qq=" + AppID + "]"
+				}
 			}
 
 			// 不是 BotID，进行正常映射
@@ -269,6 +274,12 @@ func RevertTransformedText(data interface{}) string {
 			imageCQ := "[CQ:image,file=" + md5name + ".image,subType=0,url=" + "http://" + attachment.URL + "]"
 			messageText += imageCQ
 		}
+	}
+
+	//如果移除了前部at,信息就会以空格开头,因为只移去了最前面的at,但at后紧跟随一个空格
+	if config.GetRemoveAt() {
+		//再次去前后空
+		messageText = strings.TrimSpace(msg.Content)
 	}
 
 	return messageText

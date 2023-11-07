@@ -41,4 +41,7 @@ settings:
   server_user_password : "admin"    #默认网页面板密码
   image_sizelimit : 0   #代表kb 腾讯api要求图片1500ms完成传输 如果图片发不出 请提升上行或设置此值 默认为0 不压缩
   remove_prefix : false  #是否忽略公域机器人指令前第一个/
+  remove_at : false      #是否忽略公域机器人指令前第一个[CQ:aq,qq=机器人] 场景(公域机器人,但插件未适配at开头)
   backup_port : "5200"   #当totus为ture时,port值不再是本地webui的端口,使用lotus_Port来访问webui
+  develop_access_token_dir : ""     #开发者测试环境access_token自定义获取地址 默认留空 请留空忽略
+  develop_bot_id : "1234"               #开发者环境需自行获取botid 填入 用户请不要设置这两行...开发者调试用

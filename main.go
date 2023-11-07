@@ -120,19 +120,26 @@ func main() {
 			log.Fatalln(err)
 		}
 		apiV2 = botgo.NewOpenAPI(token).WithTimeout(3 * time.Second)
-
-		// 执行API请求 显示机器人信息
-		me, err := api.Me(ctx) // Adjusted to pass only the context
-		if err != nil {
-			log.Printf("Error fetching bot details: %v\n", err)
-			//return
-			nologin = true
+		configURL := config.GetDevelop_Acdir()
+		var me *dto.User
+		if configURL == "" { // 执行API请求 显示机器人信息
+			me, err = api.Me(ctx) // Adjusted to pass only the context
+			if err != nil {
+				log.Printf("Error fetching bot details: %v\n", err)
+				//return
+				nologin = true
+			}
+			log.Printf("Bot details: %+v\n", me)
+		} else {
+			log.Printf("自定义ac地址模式...请从日志手动获取bot的真实id并设置,不然at会不正常")
 		}
-		log.Printf("Bot details: %+v\n", me)
 		if !nologin {
-			//初始化handlers
-			handlers.BotID = me.ID
-			//handlers.BotID = "1234"
+			if configURL == "" { //初始化handlers
+				handlers.BotID = me.ID
+			} else { //初始化handlers
+				handlers.BotID = config.GetDevBotid()
+			}
+
 			handlers.AppID = fmt.Sprintf("%d", conf.Settings.AppID)
 
 			// 获取 websocket 信息 这里用哪一个api获取就是用哪一个api去连接ws
@@ -170,39 +177,46 @@ func main() {
 				}
 			}()
 
-			// 启动多个WebSocket客户端
-			wsClientChan := make(chan *wsclient.WebSocketClient, len(conf.Settings.WsAddress))
-			errorChan := make(chan error, len(conf.Settings.WsAddress))
-
-			for _, wsAddr := range conf.Settings.WsAddress {
-				go func(address string) {
-					wsClient, err := wsclient.NewWebSocketClient(address, conf.Settings.AppID, api, apiV2)
-					if err != nil {
-						log.Printf("Error creating WebSocketClient for address %s: %v\n", address, err)
-						errorChan <- err
-						return
+			// 启动多个WebSocket客户端的逻辑
+			if !allEmpty(conf.Settings.WsAddress) {
+				wsClientChan := make(chan *wsclient.WebSocketClient, len(conf.Settings.WsAddress))
+				errorChan := make(chan error, len(conf.Settings.WsAddress))
+				// 定义计数器跟踪尝试建立的连接数
+				attemptedConnections := 0
+				for _, wsAddr := range conf.Settings.WsAddress {
+					if wsAddr == "" {
+						continue // Skip empty addresses
 					}
-					wsClientChan <- wsClient
-				}(wsAddr)
-			}
-
-			// 获取连接成功后的wsClient
-			for i := 0; i < len(conf.Settings.WsAddress); i++ {
-				select {
-				case wsClient := <-wsClientChan:
-					wsClients = append(wsClients, wsClient)
-				case err := <-errorChan:
-					log.Printf("Error encountered while initializing WebSocketClient: %v\n", err)
+					attemptedConnections++ // 增加尝试连接的计数
+					go func(address string) {
+						wsClient, err := wsclient.NewWebSocketClient(address, conf.Settings.AppID, api, apiV2)
+						if err != nil {
+							log.Printf("Error creating WebSocketClient for address %s: %v\n", address, err)
+							errorChan <- err
+							return
+						}
+						wsClientChan <- wsClient
+					}(wsAddr)
 				}
-			}
+				// 获取连接成功后的wsClient
+				for i := 0; i < attemptedConnections; i++ {
+					select {
+					case wsClient := <-wsClientChan:
+						wsClients = append(wsClients, wsClient)
+					case err := <-errorChan:
+						log.Printf("Error encountered while initializing WebSocketClient: %v\n", err)
+					}
+				}
 
-			// 确保所有wsClients都已初始化
-			if len(wsClients) != len(conf.Settings.WsAddress) {
-				log.Println("Error: Not all wsClients are initialized!")
-				//log.Fatalln("Failed to initialize all WebSocketClients.")
-			} else {
-				log.Println("All wsClients are successfully initialized.")
-				p = Processor.NewProcessor(api, apiV2, &conf.Settings, wsClients)
+				// 确保所有尝试建立的连接都有对应的wsClient
+				if len(wsClients) != attemptedConnections {
+					log.Println("Error: Not all wsClients are initialized!")
+					// 处理初始化失败的情况
+				} else {
+					log.Println("All wsClients are successfully initialized.")
+					// 所有客户端都成功初始化
+					p = Processor.NewProcessor(api, apiV2, &conf.Settings, wsClients)
+				}
 			}
 		} else {
 			// 设置颜色为红色
@@ -462,4 +476,14 @@ func getHandlerByName(handlerName string) (interface{}, bool) {
 		log.Printf("Unknown handler: %s\n", handlerName)
 		return nil, false
 	}
+}
+
+// allEmpty checks if all the strings in the slice are empty.
+func allEmpty(addresses []string) bool {
+	for _, addr := range addresses {
+		if addr != "" {
+			return false
+		}
+	}
+	return true
 }
