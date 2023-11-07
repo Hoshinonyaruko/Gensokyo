@@ -188,6 +188,15 @@ func NewProcessor(api openapi.OpenAPI, apiv2 openapi.OpenAPI, settings *config.S
 	}
 }
 
+// 修改函数的返回类型为 *Processor
+func NewProcessorV2(api openapi.OpenAPI, apiv2 openapi.OpenAPI, settings *config.Settings) *Processors {
+	return &Processors{
+		Api:      api,
+		Apiv2:    apiv2,
+		Settings: settings,
+	}
+}
+
 // 发信息给所有连接正向ws的客户端
 func (p *Processors) SendMessageToAllClients(message map[string]interface{}) error {
 	var result *multierror.Error

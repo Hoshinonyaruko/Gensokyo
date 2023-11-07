@@ -210,13 +210,16 @@ func main() {
 
 				// 确保所有尝试建立的连接都有对应的wsClient
 				if len(wsClients) != attemptedConnections {
-					log.Println("Error: Not all wsClients are initialized!")
+					log.Println("Error: Not all wsClients are initialized!(反向ws未设置或连接失败)")
 					// 处理初始化失败的情况
 				} else {
 					log.Println("All wsClients are successfully initialized.")
 					// 所有客户端都成功初始化
 					p = Processor.NewProcessor(api, apiV2, &conf.Settings, wsClients)
 				}
+			} else if conf.Settings.EnableWsServer {
+				log.Println("只启动正向ws")
+				p = Processor.NewProcessorV2(api, apiV2, &conf.Settings)
 			}
 		} else {
 			// 设置颜色为红色
@@ -262,11 +265,12 @@ func main() {
 		webuiGroup.DELETE("/*filepath", webui.CombinedMiddleware(api, apiV2))
 		webuiGroup.PATCH("/*filepath", webui.CombinedMiddleware(api, apiV2))
 	}
-	//r.GET("/webui/api/serverdata", getServerDataHandler)
-	//r.GET("/webui/api/logdata", getLogDataHandler)
 	//正向ws
 	if conf.Settings.AppID != 12345 {
-		r.GET("/ws", server.WsHandlerWithDependencies(api, apiV2, p))
+		if conf.Settings.EnableWsServer {
+			r.GET("/ws", server.WsHandlerWithDependencies(api, apiV2, p))
+			log.Println("正向ws启动成功,监听0.0.0.0:" + serverPort + " 请注意设置ws_server_token,并对外放通端口...")
+		}
 	}
 	r.POST("/url", url.CreateShortURLHandler)
 	r.GET("/url/:shortURL", url.RedirectFromShortURLHandler)
