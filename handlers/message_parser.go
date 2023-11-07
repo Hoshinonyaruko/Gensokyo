@@ -279,7 +279,7 @@ func RevertTransformedText(data interface{}) string {
 	//如果移除了前部at,信息就会以空格开头,因为只移去了最前面的at,但at后紧跟随一个空格
 	if config.GetRemoveAt() {
 		//再次去前后空
-		messageText = strings.TrimSpace(msg.Content)
+		messageText = strings.TrimSpace(messageText)
 	}
 
 	return messageText
