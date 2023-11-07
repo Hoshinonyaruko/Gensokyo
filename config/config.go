@@ -51,6 +51,9 @@ type Settings struct {
 	ImageLimit             int      `yaml:"image_sizelimit"`
 	RemovePrefix           bool     `yaml:"remove_prefix"`
 	BackupPort             string   `yaml:"backup_port"`
+	DevlopAcDir            string   `yaml:"develop_access_token_dir"`
+	RemoveAt               bool     `yaml:"remove_at"`
+	DevBotid               string   `yaml:"develop_bot_id"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -348,6 +351,30 @@ func GetServer_dir() string {
 	return instance.Settings.Server_dir
 }
 
+// 获取DevBotid
+func GetDevBotid() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get DevBotid.")
+		return "1234"
+	}
+	return instance.Settings.DevBotid
+}
+
+// 获取Develop_Acdir服务的地址
+func GetDevelop_Acdir() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get DevlopAcDir.")
+		return ""
+	}
+	return instance.Settings.DevlopAcDir
+}
+
 // 获取lotus的值
 func GetLotusValue() bool {
 	mu.Lock()
@@ -358,6 +385,18 @@ func GetLotusValue() bool {
 		return false
 	}
 	return instance.Settings.Lotus
+}
+
+// 获取RemoveAt的值
+func GetRemoveAt() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get RemoveAt value.")
+		return false
+	}
+	return instance.Settings.RemoveAt
 }
 
 // 获取port的值

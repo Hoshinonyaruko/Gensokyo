@@ -5,12 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
 
+	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/tencent-connect/botgo/log"
 )
 
@@ -127,9 +128,10 @@ type queryTokenReq struct {
 	ClientSecret string `json:"clientSecret"`
 }
 
+// 自定义地址返回需满足这个格式
 type queryTokenRsp struct {
-	AccessToken string `json:"access_token"`
-	ExpiresIn   string `json:"expires_in"`
+	AccessToken string      `json:"access_token"`
+	ExpiresIn   interface{} `json:"expires_in"` // 允许任何类型
 }
 
 // func queryAccessToken(ctx context.Context, tokenURL, appID, clientSecrent string) (AccessTokenInfo, error) {
@@ -191,48 +193,134 @@ type queryTokenRsp struct {
 // 	return rdata, err
 // }
 
-// queryAccessToken retrieves a new AccessToken.
 func queryAccessToken(ctx context.Context, tokenURL, appID, clientSecret string) (AccessTokenInfo, error) {
+	// 是否使用自定义ac地址
+	configURL := config.GetDevelop_Acdir()
 	if tokenURL == "" {
-		tokenURL = getAccessTokenURL // Assumes getAccessTokenURL is declared elsewhere
+		if configURL != "" {
+			tokenURL = configURL
+		} else {
+			tokenURL = getAccessTokenURL // 默认值
+		}
 	}
 
-	reqBody := queryTokenReq{
-		AppID:        appID,
-		ClientSecret: clientSecret,
-	}
-	reqData, err := json.Marshal(reqBody)
-	if err != nil {
-		return AccessTokenInfo{}, err
+	var req *http.Request
+	var err error
+
+	//自定义地址使用get,无需参数
+	if configURL != "" {
+		req, err = http.NewRequestWithContext(ctx, http.MethodGet, configURL, nil)
+	} else {
+		// 默认ac地址使用post
+		reqBody := queryTokenReq{
+			AppID:        appID,
+			ClientSecret: clientSecret,
+		}
+		reqData, err := json.Marshal(reqBody)
+		if err != nil {
+			return AccessTokenInfo{}, err
+		}
+
+		req, err = http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, bytes.NewReader(reqData))
+		if err != nil {
+			return AccessTokenInfo{}, err
+		}
+		req.Header.Set("Content-Type", "application/json")
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, bytes.NewReader(reqData))
-	if err != nil {
-		return AccessTokenInfo{}, err
-	}
-	req.Header.Add("Content-Type", "application/json")
-
+	// Perform the HTTP request.
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return AccessTokenInfo{}, err
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	// Read the response body.
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return AccessTokenInfo{}, err
 	}
 
 	var respData queryTokenRsp
-	if err := json.Unmarshal(body, &respData); err != nil {
+	if err = json.Unmarshal(body, &respData); err != nil {
 		return AccessTokenInfo{}, err
 	}
 
-	expiresIn, _ := strconv.ParseInt(respData.ExpiresIn, 10, 64) // Ignoring error can be dangerous, handle it as needed
+	// 自定义地址返回可能是string或者int
+	expiresInInt, err := parseExpiresIn(respData.ExpiresIn)
+	if err != nil {
+		return AccessTokenInfo{}, fmt.Errorf("expires_in is not a valid int or string: %v", err)
+	}
 
 	return AccessTokenInfo{
 		Token:     respData.AccessToken,
-		ExpiresIn: expiresIn,
+		ExpiresIn: expiresInInt,
 		UpTime:    time.Now(),
 	}, nil
 }
+
+func parseExpiresIn(expiresIn interface{}) (int64, error) {
+	switch v := expiresIn.(type) {
+	case float64:
+		// JSON numbers come as floats by default
+		return int64(v), nil
+	case int64:
+		// In case the JSON decoder was set to use integers
+		return v, nil
+	case json.Number:
+		// Convert json.Number to int64
+		return v.Int64()
+	case string:
+		// If the value is a string, try converting it to an integer
+		return strconv.ParseInt(v, 10, 64)
+	default:
+		// If none of the above types matched, return an error
+		return 0, fmt.Errorf("expires_in is not a valid type, got %T", expiresIn)
+	}
+}
+
+//原函数
+// func queryAccessToken(ctx context.Context, tokenURL, appID, clientSecret string) (AccessTokenInfo, error) {
+// 	if tokenURL == "" {
+// 		tokenURL = getAccessTokenURL // Assumes getAccessTokenURL is declared elsewhere
+// 	}
+
+// 	reqBody := queryTokenReq{
+// 		AppID:        appID,
+// 		ClientSecret: clientSecret,
+// 	}
+// 	reqData, err := json.Marshal(reqBody)
+// 	if err != nil {
+// 		return AccessTokenInfo{}, err
+// 	}
+
+// 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, bytes.NewReader(reqData))
+// 	if err != nil {
+// 		return AccessTokenInfo{}, err
+// 	}
+// 	req.Header.Add("Content-Type", "application/json")
+
+// 	resp, err := http.DefaultClient.Do(req)
+// 	if err != nil {
+// 		return AccessTokenInfo{}, err
+// 	}
+// 	defer resp.Body.Close()
+
+// 	body, err := ioutil.ReadAll(resp.Body)
+// 	if err != nil {
+// 		return AccessTokenInfo{}, err
+// 	}
+
+// 	var respData queryTokenRsp
+// 	if err := json.Unmarshal(body, &respData); err != nil {
+// 		return AccessTokenInfo{}, err
+// 	}
+
+// 	expiresIn, _ := strconv.ParseInt(respData.ExpiresIn, 10, 64) // Ignoring error can be dangerous, handle it as needed
+
+// 	return AccessTokenInfo{
+// 		Token:     respData.AccessToken,
+// 		ExpiresIn: expiresIn,
+// 		UpTime:    time.Now(),
+// 	}, nil
+// }
