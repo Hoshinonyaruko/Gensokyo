@@ -95,7 +95,7 @@ func (client *WebSocketClient) Reconnect() {
 
 	for {
 		time.Sleep(5 * time.Second)
-		newClient, err := NewWebSocketClient(client.urlStr, client.botID, client.api, client.apiv2)
+		newClient, err := NewWebSocketClient(client.urlStr, client.botID, client.api, client.apiv2, 30)
 		if err == nil && newClient != nil {
 			client.mutex.Lock()        // 在替换连接之前锁定
 			oldCancel := client.cancel // 保存旧的取消函数
@@ -192,10 +192,8 @@ func (c *WebSocketClient) sendHeartbeat(ctx context.Context, botID uint64) {
 	}
 }
 
-const maxRetryAttempts = 30
-
 // NewWebSocketClient 创建 WebSocketClient 实例，接受 WebSocket URL、botID 和 openapi.OpenAPI 实例
-func NewWebSocketClient(urlStr string, botID uint64, api openapi.OpenAPI, apiv2 openapi.OpenAPI) (*WebSocketClient, error) {
+func NewWebSocketClient(urlStr string, botID uint64, api openapi.OpenAPI, apiv2 openapi.OpenAPI, maxRetryAttempts int) (*WebSocketClient, error) {
 	addresses := config.GetWsAddress()
 	tokens := config.GetWsToken()
 
