@@ -267,7 +267,7 @@ func main() {
 		serverPort = conf.Settings.BackupPort
 	}
 	var r *gin.Engine
-	if config.GetDeveloperLog() { // 我假设这个函数是从您提供的例子中来的
+	if config.GetDeveloperLog() { // 是否启动调试状态
 		r = gin.Default()
 	} else {
 		r = gin.New()
