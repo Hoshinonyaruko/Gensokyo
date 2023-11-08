@@ -56,6 +56,7 @@ type Settings struct {
 	DevBotid               string   `yaml:"develop_bot_id"`
 	SandBoxMode            bool     `yaml:"sandbox_mode"`
 	Title                  string   `yaml:"title"`
+	HashID                 bool     `yaml:"hash_id"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -387,6 +388,18 @@ func GetLotusValue() bool {
 		return false
 	}
 	return instance.Settings.Lotus
+}
+
+// 获取HashID
+func GetHashIDValue() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get hashid value.")
+		return false
+	}
+	return instance.Settings.HashID
 }
 
 // 获取RemoveAt的值
