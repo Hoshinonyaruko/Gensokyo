@@ -84,14 +84,6 @@ func WsHandlerWithDependencies(c *gin.Context) {
 	// 输出新的 WebSocket 客户端连接信息
 	fmt.Println("新的webui用户已连接!")
 
-	// Start a goroutine for heartbeats
-	go func() {
-		for {
-			time.Sleep(5 * time.Second) // send a heartbeat every 30 seconds
-			client.conn.WriteMessage(websocket.PingMessage, nil)
-		}
-	}()
-
 	go client.writePump()
 	go client.readPump()
 
