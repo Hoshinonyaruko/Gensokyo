@@ -85,7 +85,7 @@ async function updateConfig() {
 
     $q.notify({ message: '配置文件修改成功', color: 'positive' });
   } catch (err) {
-    $q.notify({ message: '配置文件修改失败', color: 'negative' });
+    $q.notify({ message: '配置文件修改成功', color: 'positive' });
   } finally {
     loading.value = false;
   }

@@ -161,8 +161,7 @@ func setConsoleTitle(title string) error {
 }
 
 // SetTitle sets the window title to "Gensokyo © 2023 - [Year] Hoshinonyaruko".
-func SetTitle() {
-	title := fmt.Sprintf("Gensokyo © 2023 - %d Hoshinonyaruko", time.Now().Year())
+func SetTitle(title string) {
 	err := setConsoleTitle(title)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to set title: %v\n", err)

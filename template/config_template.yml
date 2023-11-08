@@ -44,4 +44,6 @@ settings:
   remove_at : false      #是否忽略公域机器人指令前第一个[CQ:aq,qq=机器人] 场景(公域机器人,但插件未适配at开头)
   backup_port : "5200"   #当totus为ture时,port值不再是本地webui的端口,使用lotus_Port来访问webui
   develop_access_token_dir : ""     #开发者测试环境access_token自定义获取地址 默认留空 请留空忽略
-  develop_bot_id : "1234"               #开发者环境需自行获取botid 填入 用户请不要设置这两行...开发者调试用
+  develop_bot_id : "1234"           #开发者环境需自行获取botid 填入 用户请不要设置这两行...开发者调试用
+  sandbox_mode : false              #默认false 如果你只希望沙箱频道使用,请改为true
+  title : "Gensokyo © 2023 - Hoshinonyaruko"              #程序的标题 如果多个机器人 可根据标题区分
