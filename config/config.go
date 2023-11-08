@@ -54,6 +54,8 @@ type Settings struct {
 	DevlopAcDir            string   `yaml:"develop_access_token_dir"`
 	RemoveAt               bool     `yaml:"remove_at"`
 	DevBotid               string   `yaml:"develop_bot_id"`
+	SandBoxMode            bool     `yaml:"sandbox_mode"`
+	Title                  string   `yaml:"title"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
