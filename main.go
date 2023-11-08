@@ -79,7 +79,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("error: %v", err)
 	}
-	sys.SetTitle()
+	sys.SetTitle(conf.Settings.Title)
 	webuiURL := config.ComposeWebUIURL(conf.Settings.Lotus)     // 调用函数获取URL
 	webuiURLv2 := config.ComposeWebUIURLv2(conf.Settings.Lotus) // 调用函数获取URL
 
@@ -109,17 +109,37 @@ func main() {
 			panic(errors.New("TextIntent is empty, at least one intent should be specified"))
 		}
 
-		// 创建 v1 版本的 OpenAPI 实例
-		if err := botgo.SelectOpenAPIVersion(openapi.APIv1); err != nil {
-			log.Fatalln(err)
-		}
-		api = botgo.NewOpenAPI(token).WithTimeout(3 * time.Second)
+		//创建api
+		if !conf.Settings.SandBoxMode {
+			// 创建 v1 版本的 OpenAPI 实例
+			if err := botgo.SelectOpenAPIVersion(openapi.APIv1); err != nil {
+				log.Fatalln(err)
+			}
+			api = botgo.NewOpenAPI(token).WithTimeout(3 * time.Second)
+			log.Println("创建 apiv1 成功")
 
-		// 创建 v2 版本的 OpenAPI 实例
-		if err := botgo.SelectOpenAPIVersion(openapi.APIv2); err != nil {
-			log.Fatalln(err)
+			// 创建 v2 版本的 OpenAPI 实例
+			if err := botgo.SelectOpenAPIVersion(openapi.APIv2); err != nil {
+				log.Fatalln(err)
+			}
+			apiV2 = botgo.NewOpenAPI(token).WithTimeout(3 * time.Second)
+			log.Println("创建 apiv2 成功")
+		} else {
+			// 创建 v1 版本的 OpenAPI 实例
+			if err := botgo.SelectOpenAPIVersion(openapi.APIv1); err != nil {
+				log.Fatalln(err)
+			}
+			api = botgo.NewSandboxOpenAPI(token).WithTimeout(3 * time.Second)
+			log.Println("创建 沙箱 apiv1 成功")
+
+			// 创建 v2 版本的 OpenAPI 实例
+			if err := botgo.SelectOpenAPIVersion(openapi.APIv2); err != nil {
+				log.Fatalln(err)
+			}
+			apiV2 = botgo.NewSandboxOpenAPI(token).WithTimeout(3 * time.Second)
+			log.Println("创建 沙箱 apiv2 成功")
 		}
-		apiV2 = botgo.NewOpenAPI(token).WithTimeout(3 * time.Second)
+
 		configURL := config.GetDevelop_Acdir()
 		var me *dto.User
 		if configURL == "" { // 执行API请求 显示机器人信息
