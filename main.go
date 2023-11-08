@@ -209,7 +209,7 @@ func main() {
 					}
 					attemptedConnections++ // 增加尝试连接的计数
 					go func(address string) {
-						wsClient, err := wsclient.NewWebSocketClient(address, conf.Settings.AppID, api, apiV2)
+						wsClient, err := wsclient.NewWebSocketClient(address, conf.Settings.AppID, api, apiV2, 1)
 						if err != nil {
 							log.Printf("Error creating WebSocketClient for address %s: %v\n", address, err)
 							errorChan <- err
