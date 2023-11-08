@@ -1,7 +1,9 @@
 package idmap
 
 import (
+	"crypto/md5"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +11,8 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
 
 	"github.com/boltdb/bolt"
 	"github.com/hoshinonyaruko/gensokyo/config"
@@ -42,6 +46,38 @@ func InitializeDB() {
 func CloseDB() {
 	db.Close()
 }
+func generateRowID(id string, length int) (int64, error) {
+	// 计算MD5哈希值
+	hasher := md5.New()
+	hasher.Write([]byte(id))
+	hash := hex.EncodeToString(hasher.Sum(nil))
+
+	// 只保留数字
+	var digitsBuilder strings.Builder
+	for _, r := range hash {
+		if r >= '0' && r <= '9' {
+			digitsBuilder.WriteRune(r)
+		}
+	}
+	digits := digitsBuilder.String()
+
+	// 取出需要长度的数字
+	var rowIDStr string
+	if len(digits) >= length {
+		rowIDStr = digits[:length]
+	} else {
+		// 如果数字不足指定长度，返回错误
+		return 0, fmt.Errorf("not enough digits in MD5 hash")
+	}
+
+	// 将数字字符串转换为int64
+	rowID, err := strconv.ParseInt(rowIDStr, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	return rowID, nil
+}
 
 // 根据a储存b
 func StoreID(id string) (int64, error) {
@@ -56,19 +92,46 @@ func StoreID(id string) (int64, error) {
 			newRow = int64(binary.BigEndian.Uint64(existingRowBytes))
 			return nil
 		}
-
-		// 如果ID不存在，则为它分配一个新的行号
-		currentRowBytes := b.Get([]byte(CounterKey))
-		if currentRowBytes == nil {
-			newRow = 1
+		//写入虚拟值
+		if !config.GetHashIDValue() {
+			// 如果ID不存在，则为它分配一个新的行号 数字递增
+			currentRowBytes := b.Get([]byte(CounterKey))
+			if currentRowBytes == nil {
+				newRow = 1
+			} else {
+				currentRow := binary.BigEndian.Uint64(currentRowBytes)
+				newRow = int64(currentRow) + 1
+			}
 		} else {
-			currentRow := binary.BigEndian.Uint64(currentRowBytes)
-			newRow = int64(currentRow) + 1
+			// 生成新的行号
+			var err error
+			newRow, err = generateRowID(id, 9)
+			if err != nil {
+				return err
+			}
+			// 检查新生成的行号是否重复
+			rowKey := fmt.Sprintf("row-%d", newRow)
+			if b.Get([]byte(rowKey)) != nil {
+				// 如果行号重复，使用10位数字生成行号
+				newRow, err = generateRowID(id, 10)
+				if err != nil {
+					return err
+				}
+				rowKey = fmt.Sprintf("row-%d", newRow)
+				// 再次检查重复性，如果还是重复，则返回错误
+				if b.Get([]byte(rowKey)) != nil {
+					return fmt.Errorf("unable to find a unique row ID")
+				}
+			}
 		}
 
 		rowBytes := make([]byte, 8)
 		binary.BigEndian.PutUint64(rowBytes, uint64(newRow))
-		b.Put([]byte(CounterKey), rowBytes)
+		//写入递增值
+		if !config.GetHashIDValue() {
+			b.Put([]byte(CounterKey), rowBytes)
+		}
+		//真实对应虚拟 用来直接判断是否存在,并快速返回
 		b.Put([]byte(id), rowBytes)
 
 		reverseKey := fmt.Sprintf("row-%d", newRow)
