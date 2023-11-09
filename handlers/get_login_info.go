@@ -54,6 +54,4 @@ func getLoginInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 	} else {
 		mylog.Printf("响应get_login_info: %+v", outputMap)
 	}
-
-	return
 }
