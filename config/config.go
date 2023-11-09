@@ -391,7 +391,7 @@ func GetLotusValue() bool {
 	return instance.Settings.Lotus
 }
 
-// 获取lotus的值
+// 获取双向ehco
 func GetTwoWayEcho() bool {
 	mu.Lock()
 	defer mu.Unlock()
@@ -400,7 +400,7 @@ func GetTwoWayEcho() bool {
 		mylog.Println("Warning: instance is nil when trying to get lotus value.")
 		return false
 	}
-	return instance.Settings.Lotus
+	return instance.Settings.TwoWayEcho
 }
 
 // 获取HashID
