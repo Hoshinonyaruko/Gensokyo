@@ -155,7 +155,10 @@ func (p *Processors) ProcessGuildATMessage(data *dto.WSATMessageData) error {
 			SubType: "normal",
 			Time:    time.Now().Unix(),
 			Avatar:  data.Author.Avatar,
-			Echo:    echostr,
+		}
+		// 根据条件判断是否添加Echo字段
+		if config.GetTwoWayEcho() {
+			groupMsg.Echo = echostr
 		}
 		// 获取MasterID数组
 		masterIDs := config.GetMasterID()

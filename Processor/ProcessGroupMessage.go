@@ -70,7 +70,10 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 		SubType: "normal",
 		Time:    time.Now().Unix(),
 		Avatar:  "",
-		Echo:    echostr,
+	}
+	// 根据条件判断是否添加Echo字段
+	if config.GetTwoWayEcho() {
+		groupMsg.Echo = echostr
 	}
 	// 获取MasterID数组
 	masterIDs := config.GetMasterID()

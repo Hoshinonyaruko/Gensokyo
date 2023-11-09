@@ -71,9 +71,11 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 			SubType: "friend",
 			Time:    time.Now().Unix(),
 			Avatar:  "", //todo 同上
-			Echo:    echostr,
 		}
-
+		// 根据条件判断是否添加Echo字段
+		if config.GetTwoWayEcho() {
+			privateMsg.Echo = echostr
+		}
 		// 将当前s和appid和message进行映射
 		echo.AddMsgID(AppIDString, s, data.ID)
 		echo.AddMsgType(AppIDString, s, "group_private")
@@ -131,7 +133,10 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 			SubType: "normal",
 			Time:    time.Now().Unix(),
 			Avatar:  "",
-			Echo:    echostr,
+		}
+		// 根据条件判断是否添加Echo字段
+		if config.GetTwoWayEcho() {
+			groupMsg.Echo = echostr
 		}
 		// 获取MasterID数组
 		masterIDs := config.GetMasterID()

@@ -57,6 +57,7 @@ type Settings struct {
 	SandBoxMode            bool     `yaml:"sandbox_mode"`
 	Title                  string   `yaml:"title"`
 	HashID                 bool     `yaml:"hash_id"`
+	TwoWayEcho             bool     `yaml:"twoway_echo"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -388,6 +389,18 @@ func GetLotusValue() bool {
 		return false
 	}
 	return instance.Settings.Lotus
+}
+
+// 获取双向ehco
+func GetTwoWayEcho() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get lotus value.")
+		return false
+	}
+	return instance.Settings.TwoWayEcho
 }
 
 // 获取HashID
