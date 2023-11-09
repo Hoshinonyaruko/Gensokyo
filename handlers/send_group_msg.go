@@ -46,9 +46,16 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 
 		// 使用 echo 获取消息ID
 		var messageID string
-		if echoStr, ok := message.Echo.(string); ok {
-			messageID = echo.GetMsgIDByKey(echoStr)
-			mylog.Println("echo取群组发信息对应的message_id:", messageID)
+		if config.GetLazyMessageId() {
+			//由于实现了Params的自定义unmarshell 所以可以类型安全的断言为string
+			messageID = echo.GetLazyMessagesId(message.Params.GroupID.(string))
+			mylog.Printf("GetLazyMessagesId: %v", messageID)
+		}
+		if messageID == "" {
+			if echoStr, ok := message.Echo.(string); ok {
+				messageID = echo.GetMsgIDByKey(echoStr)
+				mylog.Println("echo取群组发信息对应的message_id:", messageID)
+			}
 		}
 		//通过bolt数据库还原真实的GroupID
 		originalGroupID, err := idmap.RetrieveRowByIDv2(message.Params.GroupID.(string))

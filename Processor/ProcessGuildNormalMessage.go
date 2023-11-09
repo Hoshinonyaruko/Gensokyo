@@ -94,6 +94,8 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 		//储存当前群或频道号的类型
 		idmap.WriteConfigv2(data.ChannelID, "type", "guild")
 		//todo 完善频道ob信息
+		//懒message_id池
+		echo.AddLazyMessageId(data.ChannelID, data.ID, time.Now())
 
 		//调试
 		PrintStructWithFieldNames(onebotMsg)
@@ -189,6 +191,8 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 		//储存当前群或频道号的类型
 		idmap.WriteConfigv2(fmt.Sprint(ChannelID64), "type", "guild")
 		echo.AddMsgType(AppIDString, ChannelID64, "guild")
+		//懒message_id池
+		echo.AddLazyMessageId(strconv.FormatInt(ChannelID64, 10), data.ID, time.Now())
 
 		//调试
 		PrintStructWithFieldNames(groupMsg)

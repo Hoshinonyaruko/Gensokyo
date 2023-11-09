@@ -54,9 +54,16 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 		//mylog.Printf("发送文本信息失败: %v,%v", channelID, channelID)
 		// 使用 echo 获取消息ID
 		var messageID string
-		if echoStr, ok := message.Echo.(string); ok {
-			messageID = echo.GetMsgIDByKey(echoStr)
-			mylog.Println("echo取频道发信息对应的message_id:", messageID)
+		if config.GetLazyMessageId() {
+			//由于实现了Params的自定义unmarshell 所以可以类型安全的断言为string
+			messageID = echo.GetLazyMessagesId(channelID)
+			mylog.Printf("GetLazyMessagesId: %v", messageID)
+		}
+		if messageID == "" {
+			if echoStr, ok := message.Echo.(string); ok {
+				messageID = echo.GetMsgIDByKey(echoStr)
+				mylog.Println("echo取频道发信息对应的message_id:", messageID)
+			}
 		}
 		// 如果messageID为空，通过函数获取
 		if messageID == "" {

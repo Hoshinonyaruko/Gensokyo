@@ -58,6 +58,7 @@ type Settings struct {
 	Title                  string   `yaml:"title"`
 	HashID                 bool     `yaml:"hash_id"`
 	TwoWayEcho             bool     `yaml:"twoway_echo"`
+	LazyMessageId          bool     `yaml:"lazy_message_id"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -401,6 +402,18 @@ func GetTwoWayEcho() bool {
 		return false
 	}
 	return instance.Settings.TwoWayEcho
+}
+
+// 获取LazyMessageId状态
+func GetLazyMessageId() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get LazyMessageId value.")
+		return false
+	}
+	return instance.Settings.LazyMessageId
 }
 
 // 获取HashID
