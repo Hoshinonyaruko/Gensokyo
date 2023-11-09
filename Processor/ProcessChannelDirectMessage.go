@@ -87,9 +87,11 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 			SubType: "friend",
 			Time:    time.Now().Unix(),
 			Avatar:  data.Author.Avatar,
-			Echo:    echostr,
 		}
-
+		// 根据条件判断是否添加Echo字段
+		if config.GetTwoWayEcho() {
+			privateMsg.Echo = echostr
+		}
 		// 将当前s和appid和message进行映射
 		echo.AddMsgID(AppIDString, s, data.ID)
 		echo.AddMsgType(AppIDString, s, "guild_private")
@@ -147,7 +149,10 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 				SubType: "channel",
 				Time:    t.Unix(),
 				Avatar:  data.Author.Avatar,
-				Echo:    echostr,
+			}
+			// 根据条件判断是否添加Echo字段
+			if config.GetTwoWayEcho() {
+				onebotMsg.Echo = echostr
 			}
 			// 获取MasterID数组
 			masterIDs := config.GetMasterID()
@@ -236,7 +241,10 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 				SubType: "normal",
 				Time:    time.Now().Unix(),
 				Avatar:  data.Author.Avatar,
-				Echo:    echostr,
+			}
+			// 根据条件判断是否添加Echo字段
+			if config.GetTwoWayEcho() {
+				groupMsg.Echo = echostr
 			}
 			// 获取MasterID数组
 			masterIDs := config.GetMasterID()

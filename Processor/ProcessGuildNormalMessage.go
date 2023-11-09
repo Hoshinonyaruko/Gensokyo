@@ -62,7 +62,10 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 			SubType: "channel",
 			Time:    t.Unix(),
 			Avatar:  data.Author.Avatar,
-			Echo:    echostr,
+		}
+		// 根据条件判断是否添加Echo字段
+		if config.GetTwoWayEcho() {
+			onebotMsg.Echo = echostr
 		}
 		// 获取MasterID数组
 		masterIDs := config.GetMasterID()
@@ -154,7 +157,10 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 			SubType: "normal",
 			Time:    time.Now().Unix(),
 			Avatar:  data.Author.Avatar,
-			Echo:    echostr,
+		}
+		// 根据条件判断是否添加Echo字段
+		if config.GetTwoWayEcho() {
+			groupMsg.Echo = echostr
 		}
 		// 获取MasterID数组
 		masterIDs := config.GetMasterID()

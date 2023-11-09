@@ -48,3 +48,4 @@ settings:
   sandbox_mode : false              #默认false 如果你只希望沙箱频道使用,请改为true
   title : "Gensokyo © 2023 - Hoshinonyaruko"              #程序的标题 如果多个机器人 可根据标题区分
   hash_id : false                   #使用hash来进行idmaps转换,可以让user_id不是123开始的递增值
+  twoway_echo : false               #是否采用双向echo,根据机器人选择,獭獭\早苗 true 红色问答\椛椛 或者其他 请使用 false
