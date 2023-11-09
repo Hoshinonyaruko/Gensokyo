@@ -58,9 +58,16 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 
 		// 使用 echo 获取消息ID
 		var messageID string
-		if echoStr, ok := message.Echo.(string); ok {
-			messageID = echo.GetMsgIDByKey(echoStr)
-			mylog.Println("echo取私聊发信息对应的message_id:", messageID)
+		if config.GetLazyMessageId() {
+			//由于实现了Params的自定义unmarshell 所以可以类型安全的断言为string
+			messageID = echo.GetLazyMessagesId(UserID)
+			mylog.Printf("GetLazyMessagesId: %v", messageID)
+		}
+		if messageID == "" {
+			if echoStr, ok := message.Echo.(string); ok {
+				messageID = echo.GetMsgIDByKey(echoStr)
+				mylog.Println("echo取私聊发信息对应的message_id:", messageID)
+			}
 		}
 		// 如果messageID仍然为空，尝试使用config.GetAppID和UserID的组合来获取messageID
 		// 如果messageID为空，通过函数获取
@@ -175,9 +182,16 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 
 	// 使用 echo 获取消息ID
 	var messageID string
-	if echoStr, ok := message.Echo.(string); ok {
-		messageID = echo.GetMsgIDByKey(echoStr)
-		mylog.Println("echo取私聊发信息对应的message_id:", messageID)
+	if config.GetLazyMessageId() {
+		//由于实现了Params的自定义unmarshell 所以可以类型安全的断言为string
+		messageID = echo.GetLazyMessagesId(message.Params.UserID.(string))
+		mylog.Printf("GetLazyMessagesId: %v", messageID)
+	}
+	if messageID == "" {
+		if echoStr, ok := message.Echo.(string); ok {
+			messageID = echo.GetMsgIDByKey(echoStr)
+			mylog.Println("echo取私聊发信息对应的message_id:", messageID)
+		}
 	}
 	mylog.Println("私聊信息messageText:", messageText)
 	//mylog.Println("foundItems:", foundItems)

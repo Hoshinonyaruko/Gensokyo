@@ -98,6 +98,8 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 		//其实不需要用AppIDString,因为gensokyo是单机器人框架
 		echo.AddMsgID(AppIDString, userid64, data.ID)
 		echo.AddMsgType(AppIDString, userid64, "guild_private")
+		//懒message_id池
+		echo.AddLazyMessageId(strconv.FormatInt(userid64, 10), data.ID, time.Now())
 
 		// 调试
 		PrintStructWithFieldNames(privateMsg)
@@ -182,6 +184,8 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 			//储存当前群或频道号的类型
 			idmap.WriteConfigv2(data.ChannelID, "type", "guild_private")
 			//todo 完善频道类型信息转换
+			//懒message_id池
+			echo.AddLazyMessageId(strconv.FormatInt(userid64, 10), data.ID, time.Now())
 
 			//调试
 			PrintStructWithFieldNames(onebotMsg)
@@ -273,6 +277,8 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 			//储存当前群或频道号的类型
 			idmap.WriteConfigv2(fmt.Sprint(ChannelID64), "type", "guild_private")
 			echo.AddMsgType(AppIDString, ChannelID64, "guild_private")
+			//懒message_id池
+			echo.AddLazyMessageId(strconv.FormatInt(userid64, 10), data.ID, time.Now())
 
 			//调试
 			PrintStructWithFieldNames(groupMsg)

@@ -82,6 +82,9 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 		//其实不需要用AppIDString,因为gensokyo是单机器人框架
 		//可以试着开发一个,会很棒的
 		echo.AddMsgID(AppIDString, userid64, data.ID)
+		//懒message_id池
+		echo.AddLazyMessageId(strconv.FormatInt(userid64, 10), data.ID, time.Now())
+		//储存类型
 		echo.AddMsgType(AppIDString, userid64, "group_private")
 		//储存当前群或频道号的类型 私信不需要
 		//idmap.WriteConfigv2(data.ChannelID, "type", "group_private")
@@ -162,6 +165,8 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 		//为不支持双向echo的ob服务端映射
 		echo.AddMsgID(AppIDString, userid64, data.ID)
 		echo.AddMsgType(AppIDString, userid64, "group_private")
+		//懒message_id池
+		echo.AddLazyMessageId(strconv.FormatInt(userid64, 10), data.ID, time.Now())
 
 		//调试
 		PrintStructWithFieldNames(groupMsg)
