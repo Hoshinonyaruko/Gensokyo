@@ -49,7 +49,7 @@ type OnebotChannelMessage struct {
 	Avatar      string      `json:"avatar"`
 	UserID      int64       `json:"user_id"`
 	RawMessage  string      `json:"raw_message"`
-	Echo        string      `json:"echo"`
+	Echo        string      `json:"echo,omitempty"`
 }
 
 // 群信息事件
@@ -64,7 +64,7 @@ type OnebotGroupMessage struct {
 	SubType     string      `json:"sub_type"`
 	Time        int64       `json:"time"`
 	Avatar      string      `json:"avatar"`
-	Echo        string      `json:"echo"`
+	Echo        string      `json:"echo,omitempty"`
 	Message     interface{} `json:"message"` // For array format
 	MessageSeq  int         `json:"message_seq"`
 	Font        int         `json:"font"`
@@ -82,7 +82,7 @@ type OnebotPrivateMessage struct {
 	SubType     string        `json:"sub_type"`
 	Time        int64         `json:"time"`
 	Avatar      string        `json:"avatar"`
-	Echo        string        `json:"echo"`
+	Echo        string        `json:"echo,omitempty"`
 	Message     interface{}   `json:"message"`     // For array format
 	MessageSeq  int           `json:"message_seq"` // Optional field
 	Font        int           `json:"font"`        // Optional field
