@@ -194,10 +194,15 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 		}
 	}
 	mylog.Println("私聊信息messageText:", messageText)
-	//mylog.Println("foundItems:", foundItems)
+	//还原真实的userid todo 太绕了 要精简下逻辑
+	UserID, err := idmap.RetrieveRowByIDv2(message.Params.UserID.(string))
+	if err != nil {
+		mylog.Printf("Error reading config: %v", err)
+		return
+	}
 	// 如果messageID为空，通过函数获取
 	if messageID == "" {
-		messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), message.Params.UserID)
+		messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), UserID)
 		mylog.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
 	}
 
