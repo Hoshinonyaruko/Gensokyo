@@ -120,7 +120,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		// 使用RetrieveRowByIDv2还原真实的ChannelID
 		RChannelID, err := idmap.RetrieveRowByIDv2(message.Params.ChannelID)
 		if err != nil {
-			mylog.Printf("error retrieving real UserID: %v", err)
+			mylog.Printf("error retrieving real RChannelID: %v", err)
 		}
 		message.Params.ChannelID = RChannelID
 		//这一句是group_private的逻辑,发频道信息用的是channelid
