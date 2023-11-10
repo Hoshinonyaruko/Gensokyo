@@ -131,27 +131,7 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 		//根据userid绑定得到的具体真实事件类型,这里也有多种可能性
 		//1,私聊(但虚拟成了群),这里用群号取得需要的id
 		//2,频道私聊(但虚拟成了私聊)这里传递2个nil,用user_id去推测channel_id和guild_id
-
-		var channelIDPtr *string
-		var GuildidPtr *string
-
-		// 先尝试将GroupID断言为字符串
-		if channelID, ok := message.Params.GroupID.(string); ok && channelID != "" {
-			channelIDPtr = &channelID
-			// 读取bolt数据库 通过ChannelID取回之前储存的guild_id
-			if value, err := idmap.ReadConfigv2(*channelIDPtr, "guild_id"); err == nil && value != "" {
-				GuildidPtr = &value
-			} else {
-				mylog.Printf("Error reading config: %v", err)
-			}
-		}
-
-		if channelIDPtr == nil || GuildidPtr == nil {
-			mylog.Printf("Value or ChannelID is empty or in error. Value: %v, ChannelID: %v", GuildidPtr, channelIDPtr)
-		}
-
-		handleSendGuildChannelPrivateMsg(client, api, apiv2, message, GuildidPtr, channelIDPtr)
-
+		handleSendGuildChannelPrivateMsg(client, api, apiv2, message, nil, nil)
 	case "group_private":
 		//私聊信息
 		//还原真实的userid
