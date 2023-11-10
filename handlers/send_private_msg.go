@@ -128,37 +128,37 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 }
 
 // 这里是只有群私聊会用到
-func generatePrivateMessage(id string, foundItems map[string][]string, messageText string) interface{} {
-	if imageURLs, ok := foundItems["local_image"]; ok && len(imageURLs) > 0 {
-		// 本地发图逻辑 todo 适配base64图片
-		return &dto.RichMediaMessage{
-			EventID:    id,
-			FileType:   1, // 1代表图片
-			URL:        imageURLs[0],
-			Content:    "", // 这个字段文档没有了
-			SrvSendMsg: true,
-		}
-	} else if imageURLs, ok := foundItems["url_image"]; ok && len(imageURLs) > 0 {
-		// 发链接图片
-		return &dto.RichMediaMessage{
-			EventID:    id,
-			FileType:   1, // 1代表图片
-			URL:        "http://" + imageURLs[0],
-			Content:    "", // 这个字段文档没有了
-			SrvSendMsg: true,
-		}
-	} else if voiceURLs, ok := foundItems["base64_record"]; ok && len(voiceURLs) > 0 {
-		// 目前不支持发语音 todo 适配base64 slik
-	} else {
-		// 返回文本信息
-		return &dto.MessageToCreate{
-			Content: messageText,
-			MsgID:   id,
-			MsgType: 0, // 默认文本类型
-		}
-	}
-	return nil
-}
+// func generatePrivateMessage(id string, foundItems map[string][]string, messageText string) interface{} {
+// 	if imageURLs, ok := foundItems["local_image"]; ok && len(imageURLs) > 0 {
+// 		// 本地发图逻辑 todo 适配base64图片
+// 		return &dto.RichMediaMessage{
+// 			EventID:    id,
+// 			FileType:   1, // 1代表图片
+// 			URL:        imageURLs[0],
+// 			Content:    "", // 这个字段文档没有了
+// 			SrvSendMsg: true,
+// 		}
+// 	} else if imageURLs, ok := foundItems["url_image"]; ok && len(imageURLs) > 0 {
+// 		// 发链接图片
+// 		return &dto.RichMediaMessage{
+// 			EventID:    id,
+// 			FileType:   1, // 1代表图片
+// 			URL:        "http://" + imageURLs[0],
+// 			Content:    "", // 这个字段文档没有了
+// 			SrvSendMsg: true,
+// 		}
+// 	} else if voiceURLs, ok := foundItems["base64_record"]; ok && len(voiceURLs) > 0 {
+// 		// 目前不支持发语音 todo 适配base64 slik
+// 	} else {
+// 		// 返回文本信息
+// 		return &dto.MessageToCreate{
+// 			Content: messageText,
+// 			MsgID:   id,
+// 			MsgType: 0, // 默认文本类型
+// 		}
+// 	}
+// 	return nil
+// }
 
 // 处理频道私信 最后2个指针参数可空 代表使用userid倒推
 func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage, optionalGuildID *string, optionalChannelID *string) {
