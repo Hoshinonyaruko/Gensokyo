@@ -122,7 +122,7 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 		// 使用RetrieveRowByIDv2还原真实的ChannelID
 		RChannelID, err := idmap.RetrieveRowByIDv2(message.Params.ChannelID)
 		if err != nil {
-			mylog.Printf("error retrieving real UserID: %v", err)
+			mylog.Printf("error retrieving real RChannelID: %v", err)
 		}
 		message.Params.ChannelID = RChannelID
 		handleSendGuildChannelMsg(client, api, apiv2, message)
