@@ -86,6 +86,7 @@ settings:
   
   visible_ip : false                #转换url时,如果server_dir是ip true将以ip形式发出url 默认隐藏url 将server_dir配置为自己域名可以转换url
   forward_msg_limit : 3             #发送折叠转发信息时的最大限制条数 若要发转发信息 请设置lazy_message_id为true
+
 `
 const Logo = `
 '                                                                                                      
