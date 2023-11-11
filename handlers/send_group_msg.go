@@ -71,7 +71,10 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), message.Params.GroupID)
 			mylog.Println("通过GetMessageIDByUseridOrGroupid函数获取的message_id:", message.Params.GroupID, messageID)
 		}
-
+		//开发环境用
+		if config.GetDevMsgID() {
+			messageID = "1000"
+		}
 		// 优先发送文本信息
 		if messageText != "" {
 			groupReply := generateGroupMessage(messageID, nil, messageText)

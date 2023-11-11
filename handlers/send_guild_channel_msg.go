@@ -70,6 +70,10 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), channelID)
 			mylog.Println("通过GetMessageIDByUseridOrGroupid函数获取的message_id:", messageID)
 		}
+		//开发环境用
+		if config.GetDevMsgID() {
+			messageID = "1000"
+		}
 		mylog.Println("频道发信息messageText:", messageText)
 		//mylog.Println("foundItems:", foundItems)
 		// 优先发送文本信息

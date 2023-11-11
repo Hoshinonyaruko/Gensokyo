@@ -74,6 +74,10 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), message.Params.GroupID)
 			mylog.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
 		}
+		//开发环境用
+		if config.GetDevMsgID() {
+			messageID = "1000"
+		}
 		// 优先发送文本信息
 		if messageText != "" {
 			groupReply := generateGroupMessage(messageID, nil, messageText)
@@ -161,6 +165,10 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 		if messageID == "" {
 			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), UserID)
 			mylog.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
+		}
+		//开发环境用
+		if config.GetDevMsgID() {
+			messageID = "1000"
 		}
 		mylog.Println("私聊发信息messageText:", messageText)
 		//mylog.Println("foundItems:", foundItems)
