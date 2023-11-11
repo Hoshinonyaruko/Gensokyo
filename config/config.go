@@ -66,6 +66,7 @@ type Settings struct {
 	VisualPrefixs          []string `yaml:"visual_prefixs"`
 	VisibleIp              bool     `yaml:"visible_ip"`
 	ForwardMsgLimit        int      `yaml:"forward_msg_limit"`
+	DevMessgeID            bool     `yaml:"dev_message_id"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -765,4 +766,16 @@ func GetBackupPort() string {
 	}
 
 	return instance.Settings.BackupPort
+}
+
+// 获取GetDevMsgID的值
+func GetDevMsgID() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetDevMsgID value.")
+		return false
+	}
+	return instance.Settings.DevMessgeID
 }

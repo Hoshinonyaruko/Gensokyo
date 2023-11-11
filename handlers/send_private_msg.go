@@ -75,6 +75,10 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), UserID)
 			mylog.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
 		}
+		//开发环境用
+		if config.GetDevMsgID() {
+			messageID = "1000"
+		}
 		mylog.Println("私聊发信息messageText:", messageText)
 		//mylog.Println("foundItems:", foundItems)
 
@@ -204,6 +208,10 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 	if messageID == "" {
 		messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), UserID)
 		mylog.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
+	}
+	//开发环境用
+	if config.GetDevMsgID() {
+		messageID = "1000"
 	}
 
 	timestamp := time.Now().Unix()
