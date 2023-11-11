@@ -101,6 +101,10 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 
 		//转换at
 		messageText := handlers.RevertTransformedText(data)
+		if messageText == "" {
+			mylog.Printf("信息被自定义黑白名单拦截")
+			return nil
+		}
 		//转换appid
 		AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 		//构造echo

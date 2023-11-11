@@ -68,10 +68,14 @@ gensokyo兼容 [OneBot-v11](https://github.com/botuniverse/onebot-11) ，并在�
 
 > 拓展 API 可前往 [文档](docs/cqhttp.md) 查看
 
-- [x] 配合gocq-bridge连接多个ws/wss
+- [x] 连接多个ws地址
 - [x] 将频道虚拟成群事件
 - [x] 将私信虚拟成频道或群事件
 - [x] webui,可以在webui修改配置,查看频道列表,发送信息
+- [x] 方便过审的指令黑白名单
+- [x] 自动url转换(自备域名)
+- [x] 可自定义图片压缩\图床服务
+- [x] 可编辑的数据库
 
 
 ### 实现
