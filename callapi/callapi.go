@@ -71,6 +71,7 @@ type ParamsContent struct {
 	GuildID   string      `json:"guild_id"`
 	GroupID   interface{} `json:"group_id"`           // 每一种onebotv11实现的字段类型都可能不同
 	Message   interface{} `json:"message"`            // 这里使用interface{}因为它可能是多种类型
+	Messages  interface{} `json:"messages,omitempty"` // 坑爹转发信息
 	UserID    interface{} `json:"user_id"`            // 这里使用interface{}因为它可能是多种类型
 	Duration  int         `json:"duration,omitempty"` // 可选的整数
 	Enable    bool        `json:"enable,omitempty"`   // 可选的布尔值

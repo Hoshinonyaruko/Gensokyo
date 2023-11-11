@@ -59,6 +59,13 @@ type Settings struct {
 	HashID                 bool     `yaml:"hash_id"`
 	TwoWayEcho             bool     `yaml:"twoway_echo"`
 	LazyMessageId          bool     `yaml:"lazy_message_id"`
+	WhitePrefixMode        bool     `yaml:"white_prefix_mode"`
+	WhitePrefixs           []string `yaml:"white_prefixs"`
+	BlackPrefixMode        bool     `yaml:"black_prefix_mode"`
+	BlackPrefixs           []string `yaml:"black_prefixs"`
+	VisualPrefixs          []string `yaml:"visual_prefixs"`
+	VisibleIp              bool     `yaml:"visible_ip"`
+	ForwardMsgLimit        int      `yaml:"forward_msg_limit"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -368,6 +375,18 @@ func GetDevBotid() string {
 	return instance.Settings.DevBotid
 }
 
+// 获取DevBotid
+func GetForwardMsgLimit() int {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get GetForwardMsgLimit.")
+		return 3
+	}
+	return instance.Settings.ForwardMsgLimit
+}
+
 // 获取Develop_Acdir服务的地址
 func GetDevelop_Acdir() string {
 	mu.Lock()
@@ -402,6 +421,72 @@ func GetTwoWayEcho() bool {
 		return false
 	}
 	return instance.Settings.TwoWayEcho
+}
+
+// 获取白名单开启状态
+func GetWhitePrefixMode() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetWhitePrefixModes value.")
+		return false
+	}
+	return instance.Settings.WhitePrefixMode
+}
+
+// 获取白名单指令数组
+func GetWhitePrefixs() []string {
+	mu.Lock()
+	defer mu.Unlock()
+	if instance != nil {
+		return instance.Settings.WhitePrefixs
+	}
+	return nil // 返回nil，如果instance为nil
+}
+
+// 获取黑名单开启状态
+func GetBlackPrefixMode() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetBlackPrefixMode value.")
+		return false
+	}
+	return instance.Settings.BlackPrefixMode
+}
+
+// 获取黑名单指令数组
+func GetBlackPrefixs() []string {
+	mu.Lock()
+	defer mu.Unlock()
+	if instance != nil {
+		return instance.Settings.BlackPrefixs
+	}
+	return nil // 返回nil，如果instance为nil
+}
+
+// 获取IPurl显示开启状态
+func GetVisibleIP() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetVisibleIP value.")
+		return false
+	}
+	return instance.Settings.VisibleIp
+}
+
+// 获取虚拟指令前缀数组
+func GetVisualkPrefixs() []string {
+	mu.Lock()
+	defer mu.Unlock()
+	if instance != nil {
+		return instance.Settings.VisualPrefixs
+	}
+	return nil // 返回nil，如果instance为nil
 }
 
 // 获取LazyMessageId状态

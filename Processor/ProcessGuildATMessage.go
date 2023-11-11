@@ -28,6 +28,10 @@ func (p *Processors) ProcessGuildATMessage(data *dto.WSATMessageData) error {
 		s := client.GetGlobalS()
 		//转换at
 		messageText := handlers.RevertTransformedText(data)
+		if messageText == "" {
+			mylog.Printf("信息被自定义黑白名单拦截")
+			return nil
+		}
 		//转换appid
 		AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 		//构造echo
@@ -118,6 +122,10 @@ func (p *Processors) ProcessGuildATMessage(data *dto.WSATMessageData) error {
 		idmap.WriteConfigv2(fmt.Sprint(ChannelID64), "guild_id", data.GuildID)
 		//转换at和图片
 		messageText := handlers.RevertTransformedText(data)
+		if messageText == "" {
+			mylog.Printf("信息被自定义黑白名单拦截")
+			return nil
+		}
 		//转换appid
 		AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 		//构造echo
