@@ -3,6 +3,7 @@ config.yml
 *.db
 *.db.lock
 *.ini
+*.bat
 
 # Go specific
 *.exe
