@@ -268,6 +268,12 @@ func RevertTransformedText(data interface{}) string {
 		}
 		return m
 	})
+	//结构 <@!>空格/内容
+	//如果移除了前部at,信息就会以空格开头,因为只移去了最前面的at,但at后紧跟随一个空格
+	if config.GetRemoveAt() {
+		//再次去前后空
+		messageText = strings.TrimSpace(messageText)
+	}
 
 	// 检查是否需要移除前缀
 	if config.GetRemovePrefixValue() {
@@ -276,6 +282,7 @@ func RevertTransformedText(data interface{}) string {
 			messageText = messageText[:idx] + messageText[idx+1:]
 		}
 	}
+
 	//检查是否启用白名单模式
 	if config.GetWhitePrefixMode() {
 		// 获取白名单数组
@@ -331,12 +338,6 @@ func RevertTransformedText(data interface{}) string {
 			imageCQ := "[CQ:image,file=" + md5name + ".image,subType=0,url=" + "http://" + attachment.URL + "]"
 			messageText += imageCQ
 		}
-	}
-
-	//如果移除了前部at,信息就会以空格开头,因为只移去了最前面的at,但at后紧跟随一个空格
-	if config.GetRemoveAt() {
-		//再次去前后空
-		messageText = strings.TrimSpace(messageText)
 	}
 
 	return messageText
