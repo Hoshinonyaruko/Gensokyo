@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"net"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -160,6 +161,10 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 	return messageText, foundItems
 }
 
+func isIPAddress(address string) bool {
+	return net.ParseIP(address) != nil
+}
+
 // at处理和链接处理
 func transformMessageText(messageText string) string {
 	// 首先，将AppID替换为BotID
@@ -184,22 +189,29 @@ func transformMessageText(messageText string) string {
 		}
 		return m
 	})
-
+	// 判断服务器地址是否是IP地址
+	serverAddress := config.GetServer_dir()
+	isIP := isIPAddress(serverAddress)
+	VisualIP := config.GetVisibleIP()
 	// 使用xurls来查找和替换所有的URL
-	if config.GetLotusValue() {
-		// 连接到另一个gensokyo
-		messageText = xurls.Relaxed.ReplaceAllStringFunc(messageText, func(originalURL string) string {
+	messageText = xurls.Relaxed.ReplaceAllStringFunc(messageText, func(originalURL string) string {
+		// 当服务器地址是IP地址且GetVisibleIP为false时，替换URL为空
+		if isIP && !VisualIP {
+			return ""
+		}
+
+		// 根据配置处理URL
+		if config.GetLotusValue() {
+			// 连接到另一个gensokyo
 			shortURL := url.GenerateShortURL(originalURL)
 			return shortURL
-		})
-	} else {
-		// Lotus is false, prepend the base URL to the shortURL
-		messageText = xurls.Relaxed.ReplaceAllStringFunc(messageText, func(originalURL string) string {
+		} else {
+			// 自己是主节点
 			shortURL := url.GenerateShortURL(originalURL)
 			// 使用getBaseURL函数来获取baseUrl并与shortURL组合
 			return url.GetBaseURL() + "/url/" + shortURL
-		})
-	}
+		}
+	})
 	return messageText
 }
 
@@ -264,7 +276,52 @@ func RevertTransformedText(data interface{}) string {
 			messageText = messageText[:idx] + messageText[idx+1:]
 		}
 	}
+	//检查是否启用白名单模式
+	if config.GetWhitePrefixMode() {
+		// 获取白名单数组
+		whitePrefixes := config.GetWhitePrefixs()
+		// 默认设置为不匹配
+		matched := false
 
+		// 遍历白名单数组，检查是否有匹配项
+		for _, prefix := range whitePrefixes {
+			if strings.HasPrefix(messageText, prefix) {
+				// 找到匹配项，保留 messageText 并跳出循环
+				matched = true
+				break
+			}
+		}
+
+		// 如果没有匹配项，则将 messageText 置为空
+		if !matched {
+			messageText = ""
+		}
+	}
+	//检查是否启用黑名单模式
+	if config.GetBlackPrefixMode() {
+		// 获取黑名单数组
+		blackPrefixes := config.GetBlackPrefixs()
+		// 遍历黑名单数组，检查是否有匹配项
+		for _, prefix := range blackPrefixes {
+			if strings.HasPrefix(messageText, prefix) {
+				// 找到匹配项，将 messageText 置为空并停止处理
+				messageText = ""
+				break
+			}
+		}
+	}
+	//移除以GetVisualkPrefixs数组开头的文本
+	visualkPrefixs := config.GetVisualkPrefixs()
+	for _, prefix := range visualkPrefixs {
+		if strings.HasPrefix(messageText, prefix) {
+			// 检查 messageText 是否比 prefix 长，这意味着后面还有其他内容
+			if len(messageText) > len(prefix) {
+				// 移除找到的前缀
+				messageText = strings.TrimPrefix(messageText, prefix)
+			}
+			break // 只移除第一个匹配的前缀
+		}
+	}
 	// 处理图片附件
 	for _, attachment := range msg.Attachments {
 		if strings.HasPrefix(attachment.ContentType, "image/") {
