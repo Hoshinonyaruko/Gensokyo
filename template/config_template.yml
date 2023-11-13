@@ -62,3 +62,4 @@ settings:
   save_logs : false                 #自动储存日志
   bind_prefix : "/bind"             #需设置   #增强配置项  master_id 可触发
   me_prefix : "/me"                 #需设置   #增强配置项  master_id 可触发
+  dev_message_id : false            #在沙盒和测试环境使用无限制msg_id 仅沙盒有效,正式环境请关闭
