@@ -435,6 +435,20 @@ func ConvertToSegmentedMessage(data interface{}) []map[string]interface{} {
 		// 从原始内容中移除at部分
 		msg.Content = strings.Replace(msg.Content, match[0], "", 1)
 	}
+	//结构 <@!>空格/内容
+	//如果移除了前部at,信息就会以空格开头,因为只移去了最前面的at,但at后紧跟随一个空格
+	if config.GetRemoveAt() {
+		//再次去前后空
+		msg.Content = strings.TrimSpace(msg.Content)
+	}
+
+	// 检查是否需要移除前缀
+	if config.GetRemovePrefixValue() {
+		// 移除消息内容中第一次出现的 "/"
+		if idx := strings.Index(msg.Content, "/"); idx != -1 {
+			msg.Content = msg.Content[:idx] + msg.Content[idx+1:]
+		}
+	}
 	// 如果还有其他内容，那么这些内容被视为文本部分
 	if msg.Content != "" {
 		textSegment := map[string]interface{}{
