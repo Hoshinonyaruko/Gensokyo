@@ -260,8 +260,17 @@ func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}
 	var err error
 	var now, new string
 	var realid string
-	if specificData, ok := data.(*dto.WSMessageData); ok {
-		realid = specificData.Author.ID
+	switch v := data.(type) {
+	case *dto.WSGroupATMessageData:
+		realid = v.Author.ID
+	case *dto.WSATMessageData:
+		realid = v.Author.ID
+	case *dto.WSMessageData:
+		realid = v.Author.ID
+	case *dto.WSDirectMessageData:
+		realid = v.Author.ID
+	case *dto.WSC2CMessageData:
+		realid = v.Author.ID
 	}
 	// 获取MasterID数组
 	masterIDs := config.GetMasterID()
