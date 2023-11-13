@@ -28,7 +28,7 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 		return nil
 	}
 	//框架内指令
-	p.HandleFrameworkCommand(messageText, data, "guild")
+	p.HandleFrameworkCommand(messageText, data, "group")
 	// 转换appid
 	AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 
