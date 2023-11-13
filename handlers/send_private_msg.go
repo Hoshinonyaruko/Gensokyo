@@ -127,9 +127,9 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		//当收到发私信调用 并且来源是频道
 		handleSendGuildChannelPrivateMsg(client, api, apiv2, message, nil, nil)
 	default:
-		mylog.Printf("Unknown message type(视为频道私信调用): %s", msgType)
-		//按频道私信处理
-		handleSendGuildChannelPrivateMsg(client, api, apiv2, message, nil, nil)
+		mylog.Printf("Unknown message type: %s", msgType)
+		//直接返回成功
+		SendResponse(client, nil, &message)
 	}
 }
 
