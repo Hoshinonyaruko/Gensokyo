@@ -73,7 +73,7 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 			return nil
 		}
 		//框架内指令
-		p.HandleFrameworkCommand(messageText, data, "guild")
+		p.HandleFrameworkCommand(messageText, data, "guild_private")
 		// 如果在Array模式下, 则处理Message为Segment格式
 		var segmentedMessages interface{} = messageText
 		if config.GetArrayValue() {
@@ -133,7 +133,7 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 				return nil
 			}
 			//框架内指令
-			p.HandleFrameworkCommand(messageText, data, "guild")
+			p.HandleFrameworkCommand(messageText, data, "guild_private")
 			//转换appid
 			AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 			//构造echo
