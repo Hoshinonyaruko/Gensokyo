@@ -322,8 +322,10 @@ func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}
 
 		return nil
 	} else {
-		mylog.Printf("您没有权限,请设置master_id,发送/me 获取虚拟值或真实值填入其中")
-		SendMessage("您没有权限,请设置master_id,发送/me 获取虚拟值或真实值填入其中", data, Type, p.Api, p.Apiv2)
+		if strings.HasPrefix(cleanedMessage, config.GetBindPrefix()) {
+			mylog.Printf("您没有权限,请设置master_id,发送/me 获取虚拟值或真实值填入其中")
+			SendMessage("您没有权限,请设置master_id,发送/me 获取虚拟值或真实值填入其中", data, Type, p.Api, p.Apiv2)
+		}
 		return nil
 	}
 }
