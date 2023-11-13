@@ -436,6 +436,15 @@ func ConvertToSegmentedMessage(data interface{}) []map[string]interface{} {
 		// 从原始内容中移除at部分
 		msg.Content = strings.Replace(msg.Content, match[0], "", 1)
 	}
-
+	// 如果还有其他内容，那么这些内容被视为文本部分
+	if msg.Content != "" {
+		textSegment := map[string]interface{}{
+			"type": "text",
+			"data": map[string]interface{}{
+				"text": msg.Content,
+			},
+		}
+		messageSegments = append(messageSegments, textSegment)
+	}
 	return messageSegments
 }
