@@ -384,12 +384,11 @@ func ConvertToSegmentedMessage(data interface{}) []map[string]interface{} {
 		newImagePattern := "[CQ:image,file=" + attachment.URL + "]"
 		msg.Content = msg.Content + newImagePattern
 	}
-
+	// 将msg.Content里的BotID替换成AppID
+	msg.Content = strings.ReplaceAll(msg.Content, BotID, AppID)
 	// 使用正则表达式查找所有的[@数字]格式
 	r := regexp.MustCompile(`<@!(\d+)>`)
 	atMatches := r.FindAllStringSubmatch(msg.Content, -1)
-	// 将msg.Content里的BotID替换成AppID
-	msg.Content = strings.ReplaceAll(msg.Content, BotID, AppID)
 	for _, match := range atMatches {
 		userID := match[1]
 
