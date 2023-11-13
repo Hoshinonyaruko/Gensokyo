@@ -67,6 +67,10 @@ type Settings struct {
 	VisibleIp              bool     `yaml:"visible_ip"`
 	ForwardMsgLimit        int      `yaml:"forward_msg_limit"`
 	DevMessgeID            bool     `yaml:"dev_message_id"`
+	LogLevel               int      `yaml:"log_level"`
+	SaveLogs               bool     `yaml:"save_logs"`
+	BindPrefix             string   `yaml:"bind_prefix"`
+	MePrefix               string   `yaml:"me_prefix"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -778,4 +782,52 @@ func GetDevMsgID() bool {
 		return false
 	}
 	return instance.Settings.DevMessgeID
+}
+
+// 获取GetSaveLogs的值
+func GetSaveLogs() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetSaveLogs value.")
+		return false
+	}
+	return instance.Settings.SaveLogs
+}
+
+// 获取GetSaveLogs的值
+func GetLogLevel() int {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetLogLevel value.")
+		return 2
+	}
+	return instance.Settings.LogLevel
+}
+
+// 获取GetBindPrefix的值
+func GetBindPrefix() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetBindPrefix value.")
+		return "/bind"
+	}
+	return instance.Settings.BindPrefix
+}
+
+// 获取GetMePrefix的值
+func GetMePrefix() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetMePrefix value.")
+		return "/me"
+	}
+	return instance.Settings.MePrefix
 }

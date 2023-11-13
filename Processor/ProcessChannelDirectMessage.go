@@ -66,7 +66,14 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 			log.Fatalf("Error storing ID: %v", err)
 		}
 		messageID := int(messageID64)
-		messageText := data.Content
+		//转换at
+		messageText := handlers.RevertTransformedText(data)
+		if messageText == "" {
+			mylog.Printf("信息被自定义黑白名单拦截")
+			return nil
+		}
+		//框架内指令
+		p.HandleFrameworkCommand(messageText, data, "guild")
 		// 如果在Array模式下, 则处理Message为Segment格式
 		var segmentedMessages interface{} = messageText
 		if config.GetArrayValue() {
@@ -125,6 +132,8 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 				mylog.Printf("信息被自定义黑白名单拦截")
 				return nil
 			}
+			//框架内指令
+			p.HandleFrameworkCommand(messageText, data, "guild")
 			//转换appid
 			AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 			//构造echo

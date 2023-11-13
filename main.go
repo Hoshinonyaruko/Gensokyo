@@ -88,6 +88,11 @@ func main() {
 	var wsClients []*wsclient.WebSocketClient
 	var nologin bool
 
+	//logger
+	logLevel := mylog.GetLogLevelFromConfig(config.GetLogLevel())
+	loggerAdapter := mylog.NewMyLogAdapter(logLevel, config.GetSaveLogs())
+	botgo.SetLogger(loggerAdapter)
+
 	if conf.Settings.AppID == 12345 {
 		// 输出天蓝色文本
 		cyan := color.New(color.FgCyan)

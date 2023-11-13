@@ -27,7 +27,8 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 		mylog.Printf("信息被自定义黑白名单拦截")
 		return nil
 	}
-
+	//框架内指令
+	p.HandleFrameworkCommand(messageText, data, "guild")
 	// 转换appid
 	AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 

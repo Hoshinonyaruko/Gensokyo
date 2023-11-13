@@ -127,7 +127,9 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		//当收到发私信调用 并且来源是频道
 		handleSendGuildChannelPrivateMsg(client, api, apiv2, message, nil, nil)
 	default:
-		mylog.Printf("Unknown message type: %s", msgType)
+		mylog.Printf("Unknown message type(视为频道私信调用): %s", msgType)
+		//按频道私信处理
+		handleSendGuildChannelPrivateMsg(client, api, apiv2, message, nil, nil)
 	}
 }
 
@@ -226,7 +228,7 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 
 	// 优先发送文本信息
 	if messageText != "" {
-		textMsg, _ := generateReplyMessage(messageID, nil, messageText)
+		textMsg, _ := GenerateReplyMessage(messageID, nil, messageText)
 		if _, err = apiv2.PostDirectMessage(context.TODO(), dm, textMsg); err != nil {
 			mylog.Printf("发送文本信息失败: %v", err)
 		}
@@ -239,7 +241,7 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 		var singleItem = make(map[string][]string)
 		singleItem[key] = urls
 
-		reply, isBase64Image := generateReplyMessage(messageID, singleItem, "")
+		reply, isBase64Image := GenerateReplyMessage(messageID, singleItem, "")
 
 		if isBase64Image {
 			// 将base64内容从reply的Content转换回字节

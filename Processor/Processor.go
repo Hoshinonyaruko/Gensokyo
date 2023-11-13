@@ -2,15 +2,21 @@
 package Processor
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/config"
+	"github.com/hoshinonyaruko/gensokyo/handlers"
+	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/hoshinonyaruko/gensokyo/wsclient"
 	"github.com/tencent-connect/botgo/dto"
@@ -46,7 +52,7 @@ type OnebotChannelMessage struct {
 	Sender      Sender      `json:"sender"`
 	SubType     string      `json:"sub_type"`
 	Time        int64       `json:"time"`
-	Avatar      string      `json:"avatar"`
+	Avatar      string      `json:"avatar,omitempty"`
 	UserID      int64       `json:"user_id"`
 	RawMessage  string      `json:"raw_message"`
 	Echo        string      `json:"echo,omitempty"`
@@ -63,7 +69,7 @@ type OnebotGroupMessage struct {
 	Sender      Sender      `json:"sender"`
 	SubType     string      `json:"sub_type"`
 	Time        int64       `json:"time"`
-	Avatar      string      `json:"avatar"`
+	Avatar      string      `json:"avatar,omitempty"`
 	Echo        string      `json:"echo,omitempty"`
 	Message     interface{} `json:"message"` // For array format
 	MessageSeq  int         `json:"message_seq"`
@@ -81,7 +87,7 @@ type OnebotPrivateMessage struct {
 	Sender      PrivateSender `json:"sender"`
 	SubType     string        `json:"sub_type"`
 	Time        int64         `json:"time"`
-	Avatar      string        `json:"avatar"`
+	Avatar      string        `json:"avatar,omitempty"`
 	Echo        string        `json:"echo,omitempty"`
 	Message     interface{}   `json:"message"`     // For array format
 	MessageSeq  int           `json:"message_seq"` // Optional field
@@ -237,6 +243,163 @@ func (p *Processors) BroadcastMessageToAll(message map[string]interface{}) error
 	// 在循环结束后处理记录的错误
 	if len(errors) > 0 {
 		return fmt.Errorf(strings.Join(errors, "; "))
+	}
+
+	return nil
+}
+
+func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}, Type string) error {
+	// 正则表达式匹配转换后的 CQ 码
+	cqRegex := regexp.MustCompile(`\[CQ:at,qq=\d+\]`)
+
+	// 使用正则表达式替换所有的 CQ 码为 ""
+	cleanedMessage := cqRegex.ReplaceAllString(messageText, "")
+
+	// 去除字符串前后的空格
+	cleanedMessage = strings.TrimSpace(cleanedMessage)
+	var err error
+	var now, new string
+	var realid string
+	if specificData, ok := data.(*dto.WSMessageData); ok {
+		realid = specificData.Author.ID
+	}
+	// 获取MasterID数组
+	masterIDs := config.GetMasterID()
+	// 根据realid获取new
+	now, new, err = idmap.RetrieveVirtualValue(realid)
+	// 检查真实值或虚拟值是否在数组中
+	realValueIncluded := contains(masterIDs, realid)
+	virtualValueIncluded := contains(masterIDs, new)
+
+	// me指令处理逻辑
+	if strings.HasPrefix(cleanedMessage, config.GetMePrefix()) {
+		if err != nil {
+			// 发送错误信息
+			SendMessage(err.Error(), data, Type, p.Api, p.Apiv2)
+			return err
+		}
+
+		// 发送成功信息
+		SendMessage("目前状态:\n当前真实值 "+now+"\n当前虚拟值 "+new+"\n"+config.GetBindPrefix()+" 当前虚拟值"+" 目标虚拟值", data, Type, p.Api, p.Apiv2)
+		return nil
+	}
+
+	if realValueIncluded || virtualValueIncluded {
+		// bind指令处理逻辑
+		if strings.HasPrefix(cleanedMessage, config.GetBindPrefix()) {
+			// 分割指令以获取参数
+			parts := strings.Fields(cleanedMessage)
+			if len(parts) != 3 {
+				mylog.Printf("bind指令参数错误\n正确的格式" + config.GetBindPrefix() + " 当前虚拟值 新虚拟值")
+				return nil
+			}
+
+			// 将字符串转换为 int64
+			oldRowValue, err := strconv.ParseInt(parts[1], 10, 64)
+			if err != nil {
+				return err
+			}
+
+			newRowValue, err := strconv.ParseInt(parts[2], 10, 64)
+			if err != nil {
+				return err
+			}
+
+			// 调用 UpdateVirtualValue
+			err = idmap.UpdateVirtualValue(oldRowValue, newRowValue)
+			if err != nil {
+				SendMessage(err.Error(), data, Type, p.Api, p.Apiv2)
+				return err
+			}
+			now, new, err := idmap.RetrieveRealValue(newRowValue)
+			if err != nil {
+				SendMessage(err.Error(), data, Type, p.Api, p.Apiv2)
+			} else {
+				SendMessage("绑定成功,目前状态:\n当前真实值 "+now+"\n当前虚拟值 "+new, data, Type, p.Api, p.Apiv2)
+			}
+
+		}
+
+		return nil
+	} else {
+		mylog.Printf("您没有权限,请设置master_id,发送/me 获取虚拟值或真实值填入其中")
+		SendMessage("您没有权限,请设置master_id,发送/me 获取虚拟值或真实值填入其中", data, Type, p.Api, p.Apiv2)
+		return nil
+	}
+}
+
+// contains 检查数组中是否包含指定的字符串
+func contains(slice []string, item string) bool {
+	for _, a := range slice {
+		if a == item {
+			return true
+		}
+	}
+	return false
+}
+
+// SendMessage 发送消息根据不同的类型
+func SendMessage(messageText string, data interface{}, messageType string, api openapi.OpenAPI, apiv2 openapi.OpenAPI) error {
+	// 强制类型转换，获取Message结构
+	var msg *dto.Message
+	switch v := data.(type) {
+	case *dto.WSGroupATMessageData:
+		msg = (*dto.Message)(v)
+	case *dto.WSATMessageData:
+		msg = (*dto.Message)(v)
+	case *dto.WSMessageData:
+		msg = (*dto.Message)(v)
+	case *dto.WSDirectMessageData:
+		msg = (*dto.Message)(v)
+	case *dto.WSC2CMessageData:
+		msg = (*dto.Message)(v)
+	default:
+		return nil
+	}
+	switch messageType {
+	case "guild":
+		// 处理公会消息
+		textMsg, _ := handlers.GenerateReplyMessage(msg.ID, nil, messageText)
+		if _, err := api.PostMessage(context.TODO(), msg.ChannelID, textMsg); err != nil {
+			mylog.Printf("发送文本信息失败: %v", err)
+			return err
+		}
+
+	case "group":
+		// 处理群组消息
+		textMsg, _ := handlers.GenerateReplyMessage(msg.ID, nil, messageText)
+		_, err := apiv2.PostGroupMessage(context.TODO(), msg.GroupID, textMsg)
+		if err != nil {
+			mylog.Printf("发送文本群组信息失败: %v", err)
+			return err
+		}
+
+	case "guild_private":
+		// 处理私信
+		timestamp := time.Now().Unix()
+		timestampStr := fmt.Sprintf("%d", timestamp)
+		dm := &dto.DirectMessage{
+			GuildID:    msg.GuildID,
+			ChannelID:  msg.ChannelID,
+			CreateTime: timestampStr,
+		}
+		textMsg, _ := handlers.GenerateReplyMessage(msg.ID, nil, messageText)
+		if _, err := apiv2.PostDirectMessage(context.TODO(), dm, textMsg); err != nil {
+			mylog.Printf("发送文本信息失败: %v", err)
+			return err
+		}
+
+	case "group_private":
+		// 处理群组私聊消息
+		textMsg, _ := handlers.GenerateReplyMessage(msg.ID, nil, messageText)
+		_, err := apiv2.PostC2CMessage(context.TODO(), msg.Author.ID, textMsg)
+		if err != nil {
+			mylog.Printf("发送文本私聊信息失败: %v", err)
+			return err
+		}
+
+	default:
+		return errors.New("未知的消息类型")
 	}
 
 	return nil
