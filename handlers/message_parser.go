@@ -388,13 +388,47 @@ func ConvertToSegmentedMessage(data interface{}) []map[string]interface{} {
 	// 使用正则表达式查找所有的[@数字]格式
 	r := regexp.MustCompile(`<@!(\d+)>`)
 	atMatches := r.FindAllStringSubmatch(msg.Content, -1)
-
+	// 将msg.Content里的BotID替换成AppID
+	msg.Content = strings.ReplaceAll(msg.Content, BotID, AppID)
 	for _, match := range atMatches {
+		userID := match[1]
+
+		if userID == AppID {
+			if config.GetRemoveAt() {
+				// 根据配置移除
+				msg.Content = strings.Replace(msg.Content, match[0], "", 1)
+				continue // 跳过当前循环迭代
+			} else {
+				//将其转换为AppID
+				userID = AppID
+				// 构建at部分的映射并加入到messageSegments
+				atSegment := map[string]interface{}{
+					"type": "at",
+					"data": map[string]interface{}{
+						"qq": userID,
+					},
+				}
+				messageSegments = append(messageSegments, atSegment)
+				// 从原始内容中移除at部分
+				msg.Content = strings.Replace(msg.Content, match[0], "", 1)
+				continue // 跳过当前循环迭代
+			}
+		}
+		// 不是 AppID，进行正常处理
+		userID64, err := idmap.StoreIDv2(userID)
+		if err != nil {
+			// 如果存储失败，记录错误并继续使用原始 userID
+			mylog.Printf("Error storing ID: %v", err)
+		} else {
+			// 类型转换成功，使用新的 userID
+			userID = strconv.FormatInt(userID64, 10)
+		}
+
 		// 构建at部分的映射并加入到messageSegments
 		atSegment := map[string]interface{}{
 			"type": "at",
 			"data": map[string]interface{}{
-				"qq": match[1],
+				"qq": userID,
 			},
 		}
 		messageSegments = append(messageSegments, atSegment)
@@ -402,7 +436,6 @@ func ConvertToSegmentedMessage(data interface{}) []map[string]interface{} {
 		// 从原始内容中移除at部分
 		msg.Content = strings.Replace(msg.Content, match[0], "", 1)
 	}
-
 	// 如果还有其他内容，那么这些内容被视为文本部分
 	if msg.Content != "" {
 		textSegment := map[string]interface{}{
@@ -413,6 +446,5 @@ func ConvertToSegmentedMessage(data interface{}) []map[string]interface{} {
 		}
 		messageSegments = append(messageSegments, textSegment)
 	}
-
 	return messageSegments
 }
