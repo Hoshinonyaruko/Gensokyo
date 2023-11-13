@@ -79,7 +79,7 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 		// 优先发送文本信息
 		var err error
 		if messageText != "" {
-			textMsg, _ := generateReplyMessage(messageID, nil, messageText)
+			textMsg, _ := GenerateReplyMessage(messageID, nil, messageText)
 			if _, err = api.PostMessage(context.TODO(), channelID, textMsg); err != nil {
 				mylog.Printf("发送文本信息失败: %v", err)
 			}
@@ -92,7 +92,7 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 			var singleItem = make(map[string][]string)
 			singleItem[key] = urls
 
-			reply, isBase64Image := generateReplyMessage(messageID, singleItem, "")
+			reply, isBase64Image := GenerateReplyMessage(messageID, singleItem, "")
 
 			if isBase64Image {
 				// 将base64内容从reply的Content转换回字节
@@ -137,7 +137,7 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 }
 
 // 组合发频道信息需要的MessageToCreate 支持base64
-func generateReplyMessage(id string, foundItems map[string][]string, messageText string) (*dto.MessageToCreate, bool) {
+func GenerateReplyMessage(id string, foundItems map[string][]string, messageText string) (*dto.MessageToCreate, bool) {
 	var reply dto.MessageToCreate
 	var isBase64 bool
 

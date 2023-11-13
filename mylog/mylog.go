@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -11,9 +13,165 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+type LogLevel int
+
+const (
+	LogLevelDebug LogLevel = iota
+	LogLevelInfo
+	LogLevelWarn
+	LogLevelError
+)
+
 type Client struct {
 	conn *websocket.Conn
 	send chan EnhancedLogEntry
+}
+
+type MyLogAdapter struct {
+	Level         LogLevel
+	EnableFileLog bool
+	FileLogPath   string
+}
+
+func GetLogLevelFromConfig(logLevel int) LogLevel {
+	switch logLevel {
+	case 0:
+		return LogLevelDebug
+	case 1:
+		return LogLevelInfo
+	case 2:
+		return LogLevelWarn
+	case 3:
+		return LogLevelError
+	default:
+		return LogLevelInfo // 默认为 Info
+	}
+}
+
+// 接收新参数，并设置文件日志路径
+func NewMyLogAdapter(level LogLevel, enableFileLog bool) *MyLogAdapter {
+	exePath, err := os.Executable()
+	if err != nil {
+		panic(err) // 或者处理错误
+	}
+	exeDir := filepath.Dir(exePath)
+	logPath := filepath.Join(exeDir, "log")
+
+	if enableFileLog {
+		if _, err := os.Stat(logPath); os.IsNotExist(err) {
+			err := os.Mkdir(logPath, 0755)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
+
+	return &MyLogAdapter{
+		Level:         level,
+		EnableFileLog: enableFileLog,
+		FileLogPath:   logPath,
+	}
+}
+
+// 文件日志记录函数
+func (adapter *MyLogAdapter) logToFile(level, message string) {
+	if !adapter.EnableFileLog {
+		return
+	}
+	filename := time.Now().Format("2006-01-02") + ".log" // 按日期命名文件
+	filepath := adapter.FileLogPath + "/" + filename
+
+	file, err := os.OpenFile(filepath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Println("Error opening log file:", err)
+		return
+	}
+	defer file.Close()
+
+	logEntry := fmt.Sprintf("[%s] %s: %s\n", time.Now().Format("2006-01-02T15:04:05"), level, message)
+	if _, err := file.WriteString(logEntry); err != nil {
+		fmt.Println("Error writing to log file:", err)
+	}
+}
+
+// Debug logs a message at the debug level.
+func (adapter *MyLogAdapter) Debug(v ...interface{}) {
+	if adapter.Level <= LogLevelDebug {
+		message := fmt.Sprint(v...)
+		Println(v...)
+		adapter.logToFile("DEBUG", message)
+	}
+}
+
+// Info logs a message at the info level.
+func (adapter *MyLogAdapter) Info(v ...interface{}) {
+	if adapter.Level <= LogLevelInfo {
+		message := fmt.Sprint(v...)
+		Println(v...)
+		adapter.logToFile("INFO", message)
+	}
+}
+
+// Warn logs a message at the warn level.
+func (adapter *MyLogAdapter) Warn(v ...interface{}) {
+	if adapter.Level <= LogLevelWarn {
+		message := fmt.Sprint(v...)
+		Printf("WARN: %v\n", v...)
+		adapter.logToFile("WARN", message)
+	}
+}
+
+// Error logs a message at the error level.
+func (adapter *MyLogAdapter) Error(v ...interface{}) {
+	if adapter.Level <= LogLevelError {
+		message := fmt.Sprint(v...)
+		Printf("ERROR: %v\n", v...)
+		adapter.logToFile("ERROR", message)
+	}
+}
+
+// Debugf logs a formatted message at the debug level.
+func (adapter *MyLogAdapter) Debugf(format string, v ...interface{}) {
+	if adapter.Level <= LogLevelDebug {
+		message := fmt.Sprintf(format, v...)
+		Printf("DEBUG: "+format, v...)
+		adapter.logToFile("DEBUG", message)
+	}
+}
+
+// Infof logs a formatted message at the info level.
+func (adapter *MyLogAdapter) Infof(format string, v ...interface{}) {
+	if adapter.Level <= LogLevelInfo {
+		message := fmt.Sprintf(format, v...)
+		Printf("INFO: "+format, v...)
+		adapter.logToFile("INFO", message)
+	}
+}
+
+// Warnf logs a formatted message at the warn level.
+func (adapter *MyLogAdapter) Warnf(format string, v ...interface{}) {
+	if adapter.Level <= LogLevelWarn {
+		message := fmt.Sprintf(format, v...)
+		Printf("WARN: "+format, v...)
+		adapter.logToFile("WARN", message)
+	}
+}
+
+// Errorf logs a formatted message at the error level.
+func (adapter *MyLogAdapter) Errorf(format string, v ...interface{}) {
+	if adapter.Level <= LogLevelError {
+		message := fmt.Sprintf(format, v...)
+		Printf("ERROR: "+format, v...)
+		adapter.logToFile("ERROR", message)
+	}
+}
+
+// Sync 实现 Botgo SDK 的 Sync 方法
+func (adapter *MyLogAdapter) Sync() error {
+	// 如果日志系统有需要执行的同步操作，在这里添加相应的代码
+	// 例如，可能需要刷新或关闭文件，或执行其他清理操作
+	// 如果没有特别的同步需求，可以直接返回 nil
+	return nil
 }
 
 // 全局 WebSocket 客户端集合
@@ -26,7 +184,7 @@ type EnhancedLogEntry struct {
 	Message string `json:"message"`
 }
 
-// 我们的日志频道，所有的 WebSocket 客户端都会在此监听日志事件
+// 日志频道，所有的 WebSocket 客户端都会在此监听日志事件
 var logChannel = make(chan EnhancedLogEntry, 1000)
 
 func Println(v ...interface{}) {

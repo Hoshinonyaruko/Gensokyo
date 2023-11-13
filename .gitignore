@@ -11,5 +11,8 @@ config.yml
 # Ignore channel_temp
 channel_temp/
 
+# Ignore log
+log/
+
 # ignore dist
 webui/dist/

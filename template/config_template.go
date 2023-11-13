@@ -54,9 +54,14 @@ settings:
   crt: ""                           #证书路径 从你的域名服务商或云服务商申请签发SSL证书(qq要求SSL) 
   key: ""                           #密钥路径 Apache（crt文件、key文件）示例: "C:\\123.key" \需要双写成\\
 
-  #webui设置
+  #日志类
 
   developer_log : false             #开启开发者日志 默认关闭
+  log_level : 1                     # 0=debug 1=info 2=warning 3=error 默认1
+  save_logs : false                 #自动储存日志
+
+  #webui设置
+
   server_user_name : "useradmin"    #默认网页面板用户名
   server_user_password : "admin"    #默认网页面板密码
 
@@ -87,7 +92,11 @@ settings:
   
   visible_ip : false                #转换url时,如果server_dir是ip true将以ip形式发出url 默认隐藏url 将server_dir配置为自己域名可以转换url
   forward_msg_limit : 3             #发送折叠转发信息时的最大限制条数 若要发转发信息 请设置lazy_message_id为true
+  
+  #bind指令类 
 
+  bind_prefix : "/bind"             #需设置   #增强配置项  master_id 可触发
+  me_prefix : "/me"                 #需设置   #增强配置项  master_id 可触发
 `
 const Logo = `
 '                                                                                                      

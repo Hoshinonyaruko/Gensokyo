@@ -384,3 +384,90 @@ func ReadConfigv2(sectionName, keyName string) (string, error) {
 func joinSectionAndKey(sectionName, keyName string) []byte {
 	return []byte(sectionName + ":" + keyName)
 }
+
+// UpdateVirtualValue 更新旧的虚拟值到新的虚拟值的映射
+func UpdateVirtualValue(oldRowValue, newRowValue int64) error {
+	return db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(BucketName))
+
+		// 查找旧虚拟值对应的真实值
+		oldRowKey := fmt.Sprintf("row-%d", oldRowValue)
+		idBytes := b.Get([]byte(oldRowKey))
+		if idBytes == nil {
+			return fmt.Errorf("不存在:%v", oldRowValue)
+		}
+		id := string(idBytes)
+
+		// 检查新虚拟值是否已经存在
+		newRowKey := fmt.Sprintf("row-%d", newRowValue)
+		if b.Get([]byte(newRowKey)) != nil {
+			return fmt.Errorf("%v :已存在", newRowValue)
+		}
+
+		// 更新真实值到新的虚拟值的映射
+		newRowBytes := make([]byte, 8)
+		binary.BigEndian.PutUint64(newRowBytes, uint64(newRowValue))
+		if err := b.Put([]byte(id), newRowBytes); err != nil {
+			return err
+		}
+
+		// 更新反向映射
+		if err := b.Delete([]byte(oldRowKey)); err != nil {
+			return err
+		}
+		if err := b.Put([]byte(newRowKey), []byte(id)); err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
+// RetrieveRealValue 根据虚拟值获取真实值，并返回虚拟值及其对应的真实值
+func RetrieveRealValue(virtualValue int64) (string, string, error) {
+	var realValue string
+	err := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(BucketName))
+
+		// 构造键，根据虚拟值查找
+		virtualKey := fmt.Sprintf("row-%d", virtualValue)
+		realValueBytes := b.Get([]byte(virtualKey))
+		if realValueBytes == nil {
+			return fmt.Errorf("no real value found for virtual value: %d", virtualValue)
+		}
+		realValue = string(realValueBytes)
+
+		return nil
+	})
+
+	if err != nil {
+		return "", "", err
+	}
+
+	// 返回虚拟值和对应的真实值
+	return fmt.Sprintf("%d", virtualValue), realValue, nil
+}
+
+// RetrieveVirtualValue 根据真实值获取虚拟值，并返回真实值及其对应的虚拟值
+func RetrieveVirtualValue(realValue string) (string, string, error) {
+	var virtualValue int64
+	err := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(BucketName))
+
+		// 根据真实值查找虚拟值
+		virtualValueBytes := b.Get([]byte(realValue))
+		if virtualValueBytes == nil {
+			return fmt.Errorf("no virtual value found for real value: %s", realValue)
+		}
+		virtualValue = int64(binary.BigEndian.Uint64(virtualValueBytes))
+
+		return nil
+	})
+
+	if err != nil {
+		return "", "", err
+	}
+
+	// 返回真实值和对应的虚拟值
+	return realValue, fmt.Sprintf("%d", virtualValue), nil
+}
