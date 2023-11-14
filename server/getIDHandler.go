@@ -6,13 +6,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 )
 
 func GetIDHandler(c *gin.Context) {
 	idOrRow := c.Query("id")
 	typeVal, err := strconv.Atoi(c.Query("type"))
 
-	if err != nil || (typeVal != 1 && typeVal != 2) {
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid type"})
 		return
 	}
@@ -44,6 +45,7 @@ func GetIDHandler(c *gin.Context) {
 		value := c.Query("value")
 		err := idmap.WriteConfigv2(section, subtype, value)
 		if err != nil {
+			mylog.Printf(err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
