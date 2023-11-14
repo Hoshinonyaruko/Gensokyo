@@ -275,7 +275,7 @@ func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}
 	// 获取MasterID数组
 	masterIDs := config.GetMasterID()
 	// 根据realid获取new
-	now, new, err = idmap.RetrieveVirtualValue(realid)
+	now, new, err = idmap.RetrieveVirtualValuev2(realid)
 	// 检查真实值或虚拟值是否在数组中
 	realValueIncluded := contains(masterIDs, realid)
 	virtualValueIncluded := contains(masterIDs, new)
@@ -315,12 +315,12 @@ func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}
 			}
 
 			// 调用 UpdateVirtualValue
-			err = idmap.UpdateVirtualValue(oldRowValue, newRowValue)
+			err = idmap.UpdateVirtualValuev2(oldRowValue, newRowValue)
 			if err != nil {
 				SendMessage(err.Error(), data, Type, p.Api, p.Apiv2)
 				return err
 			}
-			now, new, err := idmap.RetrieveRealValue(newRowValue)
+			now, new, err := idmap.RetrieveRealValuev2(newRowValue)
 			if err != nil {
 				SendMessage(err.Error(), data, Type, p.Api, p.Apiv2)
 			} else {
