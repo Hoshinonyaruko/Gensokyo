@@ -185,12 +185,12 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 			return
 		}
 	}
-
+	RawUserID := message.Params.UserID.(string)
 	// 使用 echo 获取消息ID
 	var messageID string
 	if config.GetLazyMessageId() {
 		//由于实现了Params的自定义unmarshell 所以可以类型安全的断言为string
-		messageID = echo.GetLazyMessagesId(message.Params.UserID.(string))
+		messageID = echo.GetLazyMessagesId(RawUserID)
 		mylog.Printf("GetLazyMessagesId: %v", messageID)
 	}
 	if messageID == "" {
@@ -200,16 +200,32 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 		}
 	}
 	mylog.Println("私聊信息messageText:", messageText)
-	//还原真实的userid todo 太绕了 要精简下逻辑
-	UserID, err := idmap.RetrieveRowByIDv2(message.Params.UserID.(string))
-	if err != nil {
-		mylog.Printf("Error reading config: %v", err)
-		return
-	}
-	// 如果messageID为空，通过函数获取
-	if messageID == "" {
-		messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), UserID)
-		mylog.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
+	if RawUserID != "" { //还原真实的userid todo 太绕了 要精简下逻辑
+		UserID, err := idmap.RetrieveRowByIDv2(RawUserID)
+		if err != nil {
+			mylog.Printf("Error reading config: %v", err)
+			return
+		}
+		// 如果messageID为空，通过函数获取
+		if messageID == "" {
+			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), UserID)
+			mylog.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
+		}
+	} else {
+		//通过bolt数据库还原真实的GroupID
+		originalGroupID, err := idmap.RetrieveRowByIDv2(message.Params.GroupID.(string))
+		if err != nil {
+			mylog.Printf("Error retrieving original GroupID: %v", err)
+			return
+		}
+		message.Params.GroupID = originalGroupID
+		mylog.Println("群组(私信虚拟成的)发信息messageText:", messageText)
+		//mylog.Println("foundItems:", foundItems)
+		// 如果messageID为空，通过函数获取
+		if messageID == "" {
+			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), message.Params.GroupID)
+			mylog.Println("通过GetMessageIDByUseridOrGroupid函数获取的message_id:", message.Params.GroupID, messageID)
+		}
 	}
 	//开发环境用
 	if config.GetDevMsgID() {

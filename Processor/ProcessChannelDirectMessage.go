@@ -217,6 +217,8 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 			}
 			//转成int再互转 适用于群场景私聊
 			idmap.WriteConfigv2(fmt.Sprint(ChannelID64), "guild_id", data.GuildID)
+			//直接储存 适用于私信场景私聊
+			idmap.WriteConfigv2(data.ChannelID, "guild_id", data.GuildID)
 			//转换at
 			messageText := handlers.RevertTransformedText(data)
 			if messageText == "" {
@@ -290,6 +292,8 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 			echo.AddMsgType(AppIDString, s, "guild_private")
 			//为不支持双向echo的ob服务端映射
 			echo.AddMsgID(AppIDString, userid64, data.ID)
+			//为频道私聊转群聊映射
+			echo.AddMsgID(AppIDString, ChannelID64, data.ID)
 			echo.AddMsgType(AppIDString, userid64, "guild_private")
 			//储存当前群或频道号的类型
 			idmap.WriteConfigv2(fmt.Sprint(ChannelID64), "type", "guild_private")
