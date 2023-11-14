@@ -335,7 +335,16 @@ func RevertTransformedText(data interface{}) string {
 			// 获取文件的后缀名
 			ext := filepath.Ext(attachment.FileName)
 			md5name := strings.TrimSuffix(attachment.FileName, ext)
-			imageCQ := "[CQ:image,file=" + md5name + ".image,subType=0,url=" + "http://" + attachment.URL + "]"
+
+			// 检查 URL 是否已包含协议头
+			var url string
+			if strings.HasPrefix(attachment.URL, "http://") || strings.HasPrefix(attachment.URL, "https://") {
+				url = attachment.URL
+			} else {
+				url = "http://" + attachment.URL // 默认使用 http，也可以根据需要改为 https
+			}
+
+			imageCQ := "[CQ:image,file=" + md5name + ".image,subType=0,url=" + url + "]"
 			messageText += imageCQ
 		}
 	}
