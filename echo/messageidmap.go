@@ -37,7 +37,7 @@ func AddLazyMessageId(groupID, messageID string, timestamp time.Time) {
 	store.records[groupID] = append(store.records[groupID], messageRecord{messageID: messageID, timestamp: timestamp})
 }
 
-// GetRecentMessages 获取指定群号中最近5分钟内的 message_id
+// GetRecentMessages 获取指定群号中最近5分钟内的 message_id.
 func GetLazyMessagesId(groupID string) string {
 	store := initInstance()
 	store.mu.RLock()
