@@ -1,9 +1,16 @@
 package echo
 
 import (
+	"fmt"
+	"log"
 	"math/rand"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/hoshinonyaruko/gensokyo/config"
+	"github.com/hoshinonyaruko/gensokyo/idmap"
 )
 
 type messageRecord struct {
@@ -55,7 +62,38 @@ func GetLazyMessagesId(groupID string) string {
 		randomIndex := rand.Intn(len(recentMessages))
 		randomMessageID = recentMessages[randomIndex]
 	} else {
-		randomMessageID = ""
+		msgType := GetMessageIDByUseridOrGroupidv2(config.GetAppIDStr(), groupID)
+		if strings.HasPrefix(msgType, "guild") {
+			randomMessageID = "1000" // 频道主动信息
+		} else {
+			randomMessageID = ""
+		}
 	}
 	return randomMessageID
+}
+
+// 通过user_id获取messageID
+func GetMessageIDByUseridOrGroupidv2(appID string, userID interface{}) string {
+	// 从appID和userID生成key
+	var userIDStr string
+	switch u := userID.(type) {
+	case int:
+		userIDStr = strconv.Itoa(u)
+	case int64:
+		userIDStr = strconv.FormatInt(u, 10)
+	case float64:
+		userIDStr = strconv.FormatFloat(u, 'f', 0, 64)
+	case string:
+		userIDStr = u
+	default:
+		// 可能需要处理其他类型或报错
+		return ""
+	}
+	//将真实id转为int
+	userid64, err := idmap.StoreIDv2(userIDStr)
+	if err != nil {
+		log.Fatalf("Error storing ID 241: %v", err)
+	}
+	key := appID + "_" + fmt.Sprint(userid64)
+	return GetMsgIDByKey(key)
 }

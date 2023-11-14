@@ -108,6 +108,63 @@ func UploadBase64ImageHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 	}
 }
 
+// 闭包,网页后端,语音床逻辑,基于gin和www静态文件的简易语音床
+func UploadBase64RecordHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ipAddress := c.ClientIP()
+		if !rateLimiter.CheckAndUpdateRateLimit(ipAddress) {
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "rate limit exceeded"})
+			return
+		}
+
+		base64REcord := c.PostForm("base64Record")
+		// Print the length of the received base64 data
+		mylog.Println("Received base64 data length:", len(base64REcord), "characters")
+
+		RecordBytes, err := base64.StdEncoding.DecodeString(base64REcord)
+		if err != nil {
+			mylog.Println("Error while decoding base64:", err) // Print error while decoding
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid base64 data"})
+			return
+		}
+
+		fileName := generateRandomMd5() + ".silk"
+		directoryPath := "./channel_temp/"
+		savePath := directoryPath + fileName
+
+		// Create the directory if it doesn't exist
+		err = os.MkdirAll(directoryPath, 0755)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error creating directory"})
+			return
+		}
+
+		err = os.WriteFile(savePath, RecordBytes, 0644)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error saving file"})
+			return
+		}
+
+		serverAddress := config.GetServer_dir()
+		serverPort := config.GetPortValue()
+		if serverAddress == "" {
+			// Handle the case where the server address is not configured
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "server address is not configured"})
+			return
+		}
+
+		// 根据serverPort确定协议
+		protocol := "http"
+		if serverPort == "443" {
+			protocol = "https"
+		}
+
+		imageURL := fmt.Sprintf("%s://%s:%s/channel_temp/%s", protocol, serverAddress, serverPort, fileName)
+		c.JSON(http.StatusOK, gin.H{"url": imageURL})
+
+	}
+}
+
 // 检查是否超过调用频率限制
 // 默认1分钟30次 todo 允许用户自行在config编辑限制次数
 func (rl *RateLimiter) CheckAndUpdateRateLimit(ipAddress string) bool {
