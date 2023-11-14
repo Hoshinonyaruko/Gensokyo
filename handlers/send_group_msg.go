@@ -212,7 +212,29 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 			SrvSendMsg: true,
 		}
 	} else if voiceURLs, ok := foundItems["base64_record"]; ok && len(voiceURLs) > 0 {
-		// 目前不支持发语音 todo 适配base64 slik
+		// 适配base64 slik
+		if base64_record, ok := foundItems["base64_record"]; ok && len(base64_record) > 0 {
+			// 解码base64语音数据
+			fileRecordData, err := base64.StdEncoding.DecodeString(base64_record[0])
+			if err != nil {
+				mylog.Printf("failed to decode base64 record: %v", err)
+				return nil
+			}
+			// 将解码的语音数据转换回base64格式并上传
+			imageURL, err := images.UploadBase64RecordToServer(base64.StdEncoding.EncodeToString(fileRecordData))
+			if err != nil {
+				mylog.Printf("failed to upload base64 record: %v", err)
+				return nil
+			}
+			// 创建RichMediaMessage并返回
+			return &dto.RichMediaMessage{
+				EventID:    id,
+				FileType:   3, // 3代表语音
+				URL:        imageURL,
+				Content:    "", // 这个字段文档没有了
+				SrvSendMsg: true,
+			}
+		}
 	} else if base64_image, ok := foundItems["base64_image"]; ok && len(base64_image) > 0 {
 		// todo 适配base64图片
 		//因为QQ群没有 form方式上传,所以在gensokyo内置了图床,需公网,或以lotus方式连接位于公网的gensokyo

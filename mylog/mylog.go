@@ -184,6 +184,8 @@ type EnhancedLogEntry struct {
 	Message string `json:"message"`
 }
 
+//todo 下面的不会存入文件,上头的,不会进入ws,改一改
+
 // 日志频道，所有的 WebSocket 客户端都会在此监听日志事件
 var logChannel = make(chan EnhancedLogEntry, 1000)
 
@@ -197,6 +199,12 @@ func Printf(format string, v ...interface{}) {
 	log.Printf(format, v...)
 	message := fmt.Sprintf(format, v...)
 	emitLog("INFO", message)
+}
+
+func Errorf(format string, v ...interface{}) {
+	log.Printf(format, v...)
+	message := fmt.Sprintf(format, v...)
+	emitLog("ERROR", message)
 }
 
 func emitLog(level, message string) {
