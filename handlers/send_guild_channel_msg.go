@@ -184,7 +184,7 @@ func GenerateReplyMessage(id string, foundItems map[string][]string, messageText
 			MsgType: 0, // Assuming type 0 for images
 		}
 	} else if voiceURLs, ok := foundItems["base64_record"]; ok && len(voiceURLs) > 0 {
-		//还不支持发语音
+		//频道 还不支持发语音
 		// Sending a voice message
 		// reply = dto.MessageToCreate{
 		// 	EventID: id,

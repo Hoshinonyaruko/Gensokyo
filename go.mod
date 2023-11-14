@@ -16,6 +16,11 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mvdan/xurls v1.1.0 // indirect
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
+	github.com/remyoudompheng/bigfft v0.0.0-20200410134404-eec4a21b6bb0 // indirect
+	github.com/wdvxdr1123/go-silk v0.0.0-20220304095002-f67345df09ea // indirect
+	modernc.org/libc v1.8.1 // indirect
+	modernc.org/mathutil v1.2.2 // indirect
+	modernc.org/memory v1.0.4 // indirect
 )
 
 replace github.com/tencent-connect/botgo => ./botgo
