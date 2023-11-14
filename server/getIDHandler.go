@@ -59,6 +59,47 @@ func GetIDHandler(c *gin.Context) {
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"value": value})
+
+	case 5:
+		oldRowValue, err := strconv.ParseInt(c.Query("oldRowValue"), 10, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid oldRowValue"})
+			return
+		}
+
+		newRowValue, err := strconv.ParseInt(c.Query("newRowValue"), 10, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid newRowValue"})
+			return
+		}
+
+		err = idmap.UpdateVirtualValuev2(oldRowValue, newRowValue)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"status": "success"})
+
+	case 6:
+		virtualValue, err := strconv.ParseInt(c.Query("virtualValue"), 10, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid virtualValue"})
+			return
+		}
+
+		virtual, real, err := idmap.RetrieveRealValuev2(virtualValue)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"virtual": virtual, "real": real})
+	case 7:
+		realValue := c.Query("id")
+		if realValue == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+			return
+		}
+
 	}
 
 }

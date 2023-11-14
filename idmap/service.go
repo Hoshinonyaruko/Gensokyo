@@ -471,3 +471,105 @@ func RetrieveVirtualValue(realValue string) (string, string, error) {
 	// 返回真实值和对应的虚拟值
 	return realValue, fmt.Sprintf("%d", virtualValue), nil
 }
+
+func UpdateVirtualValuev2(oldRowValue, newRowValue int64) error {
+	if config.GetLotusValue() {
+		// 构建请求URL
+		serverDir := config.GetServer_dir()
+		portValue := config.GetPortValue()
+		protocol := "http"
+		if portValue == "443" {
+			protocol = "https"
+		}
+		url := fmt.Sprintf("%s://%s:%s/getid?type=5&oldRowValue=%d&newRowValue=%d", protocol, serverDir, portValue, oldRowValue, newRowValue)
+		resp, err := http.Get(url)
+		if err != nil {
+			return fmt.Errorf("failed to send request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		// 检查响应状态
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("error response from server")
+		}
+		return nil
+	}
+
+	return UpdateVirtualValue(oldRowValue, newRowValue)
+}
+
+func RetrieveRealValuev2(virtualValue int64) (string, string, error) {
+	if config.GetLotusValue() {
+		serverDir := config.GetServer_dir()
+		portValue := config.GetPortValue()
+		protocol := "http"
+		if portValue == "443" {
+			protocol = "https"
+		}
+		url := fmt.Sprintf("%s://%s:%s/getid?type=6&virtualValue=%d", protocol, serverDir, portValue, virtualValue)
+		resp, err := http.Get(url)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to send request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		// 解析响应
+		var response map[string]interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+			return "", "", fmt.Errorf("failed to decode response: %v", err)
+		}
+		if resp.StatusCode != http.StatusOK {
+			return "", "", fmt.Errorf("error response from server")
+		}
+
+		realValue, ok := response["realValue"].(string)
+		if !ok {
+			return "", "", fmt.Errorf("invalid response format")
+		}
+		return fmt.Sprintf("%d", virtualValue), realValue, nil
+	}
+
+	return RetrieveRealValue(virtualValue)
+}
+
+// RetrieveVirtualValuev2 根据真实值获取虚拟值
+func RetrieveVirtualValuev2(realValue string) (string, string, error) {
+	if config.GetLotusValue() {
+		// 使用网络请求方式
+		serverDir := config.GetServer_dir()
+		portValue := config.GetPortValue()
+
+		// 根据portValue确定协议
+		protocol := "http"
+		if portValue == "443" {
+			protocol = "https"
+		}
+
+		// 构建请求URL
+		url := fmt.Sprintf("%s://%s:%s/getid?type=7&id=%s", protocol, serverDir, portValue, realValue)
+		resp, err := http.Get(url)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to send request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		// 解析响应
+		var response map[string]interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+			return "", "", fmt.Errorf("failed to decode response: %v", err)
+		}
+		if resp.StatusCode != http.StatusOK {
+			return "", "", fmt.Errorf("error response from server: %s", response["error"])
+		}
+
+		virtualValue, ok := response["virtual"].(string)
+		if !ok {
+			return "", "", fmt.Errorf("invalid response format")
+		}
+
+		return realValue, virtualValue, nil
+	}
+
+	// 如果lotus为假,就保持原来的RetrieveVirtualValue的方法
+	return RetrieveVirtualValue(realValue)
+}
