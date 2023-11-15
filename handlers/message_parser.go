@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net"
 	"path/filepath"
 	"regexp"
@@ -469,4 +470,19 @@ func ConvertToSegmentedMessage(data interface{}) []map[string]interface{} {
 		messageSegments = append(messageSegments, textSegment)
 	}
 	return messageSegments
+}
+
+// ConvertToInt64 尝试将 interface{} 类型的值转换为 int64 类型
+func ConvertToInt64(value interface{}) (int64, error) {
+	switch v := value.(type) {
+	case int:
+		return int64(v), nil
+	case int64:
+		return v, nil
+	case string:
+		return strconv.ParseInt(v, 10, 64)
+	default:
+		// 当无法处理该类型时返回错误
+		return 0, fmt.Errorf("无法将类型 %T 转换为 int64", value)
+	}
 }

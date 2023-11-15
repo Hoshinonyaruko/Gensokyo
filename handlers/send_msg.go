@@ -43,6 +43,29 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 		msgType = GetMessageTypeByUserid(config.GetAppIDStr(), message.Params.UserID)
 	}
 
+	var idInt64 int64
+	var err error
+
+	if message.Params.UserID != "" {
+		idInt64, err = ConvertToInt64(message.Params.UserID)
+	} else if message.Params.GroupID != "" {
+		idInt64, err = ConvertToInt64(message.Params.GroupID)
+	}
+
+	//设置递归 对直接向gsk发送action时有效果
+	if msgType == "" {
+		messageCopy := message
+		if err != nil {
+			mylog.Printf("错误：无法转换 ID %v\n", err)
+		} else {
+			// 递归3次
+			echo.AddMapping(idInt64, 3)
+			// 递归调用handleSendMsg，使用设置的消息类型
+			echo.AddMsgType(config.GetAppIDStr(), idInt64, "group_private")
+			handleSendMsg(client, api, apiv2, messageCopy)
+		}
+	}
+
 	switch msgType {
 	case "group":
 		// 解析消息内容
@@ -215,6 +238,15 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 		}
 	default:
 		mylog.Printf("1Unknown message type: %s", msgType)
+	}
+	//递归3次枚举类型
+	if echo.GetMapping(idInt64) > 0 {
+		tryMessageTypes := []string{"group", "guild", "guild_private"}
+		messageCopy := message // 创建message的副本
+		echo.AddMsgType(config.GetAppIDStr(), idInt64, tryMessageTypes[echo.GetMapping(idInt64)-1])
+		time.Sleep(300 * time.Millisecond)
+		echo.AddMapping(idInt64, echo.GetMapping(idInt64)-1)
+		handleSendMsg(client, api, apiv2, messageCopy)
 	}
 }
 
