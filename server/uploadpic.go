@@ -87,9 +87,14 @@ func UploadBase64ImageHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error saving file"})
 			return
 		}
-
+		var serverPort string
 		serverAddress := config.GetServer_dir()
-		serverPort := config.GetPortValue()
+		frpport := config.GetFrpPort()
+		if frpport != "0" {
+			serverPort = frpport
+		} else {
+			serverPort = config.GetPortValue()
+		}
 		if serverAddress == "" {
 			// Handle the case where the server address is not configured
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "server address is not configured"})

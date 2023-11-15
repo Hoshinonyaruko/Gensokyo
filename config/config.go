@@ -71,6 +71,7 @@ type Settings struct {
 	SaveLogs               bool     `yaml:"save_logs"`
 	BindPrefix             string   `yaml:"bind_prefix"`
 	MePrefix               string   `yaml:"me_prefix"`
+	FrpPort                string   `yaml:"frp_port"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -830,4 +831,16 @@ func GetMePrefix() string {
 		return "/me"
 	}
 	return instance.Settings.MePrefix
+}
+
+// 获取FrpPort的值
+func GetFrpPort() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetFrpPort value.")
+		return "0"
+	}
+	return instance.Settings.FrpPort
 }

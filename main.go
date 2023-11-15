@@ -282,14 +282,16 @@ func main() {
 	r.POST("/uploadpic", server.UploadBase64ImageHandler(rateLimiter))
 	r.POST("/uploadrecord", server.UploadBase64RecordHandler(rateLimiter))
 	r.Static("/channel_temp", "./channel_temp")
-	//webui和它的api
-	webuiGroup := r.Group("/webui")
-	{
-		webuiGroup.GET("/*filepath", webui.CombinedMiddleware(api, apiV2))
-		webuiGroup.POST("/*filepath", webui.CombinedMiddleware(api, apiV2))
-		webuiGroup.PUT("/*filepath", webui.CombinedMiddleware(api, apiV2))
-		webuiGroup.DELETE("/*filepath", webui.CombinedMiddleware(api, apiV2))
-		webuiGroup.PATCH("/*filepath", webui.CombinedMiddleware(api, apiV2))
+	if config.GetFrpPort() == "0" {
+		//webui和它的api
+		webuiGroup := r.Group("/webui")
+		{
+			webuiGroup.GET("/*filepath", webui.CombinedMiddleware(api, apiV2))
+			webuiGroup.POST("/*filepath", webui.CombinedMiddleware(api, apiV2))
+			webuiGroup.PUT("/*filepath", webui.CombinedMiddleware(api, apiV2))
+			webuiGroup.DELETE("/*filepath", webui.CombinedMiddleware(api, apiV2))
+			webuiGroup.PATCH("/*filepath", webui.CombinedMiddleware(api, apiV2))
+		}
 	}
 	//正向ws
 	if conf.Settings.AppID != 12345 {
