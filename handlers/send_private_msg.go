@@ -43,6 +43,29 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		msgType = GetMessageTypeByUserid(config.GetAppIDStr(), message.Params.UserID)
 	}
 
+	var idInt64 int64
+	var err error
+
+	if message.Params.UserID != "" {
+		idInt64, err = ConvertToInt64(message.Params.UserID)
+	} else if message.Params.GroupID != "" {
+		idInt64, err = ConvertToInt64(message.Params.GroupID)
+	}
+
+	//设置递归 对直接向gsk发送action时有效果
+	if msgType == "" {
+		messageCopy := message
+		if err != nil {
+			mylog.Printf("错误：无法转换 ID %v\n", err)
+		} else {
+			// 递归1次
+			echo.AddMapping(idInt64, 1)
+			// 递归调用handleSendPrivateMsg，使用设置的消息类型
+			echo.AddMsgType(config.GetAppIDStr(), idInt64, "group_private")
+			handleSendPrivateMsg(client, api, apiv2, messageCopy)
+		}
+	}
+
 	switch msgType {
 	case "group_private":
 		//私聊信息
@@ -128,8 +151,15 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		handleSendGuildChannelPrivateMsg(client, api, apiv2, message, nil, nil)
 	default:
 		mylog.Printf("Unknown message type: %s", msgType)
-		//直接返回成功
-		SendResponse(client, nil, &message)
+	}
+	//递归1次枚举类型
+	if echo.GetMapping(idInt64) > 0 {
+		tryMessageTypes := []string{"guild_private"}
+		messageCopy := message // 创建message的副本
+		echo.AddMsgType(config.GetAppIDStr(), idInt64, tryMessageTypes[echo.GetMapping(idInt64)-1])
+		time.Sleep(300 * time.Millisecond)
+		echo.AddMapping(idInt64, echo.GetMapping(idInt64)-1)
+		handleSendGroupMsg(client, api, apiv2, messageCopy)
 	}
 }
 
