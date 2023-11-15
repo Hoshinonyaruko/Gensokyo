@@ -10,9 +10,11 @@ import (
 
 // onebot发来的action调用信息
 type ActionMessage struct {
-	Action string        `json:"action"`
-	Params ParamsContent `json:"params"`
-	Echo   interface{}   `json:"echo,omitempty"`
+	Action      string        `json:"action"`
+	Params      ParamsContent `json:"params"`
+	Echo        interface{}   `json:"echo,omitempty"`
+	PostType    string        `json:"post_type,omitempty"`
+	MessageType string        `json:"message_type,omitempty"`
 }
 
 func (a *ActionMessage) UnmarshalJSON(data []byte) error {
