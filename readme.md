@@ -60,6 +60,7 @@ gensokyo兼容 [OneBot-v11](https://github.com/botuniverse/onebot-11) ，并在�
 ## 特别鸣谢
 
 - [`mnixry/nonebot-plugin-gocqhttp`](https://github.com/mnixry/nonebot-plugin-gocqhttp/): 本项目采用了mnixry编写的前端,并实现了与它对应的,基于qq官方api的后端api.
+- 感谢 Parker Liang 提供的技术指导和支持.
 
 ### 接口
 
