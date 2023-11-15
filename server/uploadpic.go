@@ -106,9 +106,9 @@ func UploadBase64ImageHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 		if serverPort == "443" {
 			protocol = "https"
 		}
-		stun, _ := idmap.ReadConfigv2("stun", "addr")
+		stun, err := idmap.ReadConfigv2("stun", "addr")
 		var imageURL string
-		if stun != "" {
+		if err == nil && stun != "" {
 			imageURL = fmt.Sprintf("http://%s/channel_temp/%s", stun, fileName)
 		} else {
 			imageURL = fmt.Sprintf("%s://%s:%s/channel_temp/%s", protocol, serverAddress, serverPort, fileName)
