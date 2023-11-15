@@ -279,6 +279,7 @@ func main() {
 		r.Use(gin.Recovery()) // 添加恢复中间件，但不添加日志中间件
 	}
 	r.GET("/getid", server.GetIDHandler)
+	r.GET("/updateport", server.HandleIpupdate)
 	r.POST("/uploadpic", server.UploadBase64ImageHandler(rateLimiter))
 	r.POST("/uploadrecord", server.UploadBase64RecordHandler(rateLimiter))
 	r.Static("/channel_temp", "./channel_temp")
