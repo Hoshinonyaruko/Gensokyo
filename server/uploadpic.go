@@ -18,6 +18,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hoshinonyaruko/gensokyo/config"
+	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 )
 
@@ -100,14 +101,18 @@ func UploadBase64ImageHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "server address is not configured"})
 			return
 		}
-
 		// 根据serverPort确定协议
 		protocol := "http"
 		if serverPort == "443" {
 			protocol = "https"
 		}
-
-		imageURL := fmt.Sprintf("%s://%s:%s/channel_temp/%s", protocol, serverAddress, serverPort, fileName)
+		stun, err := idmap.ReadConfigv2("stun", "addr")
+		var imageURL string
+		if err == nil && stun != "" {
+			imageURL = fmt.Sprintf("http://%s/channel_temp/%s", stun, fileName)
+		} else {
+			imageURL = fmt.Sprintf("%s://%s:%s/channel_temp/%s", protocol, serverAddress, serverPort, fileName)
+		}
 		c.JSON(http.StatusOK, gin.H{"url": imageURL})
 
 	}
@@ -226,7 +231,12 @@ func generateRandomMd5() string {
 	if err != nil {
 		return ""
 	}
-
 	md5Hash := md5.Sum(randomBytes)
 	return hex.EncodeToString(md5Hash[:])
+}
+
+func HandleIpupdate(c *gin.Context) {
+	reqParam := c.Query("addr")
+	idmap.WriteConfigv2("stun", "addr", reqParam)
+	c.JSON(http.StatusOK, gin.H{"addr": reqParam})
 }
