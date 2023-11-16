@@ -180,6 +180,12 @@ func transformMessageText(messageText string) string {
 	messageText = re.ReplaceAllStringFunc(messageText, func(m string) string {
 		submatches := re.FindStringSubmatch(m)
 		if len(submatches) > 1 {
+			// 当 GetRemoveBotAtGroup 为 true 且 QQ 号长度为 32 时，返回空字符串
+			if config.GetRemoveBotAtGroup() && len(submatches[1]) == 32 {
+				return ""
+			}
+
+			// 否则继续按原有逻辑处理
 			realUserID, err := idmap.RetrieveRowByIDv2(submatches[1])
 			if err != nil {
 				// 如果出错，也替换成相应的格式，但使用原始QQ号
