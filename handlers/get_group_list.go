@@ -74,9 +74,14 @@ func getGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 			globalPager.After = guilds[len(guilds)-1].ID
 		}
 		lastCallTime = time.Now() // 更新上次调用API的时间
-
+		//如果为空 则不使用分页
 		if len(guilds) == 0 {
-			return
+			Pager := &dto.GuildPager{Limit: "10"}
+			guilds, err = api.MeGuilds(context.TODO(), Pager)
+			if err != nil {
+				mylog.Println("Error fetching guild list2:", err)
+				return
+			}
 		}
 		var groups []Group
 		for _, guild := range guilds {
