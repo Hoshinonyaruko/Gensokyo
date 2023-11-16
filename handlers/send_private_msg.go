@@ -161,6 +161,10 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		echo.AddMapping(idInt64, echo.GetMapping(idInt64)-1)
 		handleSendGroupMsg(client, api, apiv2, messageCopy)
 	}
+	//重置递归类型
+	if echo.GetMapping(idInt64) == 0 {
+		echo.AddMsgType(config.GetAppIDStr(), idInt64, "")
+	}
 }
 
 // 这里是只有群私聊会用到

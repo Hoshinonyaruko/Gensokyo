@@ -248,6 +248,10 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 		echo.AddMapping(idInt64, echo.GetMapping(idInt64)-1)
 		handleSendMsg(client, api, apiv2, messageCopy)
 	}
+	//重置递归类型
+	if echo.GetMapping(idInt64) == 0 {
+		echo.AddMsgType(config.GetAppIDStr(), idInt64, "")
+	}
 }
 
 // 通过user_id获取messageID
