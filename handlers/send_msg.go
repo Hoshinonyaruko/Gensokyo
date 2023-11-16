@@ -245,6 +245,7 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 	}
 	echo.AddMapping(idInt64, echo.GetMapping(idInt64)-1)
 
+
 	//递归3次枚举类型
 	if echo.GetMapping(idInt64) >= 0 {
 		tryMessageTypes := []string{"group", "guild", "guild_private"}
