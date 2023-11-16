@@ -59,7 +59,7 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			mylog.Printf("错误：无法转换 ID %v\n", err)
 		} else {
 			// 递归3次
-			echo.AddMapping(idInt64, 3)
+			echo.AddMapping(idInt64, 4)
 			// 递归调用handleSendPrivateMsg，使用设置的消息类型
 			echo.AddMsgType(config.GetAppIDStr(), idInt64, "group_private")
 			handleSendPrivateMsg(client, api, apiv2, messageCopy)
@@ -152,6 +152,12 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 	default:
 		mylog.Printf("Unknown message type: %s", msgType)
 	}
+	//重置递归类型
+	if echo.GetMapping(idInt64) <= 0 {
+		echo.AddMsgType(config.GetAppIDStr(), idInt64, "")
+	} else {
+		echo.AddMapping(idInt64, echo.GetMapping(idInt64)-1)
+	}
 	//递归3次枚举类型
 	if echo.GetMapping(idInt64) > 0 {
 		tryMessageTypes := []string{"group", "guild", "guild_private"}
@@ -159,12 +165,6 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		echo.AddMsgType(config.GetAppIDStr(), idInt64, tryMessageTypes[echo.GetMapping(idInt64)-1])
 		time.Sleep(300 * time.Millisecond)
 		handleSendGroupMsg(client, api, apiv2, messageCopy)
-	}
-	//重置递归类型
-	if echo.GetMapping(idInt64) <= 0 {
-		echo.AddMsgType(config.GetAppIDStr(), idInt64, "")
-	} else {
-		echo.AddMapping(idInt64, echo.GetMapping(idInt64)-1)
 	}
 }
 
