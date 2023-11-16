@@ -122,7 +122,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 	default:
 		mylog.Println("Unsupported message format: params.message field is not a string, map or slice")
 	}
-
+	mylog.Printf(messageText)
 	// 正则表达式部分
 	var localImagePattern *regexp.Regexp
 
