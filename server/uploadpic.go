@@ -25,7 +25,6 @@ import (
 const (
 	MaximumImageSize        = 10 * 1024 * 1024
 	AllowedUploadsPerMinute = 100
-	MaxRequests             = 30
 	RequestInterval         = time.Minute
 )
 
@@ -176,8 +175,10 @@ func UploadBase64RecordHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 }
 
 // 检查是否超过调用频率限制
-// 默认1分钟30次 todo 允许用户自行在config编辑限制次数
 func (rl *RateLimiter) CheckAndUpdateRateLimit(ipAddress string) bool {
+	// 获取 MaxRequests 的当前值
+	maxRequests := config.GetImageLimitB()
+
 	now := time.Now()
 	rl.Counts[ipAddress] = append(rl.Counts[ipAddress], now)
 
@@ -186,7 +187,7 @@ func (rl *RateLimiter) CheckAndUpdateRateLimit(ipAddress string) bool {
 		rl.Counts[ipAddress] = rl.Counts[ipAddress][1:]
 	}
 
-	return len(rl.Counts[ipAddress]) <= MaxRequests
+	return len(rl.Counts[ipAddress]) <= maxRequests
 }
 
 // 获取图片类型
