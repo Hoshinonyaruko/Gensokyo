@@ -73,6 +73,7 @@ type Settings struct {
 	MePrefix               string   `yaml:"me_prefix"`
 	FrpPort                string   `yaml:"frp_port"`
 	RemoveBotAtGroup       bool     `yaml:"remove_bot_at_group"`
+	ImageLimitB            int      `yaml:"image_limit"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -382,7 +383,7 @@ func GetDevBotid() string {
 	return instance.Settings.DevBotid
 }
 
-// 获取DevBotid
+// 获取GetForwardMsgLimit
 func GetForwardMsgLimit() int {
 	mu.Lock()
 	defer mu.Unlock()
@@ -856,4 +857,16 @@ func GetRemoveBotAtGroup() bool {
 		return false
 	}
 	return instance.Settings.RemoveBotAtGroup
+}
+
+// 获取ImageLimitB的值
+func GetImageLimitB() int {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to ImageLimitB value.")
+		return 100
+	}
+	return instance.Settings.ImageLimitB
 }
