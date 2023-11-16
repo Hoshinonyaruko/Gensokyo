@@ -72,6 +72,7 @@ type Settings struct {
 	BindPrefix             string   `yaml:"bind_prefix"`
 	MePrefix               string   `yaml:"me_prefix"`
 	FrpPort                string   `yaml:"frp_port"`
+	RemoveBotAtGroup       bool     `yaml:"remove_bot_at_group"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -843,4 +844,16 @@ func GetFrpPort() string {
 		return "0"
 	}
 	return instance.Settings.FrpPort
+}
+
+// 获取GetRemoveBotAtGroup的值
+func GetRemoveBotAtGroup() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetRemoveBotAtGroup value.")
+		return false
+	}
+	return instance.Settings.RemoveBotAtGroup
 }
