@@ -245,12 +245,13 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 		messageCopy := message // 创建message的副本
 		echo.AddMsgType(config.GetAppIDStr(), idInt64, tryMessageTypes[echo.GetMapping(idInt64)-1])
 		time.Sleep(300 * time.Millisecond)
-		echo.AddMapping(idInt64, echo.GetMapping(idInt64)-1)
 		handleSendMsg(client, api, apiv2, messageCopy)
 	}
 	//重置递归类型
-	if echo.GetMapping(idInt64) == 0 {
+	if echo.GetMapping(idInt64) <= 0 {
 		echo.AddMsgType(config.GetAppIDStr(), idInt64, "")
+	} else {
+		echo.AddMapping(idInt64, echo.GetMapping(idInt64)-1)
 	}
 }
 
