@@ -122,7 +122,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 	default:
 		mylog.Println("Unsupported message format: params.message field is not a string, map or slice")
 	}
-	mylog.Printf(messageText)
+	//mylog.Printf(messageText)
 	// 正则表达式部分
 	var localImagePattern *regexp.Regexp
 
@@ -152,10 +152,12 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 		for _, match := range matches {
 			if len(match) > 1 {
 				foundItems[pattern.key] = append(foundItems[pattern.key], match[1])
-				messageText = pattern.pattern.ReplaceAllString(messageText, "")
 			}
 		}
+		// 移动替换操作到这里，确保所有匹配都被处理后再进行替换
+		messageText = pattern.pattern.ReplaceAllString(messageText, "")
 	}
+
 	//处理at
 	messageText = transformMessageText(messageText)
 
