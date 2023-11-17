@@ -89,36 +89,37 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 
 		// 遍历foundItems并发送每种信息
 		for key, urls := range foundItems {
-			var singleItem = make(map[string][]string)
-			singleItem[key] = urls
+			for _, url := range urls {
+				var singleItem = make(map[string][]string)
+				singleItem[key] = []string{url} // 创建一个只有一个 URL 的 singleItem
 
-			reply, isBase64Image := GenerateReplyMessage(messageID, singleItem, "")
+				reply, isBase64Image := GenerateReplyMessage(messageID, singleItem, "")
 
-			if isBase64Image {
-				// 将base64内容从reply的Content转换回字节
-				fileImageData, err := base64.StdEncoding.DecodeString(reply.Content)
-				if err != nil {
-					mylog.Printf("Base64 解码失败: %v", err)
-					return // 或其他的错误处理方式
+				if isBase64Image {
+					// 将base64内容从reply的Content转换回字节
+					fileImageData, err := base64.StdEncoding.DecodeString(reply.Content)
+					if err != nil {
+						mylog.Printf("Base64 解码失败: %v", err)
+						continue // 跳过当前项，继续下一个
+					}
+
+					// 清除reply的Content
+					reply.Content = ""
+
+					// 使用Multipart方法发送
+					if _, err = api.PostMessageMultipart(context.TODO(), channelID, reply, fileImageData); err != nil {
+						mylog.Printf("使用multipart发送 %s 信息失败: %v message_id %v", key, err, messageID)
+					}
+					//发送成功回执
+					SendResponse(client, err, &message)
+				} else {
+					if _, err = api.PostMessage(context.TODO(), channelID, reply); err != nil {
+						mylog.Printf("发送 %s 信息失败: %v", key, err)
+					}
+					//发送成功回执
+					SendResponse(client, err, &message)
 				}
-
-				// 清除reply的Content
-				reply.Content = ""
-
-				// 使用Multipart方法发送
-				if _, err = api.PostMessageMultipart(context.TODO(), channelID, reply, fileImageData); err != nil {
-					mylog.Printf("使用multipart发送 %s 信息失败: %v message_id %v", key, err, messageID)
-				}
-				//发送成功回执
-				SendResponse(client, err, &message)
-			} else {
-				if _, err = api.PostMessage(context.TODO(), channelID, reply); err != nil {
-					mylog.Printf("发送 %s 信息失败: %v", key, err)
-				}
-				//发送成功回执
-				SendResponse(client, err, &message)
 			}
-
 		}
 	//频道私信 此时直接取出
 	case "guild_private":

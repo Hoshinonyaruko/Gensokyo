@@ -125,26 +125,31 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			SendResponse(client, err, &message)
 		}
 
-		// 遍历 foundItems 并发送每种信息
+		// 遍历foundItems并发送每种信息
 		for key, urls := range foundItems {
-			var singleItem = make(map[string][]string)
-			singleItem[key] = urls
+			for _, url := range urls {
+				var singleItem = make(map[string][]string)
+				singleItem[key] = []string{url} // 创建只包含一个 URL 的 singleItem
 
-			//先试试用群里一样的处理逻辑,看看能跑不
-			groupReply := generateGroupMessage(messageID, singleItem, "")
+				// 生成消息
+				groupReply := generateGroupMessage(messageID, singleItem, "")
 
-			// 进行类型断言
-			richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
-			if !ok {
-				mylog.Printf("Error: Expected RichMediaMessage type for key %s.", key)
-				continue
+				// 进行类型断言
+				richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
+				if !ok {
+					mylog.Printf("Error: Expected RichMediaMessage type for key %s.", key)
+					continue // 如果断言失败，跳过当前 url
+				}
+
+				// 发送消息
+				_, err := apiv2.PostC2CMessage(context.TODO(), UserID, richMediaMessage)
+				if err != nil {
+					mylog.Printf("发送 %s 私聊信息失败: %v", key, err)
+				}
+
+				// 发送成功回执
+				SendResponse(client, err, &message)
 			}
-			_, err := apiv2.PostC2CMessage(context.TODO(), UserID, richMediaMessage)
-			if err != nil {
-				mylog.Printf("发送 %s 私聊信息失败: %v", key, err)
-			}
-			//发送成功回执
-			SendResponse(client, err, &message)
 		}
 	case "guild_private":
 		//当收到发私信调用 并且来源是频道
@@ -289,36 +294,34 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 
 	// 遍历foundItems并发送每种信息
 	for key, urls := range foundItems {
-		var singleItem = make(map[string][]string)
-		singleItem[key] = urls
+		for _, url := range urls {
+			var singleItem = make(map[string][]string)
+			singleItem[key] = []string{url} // 创建一个只包含单个 URL 的 singleItem
 
-		reply, isBase64Image := GenerateReplyMessage(messageID, singleItem, "")
+			reply, isBase64Image := GenerateReplyMessage(messageID, singleItem, "")
 
-		if isBase64Image {
-			// 将base64内容从reply的Content转换回字节
-			fileImageData, err := base64.StdEncoding.DecodeString(reply.Content)
-			if err != nil {
-				mylog.Printf("Base64 解码失败: %v", err)
-				return // 或其他的错误处理方式
+			if isBase64Image {
+				// 处理 Base64 图片的逻辑
+				fileImageData, err := base64.StdEncoding.DecodeString(reply.Content)
+				if err != nil {
+					mylog.Printf("Base64 解码失败: %v", err)
+					continue // 跳过当前项，继续处理下一个
+				}
+
+				reply.Content = ""
+
+				if _, err = api.PostDirectMessageMultipart(context.TODO(), dm, reply, fileImageData); err != nil {
+					mylog.Printf("使用multipart发送 %s 信息失败: %v message_id %v", key, err, messageID)
+				}
+				SendResponse(client, err, &message)
+			} else {
+				// 处理非 Base64 图片的逻辑
+				if _, err = api.PostDirectMessage(context.TODO(), dm, reply); err != nil {
+					mylog.Printf("发送 %s 信息失败: %v", key, err)
+				}
+				SendResponse(client, err, &message)
 			}
-
-			// 清除reply的Content
-			reply.Content = ""
-
-			// 使用Multipart方法发送
-			if _, err = api.PostDirectMessageMultipart(context.TODO(), dm, reply, fileImageData); err != nil {
-				mylog.Printf("使用multipart发送 %s 信息失败: %v message_id %v", key, err, messageID)
-			}
-			//发送成功回执
-			SendResponse(client, err, &message)
-		} else {
-			if _, err = api.PostDirectMessage(context.TODO(), dm, reply); err != nil {
-				mylog.Printf("发送 %s 信息失败: %v", key, err)
-			}
-			//发送成功回执
-			SendResponse(client, err, &message)
 		}
-
 	}
 }
 
