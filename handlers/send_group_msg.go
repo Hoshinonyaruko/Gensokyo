@@ -88,7 +88,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		}
 		message.Params.GroupID = originalGroupID
 		mylog.Println("群组发信息messageText:", messageText)
-		mylog.Println("foundItems:", foundItems)
+		//mylog.Println("foundItems:", foundItems)
 		// 如果messageID为空，通过函数获取
 		if messageID == "" {
 			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), message.Params.GroupID)

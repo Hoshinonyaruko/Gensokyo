@@ -122,7 +122,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 	default:
 		mylog.Println("Unsupported message format: params.message field is not a string, map or slice")
 	}
-	mylog.Printf(messageText)
+	//mylog.Printf(messageText)
 	// 正则表达式部分
 	var localImagePattern *regexp.Regexp
 
@@ -160,9 +160,10 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 
 	//处理at
 	messageText = transformMessageText(messageText)
-	for key, items := range foundItems {
-		fmt.Printf("Key: %s, Items: %v\n", key, items)
-	}
+
+	// for key, items := range foundItems {
+	// 	fmt.Printf("Key: %s, Items: %v\n", key, items)
+	// }
 	return messageText, foundItems
 }
 

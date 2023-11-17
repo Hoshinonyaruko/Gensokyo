@@ -90,7 +90,7 @@ func AddMappingSeq(key string, value int) {
 	globalStringToIntMappingSeq.mapping[key] = value
 }
 
-// GetMapping 根据给定的 int64 键获取映射值
+// GetMapping 根据给定的 string 键获取映射值
 func GetMappingSeq(key string) int {
 	globalStringToIntMappingSeq.mu.Lock()
 	defer globalStringToIntMappingSeq.mu.Unlock()
