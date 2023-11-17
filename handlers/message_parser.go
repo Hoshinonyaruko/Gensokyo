@@ -122,7 +122,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 	default:
 		mylog.Println("Unsupported message format: params.message field is not a string, map or slice")
 	}
-	//mylog.Printf(messageText)
+	mylog.Printf(messageText)
 	// 正则表达式部分
 	var localImagePattern *regexp.Regexp
 
@@ -160,7 +160,9 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 
 	//处理at
 	messageText = transformMessageText(messageText)
-
+	for key, items := range foundItems {
+		fmt.Printf("Key: %s, Items: %v\n", key, items)
+	}
 	return messageText, foundItems
 }
 
@@ -399,8 +401,8 @@ func ConvertToSegmentedMessage(data interface{}) []map[string]interface{} {
 		messageSegments = append(messageSegments, imageSegment)
 
 		// 在msg.Content中替换旧的图片链接
-		newImagePattern := "[CQ:image,file=" + attachment.URL + "]"
-		msg.Content = msg.Content + newImagePattern
+		//newImagePattern := "[CQ:image,file=" + attachment.URL + "]"
+		//msg.Content = msg.Content + newImagePattern
 	}
 	// 将msg.Content里的BotID替换成AppID
 	msg.Content = strings.ReplaceAll(msg.Content, BotID, AppID)
