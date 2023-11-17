@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/config"
+	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/handlers"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
@@ -370,7 +371,9 @@ func SendMessage(messageText string, data interface{}, messageType string, api o
 	switch messageType {
 	case "guild":
 		// 处理公会消息
-		textMsg, _ := handlers.GenerateReplyMessage(msg.ID, nil, messageText)
+		msgseq := echo.GetMappingSeq(msg.ID)
+		echo.AddMappingSeq(msg.ID, msgseq+1)
+		textMsg, _ := handlers.GenerateReplyMessage(msg.ID, nil, messageText, msgseq+1)
 		if _, err := api.PostMessage(context.TODO(), msg.ChannelID, textMsg); err != nil {
 			mylog.Printf("发送文本信息失败: %v", err)
 			return err
@@ -378,7 +381,9 @@ func SendMessage(messageText string, data interface{}, messageType string, api o
 
 	case "group":
 		// 处理群组消息
-		textMsg, _ := handlers.GenerateReplyMessage(msg.ID, nil, messageText)
+		msgseq := echo.GetMappingSeq(msg.ID)
+		echo.AddMappingSeq(msg.ID, msgseq+1)
+		textMsg, _ := handlers.GenerateReplyMessage(msg.ID, nil, messageText, msgseq+1)
 		_, err := apiv2.PostGroupMessage(context.TODO(), msg.GroupID, textMsg)
 		if err != nil {
 			mylog.Printf("发送文本群组信息失败: %v", err)
@@ -394,7 +399,9 @@ func SendMessage(messageText string, data interface{}, messageType string, api o
 			ChannelID:  msg.ChannelID,
 			CreateTime: timestampStr,
 		}
-		textMsg, _ := handlers.GenerateReplyMessage(msg.ID, nil, messageText)
+		msgseq := echo.GetMappingSeq(msg.ID)
+		echo.AddMappingSeq(msg.ID, msgseq+1)
+		textMsg, _ := handlers.GenerateReplyMessage(msg.ID, nil, messageText, msgseq+1)
 		if _, err := apiv2.PostDirectMessage(context.TODO(), dm, textMsg); err != nil {
 			mylog.Printf("发送文本信息失败: %v", err)
 			return err
@@ -402,7 +409,9 @@ func SendMessage(messageText string, data interface{}, messageType string, api o
 
 	case "group_private":
 		// 处理群组私聊消息
-		textMsg, _ := handlers.GenerateReplyMessage(msg.ID, nil, messageText)
+		msgseq := echo.GetMappingSeq(msg.ID)
+		echo.AddMappingSeq(msg.ID, msgseq+1)
+		textMsg, _ := handlers.GenerateReplyMessage(msg.ID, nil, messageText, msgseq+1)
 		_, err := apiv2.PostC2CMessage(context.TODO(), msg.Author.ID, textMsg)
 		if err != nil {
 			mylog.Printf("发送文本私聊信息失败: %v", err)

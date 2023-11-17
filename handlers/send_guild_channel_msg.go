@@ -79,7 +79,9 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 		// 优先发送文本信息
 		var err error
 		if messageText != "" {
-			textMsg, _ := GenerateReplyMessage(messageID, nil, messageText)
+			msgseq := echo.GetMappingSeq(messageID)
+			echo.AddMappingSeq(messageID, msgseq+1)
+			textMsg, _ := GenerateReplyMessage(messageID, nil, messageText, msgseq+1)
 			if _, err = api.PostMessage(context.TODO(), channelID, textMsg); err != nil {
 				mylog.Printf("发送文本信息失败: %v", err)
 			}
@@ -92,8 +94,9 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 			for _, url := range urls {
 				var singleItem = make(map[string][]string)
 				singleItem[key] = []string{url} // 创建一个只有一个 URL 的 singleItem
-
-				reply, isBase64Image := GenerateReplyMessage(messageID, singleItem, "")
+				msgseq := echo.GetMappingSeq(messageID)
+				echo.AddMappingSeq(messageID, msgseq+1)
+				reply, isBase64Image := GenerateReplyMessage(messageID, singleItem, "", msgseq+1)
 
 				if isBase64Image {
 					// 将base64内容从reply的Content转换回字节
@@ -138,7 +141,7 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 }
 
 // 组合发频道信息需要的MessageToCreate 支持base64
-func GenerateReplyMessage(id string, foundItems map[string][]string, messageText string) (*dto.MessageToCreate, bool) {
+func GenerateReplyMessage(id string, foundItems map[string][]string, messageText string, msgseq int) (*dto.MessageToCreate, bool) {
 	var reply dto.MessageToCreate
 	var isBase64 bool
 
@@ -152,6 +155,7 @@ func GenerateReplyMessage(id string, foundItems map[string][]string, messageText
 			reply = dto.MessageToCreate{
 				Content: "错误: 图片文件不存在",
 				MsgID:   id,
+				MsgSeq:  msgseq,
 				MsgType: 0, // 默认文本类型
 			}
 			return &reply, false
@@ -163,6 +167,7 @@ func GenerateReplyMessage(id string, foundItems map[string][]string, messageText
 			return &dto.MessageToCreate{
 				Content: "错误: 压缩图片失败",
 				MsgID:   id,
+				MsgSeq:  msgseq,
 				MsgType: 0, // 默认文本类型
 			}, false
 		}
@@ -173,6 +178,7 @@ func GenerateReplyMessage(id string, foundItems map[string][]string, messageText
 		reply = dto.MessageToCreate{
 			Content: base64Encoded,
 			MsgID:   id,
+			MsgSeq:  msgseq,
 			MsgType: 0, // Assuming type 0 for images
 		}
 		isBase64 = true
@@ -182,6 +188,7 @@ func GenerateReplyMessage(id string, foundItems map[string][]string, messageText
 			//EventID: id,           // Use a placeholder event ID for now
 			Image:   "http://" + imageURLs[0], // Using the same Image field for external URLs, adjust if needed
 			MsgID:   id,
+			MsgSeq:  msgseq,
 			MsgType: 0, // Assuming type 0 for images
 		}
 	} else if voiceURLs, ok := foundItems["base64_record"]; ok && len(voiceURLs) > 0 {
@@ -200,6 +207,7 @@ func GenerateReplyMessage(id string, foundItems map[string][]string, messageText
 		reply = dto.MessageToCreate{
 			Content: base64_image[0], // 直接使用base64_image[0]作为Content
 			MsgID:   id,
+			MsgSeq:  msgseq,
 			MsgType: 0, // Default type for text
 		}
 		isBase64 = true
@@ -209,6 +217,7 @@ func GenerateReplyMessage(id string, foundItems map[string][]string, messageText
 			//EventID: id,
 			Content: messageText,
 			MsgID:   id,
+			MsgSeq:  msgseq,
 			MsgType: 0, // Default type for text
 		}
 	}

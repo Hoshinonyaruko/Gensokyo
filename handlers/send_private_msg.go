@@ -107,7 +107,9 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 
 		// 优先发送文本信息
 		if messageText != "" {
-			groupReply := generateGroupMessage(messageID, nil, messageText)
+			msgseq := echo.GetMappingSeq(messageID)
+			echo.AddMappingSeq(messageID, msgseq+1)
+			groupReply := generateGroupMessage(messageID, nil, messageText, msgseq+1)
 
 			// 进行类型断言
 			groupMessage, ok := groupReply.(*dto.MessageToCreate)
@@ -132,7 +134,9 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 				singleItem[key] = []string{url} // 创建只包含一个 URL 的 singleItem
 
 				// 生成消息
-				groupReply := generateGroupMessage(messageID, singleItem, "")
+				msgseq := echo.GetMappingSeq(messageID)
+				echo.AddMappingSeq(messageID, msgseq+1)
+				groupReply := generateGroupMessage(messageID, singleItem, "", msgseq+1)
 
 				// 进行类型断言
 				richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
@@ -172,39 +176,6 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		handleSendGroupMsg(client, api, apiv2, messageCopy)
 	}
 }
-
-// 这里是只有群私聊会用到
-// func generatePrivateMessage(id string, foundItems map[string][]string, messageText string) interface{} {
-// 	if imageURLs, ok := foundItems["local_image"]; ok && len(imageURLs) > 0 {
-// 		// 本地发图逻辑 todo 适配base64图片
-// 		return &dto.RichMediaMessage{
-// 			EventID:    id,
-// 			FileType:   1, // 1代表图片
-// 			URL:        imageURLs[0],
-// 			Content:    "", // 这个字段文档没有了
-// 			SrvSendMsg: true,
-// 		}
-// 	} else if imageURLs, ok := foundItems["url_image"]; ok && len(imageURLs) > 0 {
-// 		// 发链接图片
-// 		return &dto.RichMediaMessage{
-// 			EventID:    id,
-// 			FileType:   1, // 1代表图片
-// 			URL:        "http://" + imageURLs[0],
-// 			Content:    "", // 这个字段文档没有了
-// 			SrvSendMsg: true,
-// 		}
-// 	} else if voiceURLs, ok := foundItems["base64_record"]; ok && len(voiceURLs) > 0 {
-// 		// 目前不支持发语音 todo 适配base64 slik
-// 	} else {
-// 		// 返回文本信息
-// 		return &dto.MessageToCreate{
-// 			Content: messageText,
-// 			MsgID:   id,
-// 			MsgType: 0, // 默认文本类型
-// 		}
-// 	}
-// 	return nil
-// }
 
 // 处理频道私信 最后2个指针参数可空 代表使用userid倒推
 func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage, optionalGuildID *string, optionalChannelID *string) {
@@ -284,7 +255,9 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 
 	// 优先发送文本信息
 	if messageText != "" {
-		textMsg, _ := GenerateReplyMessage(messageID, nil, messageText)
+		msgseq := echo.GetMappingSeq(messageID)
+		echo.AddMappingSeq(messageID, msgseq+1)
+		textMsg, _ := GenerateReplyMessage(messageID, nil, messageText, msgseq+1)
 		if _, err = apiv2.PostDirectMessage(context.TODO(), dm, textMsg); err != nil {
 			mylog.Printf("发送文本信息失败: %v", err)
 		}
@@ -297,8 +270,9 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 		for _, url := range urls {
 			var singleItem = make(map[string][]string)
 			singleItem[key] = []string{url} // 创建一个只包含单个 URL 的 singleItem
-
-			reply, isBase64Image := GenerateReplyMessage(messageID, singleItem, "")
+			msgseq := echo.GetMappingSeq(messageID)
+			echo.AddMappingSeq(messageID, msgseq+1)
+			reply, isBase64Image := GenerateReplyMessage(messageID, singleItem, "", msgseq+1)
 
 			if isBase64Image {
 				// 处理 Base64 图片的逻辑

@@ -100,7 +100,9 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		}
 		// 优先发送文本信息
 		if messageText != "" {
-			groupReply := generateGroupMessage(messageID, nil, messageText)
+			msgseq := echo.GetMappingSeq(messageID)
+			echo.AddMappingSeq(messageID, msgseq+1)
+			groupReply := generateGroupMessage(messageID, nil, messageText, msgseq+1)
 
 			// 进行类型断言
 			groupMessage, ok := groupReply.(*dto.MessageToCreate)
@@ -125,8 +127,9 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				var singleItem = make(map[string][]string)
 				singleItem[key] = []string{url} // 创建一个只包含一个 URL 的 singleItem
 				mylog.Println("singleItem:", singleItem)
-
-				groupReply := generateGroupMessage(messageID, singleItem, "")
+				msgseq := echo.GetMappingSeq(messageID)
+				echo.AddMappingSeq(messageID, msgseq+1)
+				groupReply := generateGroupMessage(messageID, singleItem, "", msgseq+1)
 
 				// 进行类型断言
 				richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
@@ -194,7 +197,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 }
 
 // 整理和组合富媒体信息
-func generateGroupMessage(id string, foundItems map[string][]string, messageText string) interface{} {
+func generateGroupMessage(id string, foundItems map[string][]string, messageText string, msgseq int) interface{} {
 	if imageURLs, ok := foundItems["local_image"]; ok && len(imageURLs) > 0 {
 		// 从本地路径读取图片
 		imageData, err := os.ReadFile(imageURLs[0])
@@ -205,6 +208,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 			return &dto.MessageToCreate{
 				Content: "错误: 图片文件不存在",
 				MsgID:   id,
+				MsgSeq:  msgseq,
 				MsgType: 0, // 默认文本类型
 			}
 		}
@@ -215,6 +219,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 			return &dto.MessageToCreate{
 				Content: "错误: 压缩图片失败",
 				MsgID:   id,
+				MsgSeq:  msgseq,
 				MsgType: 0, // 默认文本类型
 			}
 		}
@@ -230,6 +235,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 			return &dto.MessageToCreate{
 				Content: "错误: 上传图片失败",
 				MsgID:   id,
+				MsgSeq:  msgseq,
 				MsgType: 0, // 默认文本类型
 			}
 		}
@@ -293,6 +299,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 				return &dto.MessageToCreate{
 					Content: "错误: 压缩图片失败",
 					MsgID:   id,
+					MsgSeq:  msgseq,
 					MsgType: 0, // 默认文本类型
 				}
 			}
@@ -316,6 +323,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 		return &dto.MessageToCreate{
 			Content: messageText,
 			MsgID:   id,
+			MsgSeq:  msgseq,
 			MsgType: 0, // 默认文本类型
 		}
 	}
