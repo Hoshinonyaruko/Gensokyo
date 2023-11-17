@@ -479,6 +479,8 @@ func ConvertToSegmentedMessage(data interface{}) []map[string]interface{} {
 		}
 		messageSegments = append(messageSegments, textSegment)
 	}
+	//排列
+	messageSegments = sortMessageSegments(messageSegments)
 	return messageSegments
 }
 
@@ -495,4 +497,23 @@ func ConvertToInt64(value interface{}) (int64, error) {
 		// 当无法处理该类型时返回错误
 		return 0, fmt.Errorf("无法将类型 %T 转换为 int64", value)
 	}
+}
+
+// 排列MessageSegments
+func sortMessageSegments(segments []map[string]interface{}) []map[string]interface{} {
+	var atSegments, textSegments, imageSegments []map[string]interface{}
+
+	for _, segment := range segments {
+		switch segment["type"] {
+		case "at":
+			atSegments = append(atSegments, segment)
+		case "text":
+			textSegments = append(textSegments, segment)
+		case "image":
+			imageSegments = append(imageSegments, segment)
+		}
+	}
+
+	// 按照指定的顺序合并这些切片
+	return append(append(atSegments, textSegments...), imageSegments...)
 }
