@@ -61,11 +61,10 @@ func (c *WebSocketClient) handleIncomingMessages(ctx context.Context, cancel con
 		_, msg, err := c.conn.ReadMessage()
 		if err != nil {
 			mylog.Println("WebSocket connection closed:", err)
-			cancel() // 取消心跳 goroutine
-
-			if !c.isReconnecting {
-				go c.Reconnect()
-			}
+			// cancel() // 取消心跳 goroutine
+			// if !c.isReconnecting {
+			// 	go c.Reconnect()
+			// }
 			return // 退出循环，不再尝试读取消息
 		}
 
