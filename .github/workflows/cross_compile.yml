@@ -94,13 +94,17 @@ jobs:
         GOARCH: ${{ matrix.goarch }}
         CGO_ENABLED: 0
       run: |
-        go build -o output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}
+        if [ "$GOOS" = "windows" ]; then
+          go build -o output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}.exe
+        else
+          go build -o output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}
+        fi
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
       with:
         name: gensokyo-${{ matrix.os }}-${{ matrix.goarch }}
-        path: output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}
+        path: output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}${{ if eq(matrix.os, 'windows') }}.exe${{ endif }}
 
   prepare_release:
     needs: build
