@@ -93,25 +93,22 @@ func (client *WebSocketClient) Reconnect() {
 		client.mutex.Unlock()
 	}()
 
-	for {
-		time.Sleep(5 * time.Second)
-		newClient, err := NewWebSocketClient(client.urlStr, client.botID, client.api, client.apiv2, 30)
-		if err == nil && newClient != nil {
-			client.mutex.Lock()        // 在替换连接之前锁定
-			oldCancel := client.cancel // 保存旧的取消函数
-			client.conn = newClient.conn
-			client.api = newClient.api
-			client.apiv2 = newClient.apiv2
-			oldCancel()                      // 停止所有相关的旧协程
-			client.cancel = newClient.cancel // 更新取消函数
-			client.mutex.Unlock()
-			// 重发失败的消息
-			go newClient.processFailedMessages(oldSendFailures)
-			mylog.Println("Successfully reconnected to WebSocket.")
-			return
-		}
-		mylog.Println("Failed to reconnect to WebSocket. Retrying in 5 seconds...")
+	newClient, err := NewWebSocketClient(client.urlStr, client.botID, client.api, client.apiv2, 30)
+	if err == nil && newClient != nil {
+		client.mutex.Lock()        // 在替换连接之前锁定
+		oldCancel := client.cancel // 保存旧的取消函数
+		client.conn = newClient.conn
+		client.api = newClient.api
+		client.apiv2 = newClient.apiv2
+		oldCancel()                      // 停止所有相关的旧协程
+		client.cancel = newClient.cancel // 更新取消函数
+		client.mutex.Unlock()
+		// 重发失败的消息
+		go newClient.processFailedMessages(oldSendFailures)
+		mylog.Println("Successfully reconnected to WebSocket.")
+		return
 	}
+
 }
 
 // 处理发送失败的消息
