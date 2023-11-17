@@ -11,10 +11,16 @@ type EchoMapping struct {
 	msgIDMapping   map[string]string
 }
 
-// Int64ToIntMapping 用于存储 int64 到 int 的映射
+// Int64ToIntMapping 用于存储 int64 到 int 的映射(递归计数器)
 type Int64ToIntMapping struct {
 	mu      sync.Mutex
 	mapping map[int64]int
+}
+
+// IntToStringMappingSeq 用于存储 string 到 int 的映射(seq对应)
+type StringToIntMappingSeq struct {
+	mu      sync.Mutex
+	mapping map[string]int
 }
 
 var globalEchoMapping = &EchoMapping{
@@ -23,6 +29,10 @@ var globalEchoMapping = &EchoMapping{
 }
 var globalInt64ToIntMapping = &Int64ToIntMapping{
 	mapping: make(map[int64]int),
+}
+
+var globalStringToIntMappingSeq = &StringToIntMappingSeq{
+	mapping: make(map[string]int),
 }
 
 func (e *EchoMapping) GenerateKey(appid string, s int64) string {
@@ -71,4 +81,18 @@ func GetMapping(key int64) int {
 	globalInt64ToIntMapping.mu.Lock()
 	defer globalInt64ToIntMapping.mu.Unlock()
 	return globalInt64ToIntMapping.mapping[key]
+}
+
+// AddMapping 添加一个新的映射
+func AddMappingSeq(key string, value int) {
+	globalStringToIntMappingSeq.mu.Lock()
+	defer globalStringToIntMappingSeq.mu.Unlock()
+	globalStringToIntMappingSeq.mapping[key] = value
+}
+
+// GetMapping 根据给定的 int64 键获取映射值
+func GetMappingSeq(key string) int {
+	globalStringToIntMappingSeq.mu.Lock()
+	defer globalStringToIntMappingSeq.mu.Unlock()
+	return globalStringToIntMappingSeq.mapping[key]
 }

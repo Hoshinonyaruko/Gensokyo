@@ -103,7 +103,9 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 		}
 		// 优先发送文本信息
 		if messageText != "" {
-			groupReply := generateGroupMessage(messageID, nil, messageText)
+			msgseq := echo.GetMappingSeq(messageID)
+			echo.AddMappingSeq(messageID, msgseq+1)
+			groupReply := generateGroupMessage(messageID, nil, messageText, msgseq+1)
 
 			// 进行类型断言
 			groupMessage, ok := groupReply.(*dto.MessageToCreate)
@@ -126,8 +128,9 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 			for _, url := range urls {
 				var singleItem = make(map[string][]string)
 				singleItem[key] = []string{url} // 创建一个只包含一个 URL 的 singleItem
-
-				groupReply := generateGroupMessage(messageID, singleItem, "")
+				msgseq := echo.GetMappingSeq(messageID)
+				echo.AddMappingSeq(messageID, msgseq+1)
+				groupReply := generateGroupMessage(messageID, singleItem, "", msgseq+1)
 
 				// 进行类型断言
 				richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
@@ -200,7 +203,9 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 
 		// 优先发送文本信息
 		if messageText != "" {
-			groupReply := generateGroupMessage(messageID, nil, messageText)
+			msgseq := echo.GetMappingSeq(messageID)
+			echo.AddMappingSeq(messageID, msgseq+1)
+			groupReply := generateGroupMessage(messageID, nil, messageText, msgseq+1)
 
 			// 进行类型断言
 			groupMessage, ok := groupReply.(*dto.MessageToCreate)
@@ -223,8 +228,9 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 			for _, url := range urls {
 				var singleItem = make(map[string][]string)
 				singleItem[key] = []string{url} // 创建一个只包含一个 URL 的 singleItem
-
-				groupReply := generateGroupMessage(messageID, singleItem, "")
+				msgseq := echo.GetMappingSeq(messageID)
+				echo.AddMappingSeq(messageID, msgseq+1)
+				groupReply := generateGroupMessage(messageID, singleItem, "", msgseq+1)
 
 				// 进行类型断言
 				richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)

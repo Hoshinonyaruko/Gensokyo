@@ -49,6 +49,7 @@ type MessageToCreate struct {
 	Keyboard         *keyboard.MessageKeyboard `json:"keyboard,omitempty"`  // 消息按钮组件
 	EventID          string                    `json:"event_id,omitempty"`  // 要回复的事件id, 逻辑同MsgID
 	Timestamp        int64                     `json:"timestamp,omitempty"` //TODO delete this
+	MsgSeq           int                       `json:"msg_seq,omitempty"`   //回复消息的序号，与 msg_id 联合使用，避免相同消息id回复重复发送，不填默认是1。相同的 msg_id + msg_seq 重复发送会失败。
 }
 
 // GetEventID 事件ID

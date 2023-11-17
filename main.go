@@ -237,6 +237,8 @@ func main() {
 				if len(wsClients) != attemptedConnections {
 					log.Println("Error: Not all wsClients are initialized!(反向ws未设置或连接失败)")
 					// 处理初始化失败的情况
+					p = Processor.NewProcessorV2(api, apiV2, &conf.Settings)
+					//只启动正向
 				} else {
 					log.Println("All wsClients are successfully initialized.")
 					// 所有客户端都成功初始化
