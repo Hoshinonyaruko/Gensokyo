@@ -88,7 +88,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		}
 		message.Params.GroupID = originalGroupID
 		mylog.Println("群组发信息messageText:", messageText)
-		//mylog.Println("foundItems:", foundItems)
+		mylog.Println("foundItems:", foundItems)
 		// 如果messageID为空，通过函数获取
 		if messageID == "" {
 			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), message.Params.GroupID)
@@ -124,6 +124,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			for _, url := range urls {
 				var singleItem = make(map[string][]string)
 				singleItem[key] = []string{url} // 创建一个只包含一个 URL 的 singleItem
+				mylog.Println("singleItem:", singleItem)
 
 				groupReply := generateGroupMessage(messageID, singleItem, "")
 
