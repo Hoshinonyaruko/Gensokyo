@@ -122,7 +122,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 	default:
 		mylog.Println("Unsupported message format: params.message field is not a string, map or slice")
 	}
-	//mylog.Printf(messageText)
+	mylog.Printf(messageText)
 	// 正则表达式部分
 	var localImagePattern *regexp.Regexp
 
@@ -160,7 +160,9 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 
 	//处理at
 	messageText = transformMessageText(messageText)
-
+	for key, items := range foundItems {
+		fmt.Printf("Key: %s, Items: %v\n", key, items)
+	}
 	return messageText, foundItems
 }
 
@@ -399,8 +401,8 @@ func ConvertToSegmentedMessage(data interface{}) []map[string]interface{} {
 		messageSegments = append(messageSegments, imageSegment)
 
 		// 在msg.Content中替换旧的图片链接
-		newImagePattern := "[CQ:image,file=" + attachment.URL + "]"
-		msg.Content = msg.Content + newImagePattern
+		//newImagePattern := "[CQ:image,file=" + attachment.URL + "]"
+		//msg.Content = msg.Content + newImagePattern
 	}
 	// 将msg.Content里的BotID替换成AppID
 	msg.Content = strings.ReplaceAll(msg.Content, BotID, AppID)
@@ -477,6 +479,8 @@ func ConvertToSegmentedMessage(data interface{}) []map[string]interface{} {
 		}
 		messageSegments = append(messageSegments, textSegment)
 	}
+	//排列
+	messageSegments = sortMessageSegments(messageSegments)
 	return messageSegments
 }
 
@@ -493,4 +497,23 @@ func ConvertToInt64(value interface{}) (int64, error) {
 		// 当无法处理该类型时返回错误
 		return 0, fmt.Errorf("无法将类型 %T 转换为 int64", value)
 	}
+}
+
+// 排列MessageSegments
+func sortMessageSegments(segments []map[string]interface{}) []map[string]interface{} {
+	var atSegments, textSegments, imageSegments []map[string]interface{}
+
+	for _, segment := range segments {
+		switch segment["type"] {
+		case "at":
+			atSegments = append(atSegments, segment)
+		case "text":
+			textSegments = append(textSegments, segment)
+		case "image":
+			imageSegments = append(imageSegments, segment)
+		}
+	}
+
+	// 按照指定的顺序合并这些切片
+	return append(append(atSegments, textSegments...), imageSegments...)
 }

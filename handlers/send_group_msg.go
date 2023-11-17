@@ -121,24 +121,26 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 
 		// 遍历foundItems并发送每种信息
 		for key, urls := range foundItems {
-			var singleItem = make(map[string][]string)
-			singleItem[key] = urls
+			for _, url := range urls {
+				var singleItem = make(map[string][]string)
+				singleItem[key] = []string{url} // 创建一个只包含一个 URL 的 singleItem
 
-			groupReply := generateGroupMessage(messageID, singleItem, "")
+				groupReply := generateGroupMessage(messageID, singleItem, "")
 
-			// 进行类型断言
-			richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
-			if !ok {
-				mylog.Printf("Error: Expected RichMediaMessage type for key %s.", key)
-				continue // 跳过这个项，继续下一个
+				// 进行类型断言
+				richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
+				if !ok {
+					mylog.Printf("Error: Expected RichMediaMessage type for key %s.", key)
+					continue // 跳过这个项，继续下一个
+				}
+				mylog.Printf("richMediaMessage: %+v\n", richMediaMessage)
+				_, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), richMediaMessage)
+				if err != nil {
+					mylog.Printf("发送 %s 信息失败_send_group_msg: %v", key, err)
+				}
+				//发送成功回执
+				SendResponse(client, err, &message)
 			}
-			mylog.Printf("richMediaMessage: %+v\n", richMediaMessage)
-			_, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), richMediaMessage)
-			if err != nil {
-				mylog.Printf("发送 %s 信息失败_send_group_msg: %v", key, err)
-			}
-			//发送成功回执
-			SendResponse(client, err, &message)
 		}
 	case "guild":
 		//用GroupID给ChannelID赋值,因为我们是把频道虚拟成了群
@@ -190,7 +192,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 	}
 }
 
-// 不支持base64
+// 整理和组合富媒体信息
 func generateGroupMessage(id string, foundItems map[string][]string, messageText string) interface{} {
 	if imageURLs, ok := foundItems["local_image"]; ok && len(imageURLs) > 0 {
 		// 从本地路径读取图片
