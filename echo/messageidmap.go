@@ -1,8 +1,6 @@
 package echo
 
 import (
-	"fmt"
-	"log"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -10,7 +8,6 @@ import (
 	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/config"
-	"github.com/hoshinonyaruko/gensokyo/idmap"
 )
 
 type messageRecord struct {
@@ -62,7 +59,7 @@ func GetLazyMessagesId(groupID string) string {
 		randomIndex := rand.Intn(len(recentMessages))
 		randomMessageID = recentMessages[randomIndex]
 	} else {
-		msgType := GetMessageIDByUseridOrGroupidv2(config.GetAppIDStr(), groupID)
+		msgType := GetMessageTypeByGroupidv2(config.GetAppIDStr(), groupID)
 		if strings.HasPrefix(msgType, "guild") {
 			randomMessageID = "1000" // 频道主动信息
 		} else {
@@ -72,28 +69,22 @@ func GetLazyMessagesId(groupID string) string {
 	return randomMessageID
 }
 
-// 通过user_id获取messageID
-func GetMessageIDByUseridOrGroupidv2(appID string, userID interface{}) string {
+// 通过group_id获取类型
+func GetMessageTypeByGroupidv2(appID string, GroupID interface{}) string {
 	// 从appID和userID生成key
-	var userIDStr string
-	switch u := userID.(type) {
+	var GroupIDStr string
+	switch u := GroupID.(type) {
 	case int:
-		userIDStr = strconv.Itoa(u)
+		GroupIDStr = strconv.Itoa(u)
 	case int64:
-		userIDStr = strconv.FormatInt(u, 10)
-	case float64:
-		userIDStr = strconv.FormatFloat(u, 'f', 0, 64)
+		GroupIDStr = strconv.FormatInt(u, 10)
 	case string:
-		userIDStr = u
+		GroupIDStr = u
 	default:
 		// 可能需要处理其他类型或报错
 		return ""
 	}
-	//将真实id转为int
-	userid64, err := idmap.StoreIDv2(userIDStr)
-	if err != nil {
-		log.Fatalf("Error storing ID 241: %v", err)
-	}
-	key := appID + "_" + fmt.Sprint(userid64)
-	return GetMsgIDByKey(key)
+
+	key := appID + "_" + GroupIDStr
+	return GetMsgTypeByKey(key)
 }

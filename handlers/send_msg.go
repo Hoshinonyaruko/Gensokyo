@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 
@@ -285,7 +284,8 @@ func GetMessageIDByUseridOrGroupid(appID string, userID interface{}) string {
 	//将真实id转为int
 	userid64, err := idmap.StoreIDv2(userIDStr)
 	if err != nil {
-		log.Fatalf("Error storing ID 241: %v", err)
+		mylog.Fatalf("Error storing ID 241: %v", err)
+		return ""
 	}
 	key := appID + "_" + fmt.Sprint(userid64)
 	return echo.GetMsgIDByKey(key)
