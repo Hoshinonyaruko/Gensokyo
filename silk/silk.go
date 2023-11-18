@@ -129,9 +129,8 @@ func encode(record []byte, tempName string) (silkWav []byte) {
 		return nil
 	}
 	silkWav, err = silk.EncodePcmBuffToSilkv2(pcm, sampleRate, bitRate, true, false, 2)
-
 	if err != nil {
-		mylog.Printf("silk encode error")
+		mylog.Printf("silk encode error:%v", err)
 		return nil
 	}
 	silkPath := path.Join(silkCachePath, tempName+".silk")

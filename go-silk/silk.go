@@ -204,12 +204,18 @@ func EncodePcmBuffToSilkv2(src []byte, sampleRate, bitRate int, tencent, bigEndi
 
 	// Default settings
 	encControl.FAPI_sampleRate = int32(sampleRate)
-	encControl.FmaxInternalSampleRate = 24000
 	encControl.FpacketSize = (packetSizeMs * int32(sampleRate)) / 1000
 	encControl.FpacketLossPercentage = int32(0)
 	encControl.FuseInBandFEC = 0
 	encControl.FuseDTX = 0
 	encControl.FbitRate = int32(bitRate)
+
+	// Set max internal sample rate
+	maxInternalFsHz := int32(24000)
+	if encControl.FAPI_sampleRate < maxInternalFsHz {
+		maxInternalFsHz = encControl.FAPI_sampleRate
+	}
+	encControl.FmaxInternalSampleRate = maxInternalFsHz
 
 	// Create Encoder
 	var encSizeBytes int32
@@ -294,4 +300,3 @@ func SwapEndian(data []byte) {
 		data[i], data[i+1] = data[i+1], data[i]
 	}
 }
-
