@@ -66,3 +66,5 @@ settings:
   frp_port : "0"                    #不使用请保持为0,frp的端口,frp有内外端口,请在frp软件设置gensokyo的port,并将frp显示的对外端口填入这里
   remove_bot_at_group : true        #因为群聊机器人不支持发at,开启本开关会自动隐藏群机器人发出的at(不影响频道场景)
   image_limit : 100                 #每分钟上传的最大图片数量,可自行增加
+  record_sampleRate : 24000         #语音文件的采样率 最高48000 默认24000 单位Khz
+  record_bitRate : 24000            #语音文件的比特率 默认24000 代表 24 kbps 最高无限 请根据带宽 您发送的实际码率调整

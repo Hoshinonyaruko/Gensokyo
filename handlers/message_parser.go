@@ -129,12 +129,12 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 	if runtime.GOOS == "windows" {
 		localImagePattern = regexp.MustCompile(`\[CQ:image,file=file:///([^\]]+?)\]`)
 	} else {
-		localImagePattern = regexp.MustCompile(`\[CQ:image,file=file://([^\]]+?)\]`)
+		localImagePattern = regexp.MustCompile(`\[CQ:image,file=file:///?(.+?)\]`)
 	}
 	if runtime.GOOS == "windows" {
 		localRecordPattern = regexp.MustCompile(`\[CQ:record,file=file:///([^\]]+?)\]`)
 	} else {
-		localRecordPattern = regexp.MustCompile(`\[CQ:record,file=file://([^\]]+?)\]`)
+		localRecordPattern = regexp.MustCompile(`\[CQ:record,file=file:///?(.+?)\]`)
 	}
 	urlImagePattern := regexp.MustCompile(`\[CQ:image,file=https?://(.+)\]`)
 	base64ImagePattern := regexp.MustCompile(`\[CQ:image,file=base64://(.+)\]`)

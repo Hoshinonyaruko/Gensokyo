@@ -16,8 +16,10 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strconv"
 	"strings"
 
+	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/wdvxdr1123/go-silk"
 )
@@ -86,8 +88,10 @@ func encode(record []byte, tempName string) (silkWav []byte) {
 	defer os.Remove(rawPath)
 
 	// 2.转换pcm
+	sampleRate := config.GetRecordSampleRate() // 获取采样率
+	bitRate := config.GetRecordBitRate()       // 获取比特率
 	pcmPath := path.Join(silkCachePath, tempName+".pcm")
-	cmd := exec.Command("ffmpeg", "-i", rawPath, "-f", "s16le", "-ar", "24000", "-ac", "1", pcmPath)
+	cmd := exec.Command("ffmpeg", "-i", rawPath, "-f", "s16le", "-ar", strconv.Itoa(sampleRate), "-ac", "1", pcmPath)
 	if errors.Is(cmd.Err, exec.ErrDot) {
 		cmd.Err = nil
 	}
@@ -103,7 +107,7 @@ func encode(record []byte, tempName string) (silkWav []byte) {
 		mylog.Printf("read pcm file err")
 		return nil
 	}
-	silkWav, err = silk.EncodePcmBuffToSilk(pcm, 24000, 24000, true)
+	silkWav, err = silk.EncodePcmBuffToSilk(pcm, sampleRate, bitRate, true)
 	if err != nil {
 		mylog.Printf("silk encode error")
 		return nil
