@@ -109,6 +109,8 @@ func encode(record []byte, tempName string) (silkWav []byte) {
 	// 2.转换pcm
 	sampleRate := config.GetRecordSampleRate() // 获取采样率
 	bitRate := config.GetRecordBitRate()       // 获取比特率
+	mylog.Printf("sampleRate%v", sampleRate)
+	mylog.Printf("bitRate%v", bitRate)
 	pcmPath := path.Join(silkCachePath, tempName+".pcm")
 	cmd := exec.Command("ffmpeg", "-i", rawPath, "-f", "s16le", "-ar", strconv.Itoa(sampleRate), "-ac", "1", pcmPath)
 	if errors.Is(cmd.Err, exec.ErrDot) {
