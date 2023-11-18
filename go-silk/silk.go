@@ -250,6 +250,7 @@ func EncodePcmBuffToSilkv2(src []byte, sampleRate, bitRate int, tencent, bigEndi
 
 	// Encoding loop
 	var counter int
+	var smplsSinceLastPacket int
 	for {
 		counter, err = reader.Read(in)
 		if err != nil {
@@ -258,6 +259,12 @@ func EncodePcmBuffToSilkv2(src []byte, sampleRate, bitRate int, tencent, bigEndi
 				break
 			}
 			return
+		}
+
+		if counter < len(in) {
+			for i := counter; i < len(in); i++ {
+				in[i] = 0
+			}
 		}
 
 		if bigEndian {
@@ -279,8 +286,13 @@ func EncodePcmBuffToSilkv2(src []byte, sampleRate, bitRate int, tencent, bigEndi
 			return nil, fmt.Errorf("SKP_Silk_Encode returned %d", ret)
 		}
 
-		_ = binary.Write(&out, binary.LittleEndian, nBytes)
-		_, _ = out.Write(payload[:nBytes])
+		packetSizeMs := (1000 * int(encControl.FpacketSize)) / int(encControl.FAPI_sampleRate)
+		smplsSinceLastPacket += counter
+		if ((1000 * smplsSinceLastPacket) / int(sampleRate)) == packetSizeMs {
+			_ = binary.Write(&out, binary.LittleEndian, nBytes)
+			_, _ = out.Write(payload[:nBytes])
+			smplsSinceLastPacket = 0
+		}
 	}
 
 	if !tencent {
