@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/images"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
+	"github.com/hoshinonyaruko/gensokyo/silk"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/openapi"
 )
@@ -265,6 +267,19 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 			if err != nil {
 				mylog.Printf("failed to decode base64 record: %v", err)
 				return nil
+			}
+			//判断并转码
+			if !silk.IsAMRorSILK(fileRecordData) {
+				mt, ok := silk.CheckAudio(bytes.NewReader(fileRecordData))
+				if !ok {
+					mylog.Errorf("voice type error: " + mt)
+					return nil
+				}
+				fileRecordData = silk.EncoderSilk(fileRecordData)
+				mylog.Errorf("音频转码ing")
+				if err != nil {
+					return nil
+				}
 			}
 			// 将解码的语音数据转换回base64格式并上传
 			imageURL, err := images.UploadBase64RecordToServer(base64.StdEncoding.EncodeToString(fileRecordData))
