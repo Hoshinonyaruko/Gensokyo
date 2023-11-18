@@ -7,18 +7,31 @@
 package silk
 
 import (
+	"bytes"
 	"crypto/md5"
 	"encoding/hex"
 	"errors"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/wdvxdr1123/go-silk"
 )
 
+const (
+	// HeaderAmr AMR文件头
+	HeaderAmr = "#!AMR"
+	// HeaderSilk Silkv3文件头
+	HeaderSilk = "\x02#!SILK_V3"
+)
+
 const silkCachePath = "data/cache"
+
+const limit = 4 * 1024
 
 // EncoderSilk 将音频编码为Silk
 func EncoderSilk(data []byte) []byte {
@@ -30,7 +43,6 @@ func EncoderSilk(data []byte) []byte {
 	}
 	tempName := hex.EncodeToString(h.Sum(nil))
 	slk := encode(data, tempName)
-
 	return slk
 }
 
@@ -103,6 +115,30 @@ func encode(record []byte, tempName string) (silkWav []byte) {
 		return nil
 	}
 	return silkWav
+}
+
+// IsAMRorSILK 判断给定文件是否为Amr或Silk格式
+func IsAMRorSILK(b []byte) bool {
+	return bytes.HasPrefix(b, []byte(HeaderAmr)) || bytes.HasPrefix(b, []byte(HeaderSilk))
+}
+
+// 扫描格式
+func scan(r io.ReadSeeker) string {
+	_, _ = r.Seek(0, io.SeekStart)
+	defer r.Seek(0, io.SeekStart)
+	in := make([]byte, limit)
+	_, _ = r.Read(in)
+	return http.DetectContentType(in)
+}
+
+// CheckAudio 判断给定流是否为合法音频
+func CheckAudio(r io.ReadSeeker) (string, bool) {
+	t := scan(r)
+	// std mime type detection is not full supported for audio
+	if strings.Contains(t, "text") || strings.Contains(t, "image") {
+		return t, false
+	}
+	return t, true
 }
 
 // // resample 将silk重新编码为 24000 bit rate
