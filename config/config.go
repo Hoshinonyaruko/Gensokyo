@@ -74,6 +74,8 @@ type Settings struct {
 	FrpPort                string   `yaml:"frp_port"`
 	RemoveBotAtGroup       bool     `yaml:"remove_bot_at_group"`
 	ImageLimitB            int      `yaml:"image_limit"`
+	RecordSampleRate       int      `yaml:"record_sampleRate"`
+	RecordBitRate          int      `yaml:"record_bitRate"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -869,4 +871,30 @@ func GetImageLimitB() int {
 		return 100
 	}
 	return instance.Settings.ImageLimitB
+}
+
+// GetRecordSampleRate 返回 RecordSampleRate的值
+func GetRecordSampleRate() int {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetRecordSampleRate value.")
+		return 0 // 或者返回一个默认的 ImageLimit 值
+	}
+
+	return instance.Settings.RecordSampleRate
+}
+
+// GetRecordBitRate 返回 RecordBitRate
+func GetRecordBitRate() int {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetRecordBitRate value.")
+		return 0 // 或者返回一个默认的 ImageLimit 值
+	}
+
+	return instance.Settings.RecordBitRate
 }
