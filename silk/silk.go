@@ -1,14 +1,9 @@
-//go:build (linux || (windows && !arm && !arm64) || darwin) && (386 || amd64 || arm || arm64) && !race && !nosilk
-// +build linux windows,!arm,!arm64 darwin
-// +build 386 amd64 arm arm64
-// +build !race
-// +build !nosilk
-
 package silk
 
 import (
 	"bytes"
 	"crypto/md5"
+	"embed"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -17,13 +12,16 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"runtime"
 	"strconv"
 	"strings"
 
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
-	"github.com/wdvxdr1123/go-silk"
 )
+
+//go:embed exec/*
+var silkCodecs embed.FS
 
 const (
 	// HeaderAmr AMR文件头
@@ -35,6 +33,54 @@ const (
 const silkCachePath = "data/cache"
 
 const limit = 4 * 1024
+
+func getSilkCodecPath() (string, error) {
+	var codecFileName string
+	switch runtime.GOOS {
+	case "windows":
+		switch runtime.GOARCH {
+		case "amd64":
+			codecFileName = "silk_codec-windows-static-x64.exe"
+		case "386":
+			codecFileName = "silk_codec-windows-static-x86.exe"
+		default:
+			return "", fmt.Errorf("unsupported architecture: %s", runtime.GOARCH)
+		}
+	case "linux":
+		switch runtime.GOARCH {
+		case "amd64":
+			codecFileName = "silk_codec-linux-x64"
+		case "arm64":
+			codecFileName = "silk_codec-linux-arm64"
+		default:
+			return "", fmt.Errorf("unsupported architecture for Linux: %s", runtime.GOARCH)
+		}
+	case "darwin":
+		switch runtime.GOARCH {
+		case "amd64":
+			codecFileName = "silk_codec-macos"
+		case "arm64":
+			codecFileName = "silk_codec-macos"
+		default:
+			return "", fmt.Errorf("unsupported architecture for macOS: %s", runtime.GOARCH)
+		}
+	case "android":
+		switch runtime.GOARCH {
+		case "arm64":
+			codecFileName = "silk_codec-android-arm64"
+		case "x86":
+			codecFileName = "silk_codec-android-x86"
+		case "x86_64":
+			codecFileName = "silk_codec-android-x86_64"
+		default:
+			return "", fmt.Errorf("unsupported architecture for macOS: %s", runtime.GOARCH)
+		}
+	default:
+		return "", fmt.Errorf("unsupported platform: %s", runtime.GOOS)
+	}
+
+	return "exec/" + codecFileName, nil
+}
 
 // EncoderSilk 将音频编码为Silk
 func EncoderSilk(data []byte) []byte {
@@ -120,26 +166,92 @@ func encode(record []byte, tempName string) (silkWav []byte) {
 		mylog.Errorf("convert pcm file error")
 		return nil
 	}
-	defer os.Remove(pcmPath)
+
+	//defer os.Remove(pcmPath)
+	//todo 有大佬可以试试完善go-silk 这部分编码转换
+	//努力了很久,都没成功播放
 
 	// 3. 转silk
-	pcm, err := os.ReadFile(pcmPath)
-	if err != nil {
-		mylog.Printf("read pcm file err")
-		return nil
-	}
-	silkWav, err = silk.EncodePcmBuffToSilkv2(pcm, sampleRate, bitRate, true, false, 2)
+	// pcm, err := os.ReadFile(pcmPath)
+	// if err != nil {
+	// 	mylog.Printf("read pcm file err")
+	// 	return nil
+	// }
+	// //silkWav, err = silk.EncodePcmBuffToSilkv2(pcm, sampleRate, bitRate, true, false, 2)
+	// silkWav, err = silk.EncodePcmBuffToSilk(pcm, sampleRate, bitRate, true)
+	// if err != nil {
+	// 	mylog.Printf("silk encode error:%v", err)
+	// 	return nil
+	// }
 
-	if err != nil {
-		mylog.Printf("silk encode error")
-		return nil
-	}
 	silkPath := path.Join(silkCachePath, tempName+".silk")
-	err = os.WriteFile(silkPath, silkWav, 0o666)
+
+	// err = os.WriteFile(silkPath, silkWav, 0o666)
+	// if err != nil {
+	// 	mylog.Printf("silk encode error2")
+	// 	return nil
+	// }
+
+	// 调用silk_codec转换为Silk
+
+	// 获取silk_codec文件名
+	codecFileName, err := getSilkCodecPath()
 	if err != nil {
-		mylog.Printf("silk encode error2")
+		mylog.Errorf("failed to get codec path: %v", err)
 		return nil
 	}
+
+	// 从嵌入的文件系统中读取silk_codec二进制文件
+	codecData, err := silkCodecs.ReadFile(codecFileName)
+	if err != nil {
+		mylog.Errorf("failed to read codec data: %v", err)
+		return nil
+	}
+
+	// 根据操作系统确定临时文件的扩展名
+	tempFilePattern := "silk_codec*"
+	if runtime.GOOS == "windows" {
+		tempFilePattern += ".exe"
+	}
+
+	// 创建临时文件
+	tmpFile, err := os.CreateTemp("", tempFilePattern)
+	if err != nil {
+		mylog.Errorf("failed to create temp file: %v", err)
+		return nil
+	}
+	defer os.Remove(tmpFile.Name()) // 清理临时文件
+
+	// 写入二进制数据到临时文件
+	if _, err := tmpFile.Write(codecData); err != nil {
+		mylog.Errorf("failed to write codec data to temp file: %v", err)
+		return nil
+	}
+	if err := tmpFile.Close(); err != nil {
+		mylog.Errorf("failed to close temp file: %v", err)
+		return nil
+	}
+
+	// 确保临时文件可执行
+	if err := os.Chmod(tmpFile.Name(), 0700); err != nil {
+		mylog.Errorf("failed to chmod temp file: %v", err)
+		return nil
+	}
+
+	// 使用临时文件执行silk_codec
+	cmd = exec.Command(tmpFile.Name(), "pts", "-i", pcmPath, "-o", silkPath, "-s", "24000")
+	if err := cmd.Run(); err != nil {
+		mylog.Errorf("silk encode error: %v", err)
+		return nil
+	}
+
+	// 读取Silk文件
+	silkWav, err = os.ReadFile(silkPath)
+	if err != nil {
+		mylog.Errorf("read silk file error: %v", err)
+		return nil
+	}
+
 	return silkWav
 }
 

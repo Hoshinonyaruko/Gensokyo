@@ -16,3 +16,6 @@ log/
 
 # ignore dist
 webui/dist/
+
+#ignore data
+data/

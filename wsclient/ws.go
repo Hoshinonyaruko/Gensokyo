@@ -124,7 +124,7 @@ func (client *WebSocketClient) processFailedMessages(failuresChan chan map[strin
 // 处理信息,调用腾讯api
 func (c *WebSocketClient) recvMessage(msg []byte) {
 	var message callapi.ActionMessage
-	mylog.Println("Received from onebotv11 server raw:", string(msg))
+	//mylog.Println("Received from onebotv11 server raw:", string(msg))
 	err := json.Unmarshal(msg, &message)
 	if err != nil {
 		mylog.Printf("Error unmarshalling message: %v, Original message: %s", err, string(msg))

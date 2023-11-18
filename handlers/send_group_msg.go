@@ -128,7 +128,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			for _, url := range urls {
 				var singleItem = make(map[string][]string)
 				singleItem[key] = []string{url} // 创建一个只包含一个 URL 的 singleItem
-				mylog.Println("singleItem:", singleItem)
+				//mylog.Println("singleItem:", singleItem)
 				msgseq := echo.GetMappingSeq(messageID)
 				echo.AddMappingSeq(messageID, msgseq+1)
 				groupReply := generateGroupMessage(messageID, singleItem, "", msgseq+1)
