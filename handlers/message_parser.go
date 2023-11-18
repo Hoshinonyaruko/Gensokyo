@@ -95,6 +95,9 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 			case "voice":
 				fileContent, _ := segmentMap["data"].(map[string]interface{})["file"].(string)
 				segmentContent = "[CQ:record,file=" + fileContent + "]"
+			case "record":
+				fileContent, _ := segmentMap["data"].(map[string]interface{})["file"].(string)
+				segmentContent = "[CQ:record,file=" + fileContent + "]"
 			case "at":
 				qqNumber, _ := segmentMap["data"].(map[string]interface{})["qq"].(string)
 				segmentContent = "[CQ:at,qq=" + qqNumber + "]"
@@ -115,6 +118,9 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 		case "voice":
 			fileContent, _ := message["data"].(map[string]interface{})["file"].(string)
 			messageText = "[CQ:record,file=" + fileContent + "]"
+		case "record":
+			fileContent, _ := message["data"].(map[string]interface{})["file"].(string)
+			messageText = "[CQ:record,file=" + fileContent + "]"
 		case "at":
 			qqNumber, _ := message["data"].(map[string]interface{})["qq"].(string)
 			messageText = "[CQ:at,qq=" + qqNumber + "]"
@@ -129,12 +135,12 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 	if runtime.GOOS == "windows" {
 		localImagePattern = regexp.MustCompile(`\[CQ:image,file=file:///([^\]]+?)\]`)
 	} else {
-		localImagePattern = regexp.MustCompile(`\[CQ:image,file=file:///?(.+?)\]`)
+		localImagePattern = regexp.MustCompile(`\[CQ:image,file=file://([^\]]+?)\]`)
 	}
 	if runtime.GOOS == "windows" {
 		localRecordPattern = regexp.MustCompile(`\[CQ:record,file=file:///([^\]]+?)\]`)
 	} else {
-		localRecordPattern = regexp.MustCompile(`\[CQ:record,file=file:///?(.+?)\]`)
+		localRecordPattern = regexp.MustCompile(`\[CQ:record,file=file://([^\]]+?)\]`)
 	}
 	urlImagePattern := regexp.MustCompile(`\[CQ:image,file=https?://(.+)\]`)
 	base64ImagePattern := regexp.MustCompile(`\[CQ:image,file=base64://(.+)\]`)
