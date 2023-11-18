@@ -294,3 +294,4 @@ func SwapEndian(data []byte) {
 		data[i], data[i+1] = data[i+1], data[i]
 	}
 }
+
