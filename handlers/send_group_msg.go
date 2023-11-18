@@ -250,6 +250,47 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 			Content:    "", // 这个字段文档没有了
 			SrvSendMsg: true,
 		}
+	} else if RecordURLs, ok := foundItems["local_record"]; ok && len(RecordURLs) > 0 {
+		// 从本地路径读取语音
+		RecordData, err := os.ReadFile(RecordURLs[0])
+		if err != nil {
+			// 读入文件失败
+			mylog.Printf("Error reading the record from path %s: %v", RecordURLs[0], err)
+			// 返回文本信息，提示语音文件不存在
+			return &dto.MessageToCreate{
+				Content: "错误: 语音文件不存在",
+				MsgID:   id,
+				MsgSeq:  msgseq,
+				MsgType: 0, // 默认文本类型
+			}
+		}
+		//判断并转码
+		if !silk.IsAMRorSILK(RecordData) {
+			mt, ok := silk.CheckAudio(bytes.NewReader(RecordData))
+			if !ok {
+				mylog.Errorf("voice type error: " + mt)
+				return nil
+			}
+			RecordData = silk.EncoderSilk(RecordData)
+			mylog.Errorf("音频转码ing")
+			if err != nil {
+				return nil
+			}
+		}
+		// 将解码的语音数据转换回base64格式并上传
+		imageURL, err := images.UploadBase64RecordToServer(base64.StdEncoding.EncodeToString(RecordData))
+		if err != nil {
+			mylog.Printf("failed to upload base64 record: %v", err)
+			return nil
+		}
+		// 创建RichMediaMessage并返回
+		return &dto.RichMediaMessage{
+			EventID:    id,
+			FileType:   3, // 3代表语音
+			URL:        imageURL,
+			Content:    "", // 这个字段文档没有了
+			SrvSendMsg: true,
+		}
 	} else if imageURLs, ok := foundItems["url_image"]; ok && len(imageURLs) > 0 {
 		// 发链接图片
 		return &dto.RichMediaMessage{

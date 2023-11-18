@@ -125,13 +125,17 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 	//mylog.Printf(messageText)
 	// 正则表达式部分
 	var localImagePattern *regexp.Regexp
-
+	var localRecordPattern *regexp.Regexp
 	if runtime.GOOS == "windows" {
 		localImagePattern = regexp.MustCompile(`\[CQ:image,file=file:///([^\]]+?)\]`)
 	} else {
 		localImagePattern = regexp.MustCompile(`\[CQ:image,file=file://([^\]]+?)\]`)
 	}
-
+	if runtime.GOOS == "windows" {
+		localRecordPattern = regexp.MustCompile(`\[CQ:record,file=file:///([^\]]+?)\]`)
+	} else {
+		localRecordPattern = regexp.MustCompile(`\[CQ:record,file=file://([^\]]+?)\]`)
+	}
 	urlImagePattern := regexp.MustCompile(`\[CQ:image,file=https?://(.+)\]`)
 	base64ImagePattern := regexp.MustCompile(`\[CQ:image,file=base64://(.+)\]`)
 	base64RecordPattern := regexp.MustCompile(`\[CQ:record,file=base64://(.+)\]`)
@@ -144,6 +148,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 		{"url_image", urlImagePattern},
 		{"base64_image", base64ImagePattern},
 		{"base64_record", base64RecordPattern},
+		{"local_record", localRecordPattern},
 	}
 
 	foundItems := make(map[string][]string)
