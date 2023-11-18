@@ -11,6 +11,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -76,11 +77,29 @@ func ExtractCover(src string, target string) error {
 	return nil
 }
 
+// createDirectoryIfNotExists 检查目录是否存在，如果不存在则创建它
+func createDirectoryIfNotExists(directoryPath string) error {
+	_, err := os.Stat(directoryPath)
+	if os.IsNotExist(err) {
+		// 目录不存在，创建它
+		err := os.MkdirAll(directoryPath, os.ModePerm)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // encode 将音频编码为Silk
 func encode(record []byte, tempName string) (silkWav []byte) {
+	// 0. 创建缓存目录
+	err := createDirectoryIfNotExists(silkCachePath)
+	if err != nil {
+		fmt.Printf("创建语音缓存目录失败：%v\n", err)
+	}
 	// 1. 写入缓存文件
 	rawPath := path.Join(silkCachePath, tempName+".wav")
-	err := os.WriteFile(rawPath, record, os.ModePerm)
+	err = os.WriteFile(rawPath, record, os.ModePerm)
 	if err != nil {
 		mylog.Errorf("write temp file error")
 		return nil
