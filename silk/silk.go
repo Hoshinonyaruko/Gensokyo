@@ -128,7 +128,7 @@ func encode(record []byte, tempName string) (silkWav []byte) {
 		mylog.Printf("read pcm file err")
 		return nil
 	}
-	silkWav, err = silk.EncodePcmBuffToSilk(pcm, sampleRate, bitRate, true)
+	silkWav, err = silk.EncodePcmBuffToSilkv2(pcm, sampleRate, bitRate, true, false, 2)
 	if err != nil {
 		mylog.Printf("silk encode error")
 		return nil
