@@ -166,8 +166,7 @@ func encode(record []byte, tempName string) (silkWav []byte) {
 		mylog.Errorf("convert pcm file error")
 		return nil
 	}
-
-	//defer os.Remove(pcmPath)
+	defer os.Remove(pcmPath)
 	//todo 有大佬可以试试完善go-silk 这部分编码转换
 	//努力了很久,都没成功播放
 
