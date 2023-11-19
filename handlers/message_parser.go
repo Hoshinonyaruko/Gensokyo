@@ -322,9 +322,9 @@ func RevertTransformedText(data interface{}) string {
 			}
 		}
 
-		// 如果没有匹配项，则将 messageText 置为空
+		// 如果没有匹配项，则将 messageText 置为兜底回复 兜底回复可空
 		if !matched {
-			messageText = ""
+			messageText = config.GetNoWhiteResponse()
 		}
 	}
 	//检查是否启用黑名单模式
