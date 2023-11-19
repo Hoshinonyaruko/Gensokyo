@@ -48,16 +48,30 @@ func GetLogLevelFromConfig(logLevel int) LogLevel {
 	}
 }
 
-// 接收新参数，并设置文件日志路径
-func NewMyLogAdapter(level LogLevel, enableFileLog bool) *MyLogAdapter {
+var logPath string
+
+func init() {
 	exePath, err := os.Executable()
 	if err != nil {
-		panic(err) // 或者处理错误
+		panic(err)
 	}
-	exeDir := filepath.Dir(exePath)
-	logPath := filepath.Join(exeDir, "log")
 
+	exeDir := filepath.Dir(exePath)
+	logPath = filepath.Join(exeDir, "log")
+}
+
+// 全局变量，用于存储日志启用状态
+var enableFileLogGlobal bool
+
+// SetEnableFileLog 设置 enableFileLogGlobal 的值
+func SetEnableFileLog(value bool) {
+	enableFileLogGlobal = value
+}
+
+// 接收新参数，并设置文件日志路径
+func NewMyLogAdapter(level LogLevel, enableFileLog bool) *MyLogAdapter {
 	if enableFileLog {
+		SetEnableFileLog(true)
 		if _, err := os.Stat(logPath); os.IsNotExist(err) {
 			err := os.Mkdir(logPath, 0755)
 			if err != nil {
@@ -94,12 +108,34 @@ func (adapter *MyLogAdapter) logToFile(level, message string) {
 	}
 }
 
+// 独立的文件日志记录函数
+func LogToFile(level, message string) {
+	if !enableFileLogGlobal {
+		return
+	}
+	filename := time.Now().Format("2006-01-02") + ".log"
+	filepath := logPath + "/" + filename
+
+	file, err := os.OpenFile(filepath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Println("Error opening log file:", err)
+		return
+	}
+	defer file.Close()
+
+	logEntry := fmt.Sprintf("[%s] %s: %s\n", time.Now().Format("2006-01-02T15:04:05"), level, message)
+	if _, err := file.WriteString(logEntry); err != nil {
+		fmt.Println("Error writing to log file:", err)
+	}
+}
+
 // Debug logs a message at the debug level.
 func (adapter *MyLogAdapter) Debug(v ...interface{}) {
 	if adapter.Level <= LogLevelDebug {
 		message := fmt.Sprint(v...)
 		Println(v...)
 		adapter.logToFile("DEBUG", message)
+		emitLog("DEBUG", message)
 	}
 }
 
@@ -109,6 +145,7 @@ func (adapter *MyLogAdapter) Info(v ...interface{}) {
 		message := fmt.Sprint(v...)
 		Println(v...)
 		adapter.logToFile("INFO", message)
+		emitLog("INFO", message)
 	}
 }
 
@@ -118,6 +155,7 @@ func (adapter *MyLogAdapter) Warn(v ...interface{}) {
 		message := fmt.Sprint(v...)
 		Printf("WARN: %v\n", v...)
 		adapter.logToFile("WARN", message)
+		emitLog("WARN", message)
 	}
 }
 
@@ -127,6 +165,7 @@ func (adapter *MyLogAdapter) Error(v ...interface{}) {
 		message := fmt.Sprint(v...)
 		Printf("ERROR: %v\n", v...)
 		adapter.logToFile("ERROR", message)
+		emitLog("ERROR", message)
 	}
 }
 
@@ -136,6 +175,7 @@ func (adapter *MyLogAdapter) Debugf(format string, v ...interface{}) {
 		message := fmt.Sprintf(format, v...)
 		Printf("DEBUG: "+format, v...)
 		adapter.logToFile("DEBUG", message)
+		emitLog("DEBUG", message)
 	}
 }
 
@@ -145,6 +185,7 @@ func (adapter *MyLogAdapter) Infof(format string, v ...interface{}) {
 		message := fmt.Sprintf(format, v...)
 		Printf("INFO: "+format, v...)
 		adapter.logToFile("INFO", message)
+		emitLog("INFO", message)
 	}
 }
 
@@ -154,6 +195,7 @@ func (adapter *MyLogAdapter) Warnf(format string, v ...interface{}) {
 		message := fmt.Sprintf(format, v...)
 		Printf("WARN: "+format, v...)
 		adapter.logToFile("WARN", message)
+		emitLog("WARN", message)
 	}
 }
 
@@ -163,6 +205,7 @@ func (adapter *MyLogAdapter) Errorf(format string, v ...interface{}) {
 		message := fmt.Sprintf(format, v...)
 		Printf("ERROR: "+format, v...)
 		adapter.logToFile("ERROR", message)
+		emitLog("ERROR", message)
 	}
 }
 
@@ -184,8 +227,6 @@ type EnhancedLogEntry struct {
 	Message string `json:"message"`
 }
 
-//todo 下面的不会存入文件,上头的,不会进入ws,改一改
-
 // 日志频道，所有的 WebSocket 客户端都会在此监听日志事件
 var logChannel = make(chan EnhancedLogEntry, 1000)
 
@@ -193,24 +234,28 @@ func Println(v ...interface{}) {
 	log.Println(v...)
 	message := fmt.Sprint(v...)
 	emitLog("INFO", message)
+	LogToFile("INFO", message)
 }
 
 func Printf(format string, v ...interface{}) {
 	log.Printf(format, v...)
 	message := fmt.Sprintf(format, v...)
 	emitLog("INFO", message)
+	LogToFile("INFO", message)
 }
 
 func Errorf(format string, v ...interface{}) {
 	log.Printf(format, v...)
 	message := fmt.Sprintf(format, v...)
 	emitLog("ERROR", message)
+	LogToFile("ERROR", message)
 }
 
 func Fatalf(format string, v ...interface{}) {
 	log.Printf(format, v...)
 	message := fmt.Sprintf(format, v...)
 	emitLog("Fatal", message)
+	LogToFile("Fatal", message)
 }
 
 func emitLog(level, message string) {
