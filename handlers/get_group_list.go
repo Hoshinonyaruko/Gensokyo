@@ -86,7 +86,6 @@ func getGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 				return
 			}
 		}
-		var groups []Group
 		for _, guild := range guilds {
 			joinedAtTime, err := guild.JoinedAt.Time()
 			if err != nil {
@@ -103,7 +102,7 @@ func getGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 				MaxMemberCount:  strconv.FormatInt(guild.MaxMembers, 10),
 				MemberCount:     strconv.Itoa(guild.MemberCount),
 			}
-			groups = append(groups, group)
+			groupList.Data = append(groupList.Data, group)
 			// 获取每个guild的channel信息
 			channels, err := api.Channels(context.TODO(), guild.ID) // 使用guild.ID作为参数
 			if err != nil {
@@ -126,11 +125,9 @@ func getGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 					MaxMemberCount:  "", // 频道没有直接对应的最大成员数字段
 					MemberCount:     "", // 频道没有直接对应的成员数字段
 				}
-				groups = append(groups, channelGroup)
+				groupList.Data = append(groupList.Data, channelGroup)
 			}
 		}
-
-		groupList.Data = groups
 		groupList.Message = ""
 		groupList.RetCode = 0
 		groupList.Status = "ok"
