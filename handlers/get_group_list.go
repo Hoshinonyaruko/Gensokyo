@@ -56,8 +56,11 @@ type GroupList struct {
 
 func getGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
 	//群还不支持,这里取得是频道的,如果后期支持了群,那都请求,一起返回
+	var groupList GroupList
 	actiontype := "guild"
 	if actiontype == "guild" {
+		// 初始化 groupList.Data 为一个空数组
+		groupList.Data = []Group{}
 		// 检查时间差异
 		if time.Since(lastCallTime) > 5*time.Minute {
 			// 如果超过5分钟，则重置分页状态
@@ -126,12 +129,12 @@ func getGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 				groups = append(groups, channelGroup)
 			}
 		}
-		groupList := GroupList{
-			Data:    groups,
-			Message: "",
-			RetCode: 0,
-			Status:  "ok",
-		}
+
+		groupList.Data = groups
+		groupList.Message = ""
+		groupList.RetCode = 0
+		groupList.Status = "ok"
+
 		if message.Echo == "" {
 			groupList.Echo = "0"
 		} else {
