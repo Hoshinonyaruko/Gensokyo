@@ -22,7 +22,7 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 	s := client.GetGlobalS()
 
 	// 转换at
-	messageText := handlers.RevertTransformedText(data)
+	messageText := handlers.RevertTransformedText(data, "group", p.Api, p.Apiv2)
 	if messageText == "" {
 		mylog.Printf("信息被自定义黑白名单拦截")
 		return nil
