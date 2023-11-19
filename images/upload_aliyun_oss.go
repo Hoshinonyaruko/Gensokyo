@@ -88,16 +88,24 @@ func (ou *UploadWithOSS) UploadImage(image []byte, ext string) (string, error) {
 		return "", err
 	}
 
-	return objectPath, nil
+	// 构建图片文件名
+	FileName := fmt.Sprintf("%s.%s", md5, ext)
+
+	return FileName, nil
 }
 
-// GetImageURL: 构建图片的URL
-func (ou *UploadWithOSS) GetImageURL(objectPath string) string {
-	return fmt.Sprintf("%s/%s", ou.Endpoint, ou.OSSBucket)
+// GetImageURL: 构建图片 URL
+func (ou *UploadWithOSS) GetImageURL(FileName string) string {
+	return fmt.Sprintf("%s/%s/%s", ou.Endpoint, ou.OSSBucket, FileName)
 }
 
-// DeleteImage: 删除已上传的图片
-func (ou *UploadWithOSS) DeleteImage(objectPath string) error {
-	err := ou.bucket.DeleteObject(objectPath)
+// DeleteImage: 删除已上传图片
+func (ou *UploadWithOSS) DeleteImage(FileName string) error {
+
+	// 构建图片 OSS 路径
+	ObjectPath := fmt.Sprintf("%s/%s", ou.OSSBucket, FileName)
+
+	// 提交删除图片操作
+	err := ou.bucket.DeleteObject(ObjectPath)
 	return err
 }

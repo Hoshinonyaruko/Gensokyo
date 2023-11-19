@@ -11,25 +11,25 @@ import (
 type UploadWithOSSFS struct {
 
 	// OSS 域名
-	Domain string
+	EndPoint string
 
 	// OSSFS 本地映射路径
 	OSSFSPath string
 }
 
 // NewUploadWithOSSFS: 创建 UploadWithOSSFS 的新实例
-func NewUploadWithOSSFS(config map[string]string) *UploadWithOSSFS {
+func NewUploadWithOSSFS(endpoint, OssfsPath string) *UploadWithOSSFS {
 
 	return &UploadWithOSSFS{
 
-		Domain: config["domain"],
+		EndPoint: endpoint,
 
-		OSSFSPath: config["ossfs_path"],
+		OSSFSPath: OssfsPath,
 	}
 
 }
 
-// SavePicture: 保存给定的图像数据以及指定的扩展名
+// SavePicture: 以指定的扩展名保存文件
 func (u *UploadWithOSSFS) SavePicture(image []byte, ext string) (string, error) {
 
 	// 计算图像数据的 MD5 值
@@ -51,7 +51,7 @@ func (u *UploadWithOSSFS) SavePicture(image []byte, ext string) (string, error) 
 
 // GetURL: 构建图片直链 URL
 func (u *UploadWithOSSFS) GetURL(name string) string {
-	return fmt.Sprintf("%s/%s", u.Domain, name)
+	return fmt.Sprintf("%s/%s", u.EndPoint, name)
 }
 
 // DelPicture: 删除上传完成的图片
