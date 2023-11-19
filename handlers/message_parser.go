@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net"
 	"path/filepath"
@@ -8,13 +10,16 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/config"
+	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/hoshinonyaruko/gensokyo/url"
 	"github.com/tencent-connect/botgo/dto"
+	"github.com/tencent-connect/botgo/openapi"
 	"mvdan.cc/xurls" //xurls是一个从文本提取url的库 适用于多种场景
 )
 
@@ -239,7 +244,7 @@ func transformMessageText(messageText string) string {
 }
 
 // 处理at和其他定形文到onebotv11格式(cq码)
-func RevertTransformedText(data interface{}) string {
+func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI, apiv2 openapi.OpenAPI) string {
 	var msg *dto.Message
 	switch v := data.(type) {
 	case *dto.WSGroupATMessageData:
@@ -324,7 +329,8 @@ func RevertTransformedText(data interface{}) string {
 
 		// 如果没有匹配项，则将 messageText 置为兜底回复 兜底回复可空
 		if !matched {
-			messageText = config.GetNoWhiteResponse()
+			messageText = ""
+			SendMessage(config.GetNoWhiteResponse(), data, msgtype, api, apiv2)
 		}
 	}
 	//检查是否启用黑名单模式
@@ -528,4 +534,79 @@ func sortMessageSegments(segments []map[string]interface{}) []map[string]interfa
 
 	// 按照指定的顺序合并这些切片
 	return append(append(atSegments, textSegments...), imageSegments...)
+}
+
+// SendMessage 发送消息根据不同的类型
+func SendMessage(messageText string, data interface{}, messageType string, api openapi.OpenAPI, apiv2 openapi.OpenAPI) error {
+	// 强制类型转换，获取Message结构
+	var msg *dto.Message
+	switch v := data.(type) {
+	case *dto.WSGroupATMessageData:
+		msg = (*dto.Message)(v)
+	case *dto.WSATMessageData:
+		msg = (*dto.Message)(v)
+	case *dto.WSMessageData:
+		msg = (*dto.Message)(v)
+	case *dto.WSDirectMessageData:
+		msg = (*dto.Message)(v)
+	case *dto.WSC2CMessageData:
+		msg = (*dto.Message)(v)
+	default:
+		return nil
+	}
+	switch messageType {
+	case "guild":
+		// 处理公会消息
+		msgseq := echo.GetMappingSeq(msg.ID)
+		echo.AddMappingSeq(msg.ID, msgseq+1)
+		textMsg, _ := GenerateReplyMessage(msg.ID, nil, messageText, msgseq+1)
+		if _, err := api.PostMessage(context.TODO(), msg.ChannelID, textMsg); err != nil {
+			mylog.Printf("发送文本信息失败: %v", err)
+			return err
+		}
+
+	case "group":
+		// 处理群组消息
+		msgseq := echo.GetMappingSeq(msg.ID)
+		echo.AddMappingSeq(msg.ID, msgseq+1)
+		textMsg, _ := GenerateReplyMessage(msg.ID, nil, messageText, msgseq+1)
+		_, err := apiv2.PostGroupMessage(context.TODO(), msg.GroupID, textMsg)
+		if err != nil {
+			mylog.Printf("发送文本群组信息失败: %v", err)
+			return err
+		}
+
+	case "guild_private":
+		// 处理私信
+		timestamp := time.Now().Unix()
+		timestampStr := fmt.Sprintf("%d", timestamp)
+		dm := &dto.DirectMessage{
+			GuildID:    msg.GuildID,
+			ChannelID:  msg.ChannelID,
+			CreateTime: timestampStr,
+		}
+		msgseq := echo.GetMappingSeq(msg.ID)
+		echo.AddMappingSeq(msg.ID, msgseq+1)
+		textMsg, _ := GenerateReplyMessage(msg.ID, nil, messageText, msgseq+1)
+		if _, err := apiv2.PostDirectMessage(context.TODO(), dm, textMsg); err != nil {
+			mylog.Printf("发送文本信息失败: %v", err)
+			return err
+		}
+
+	case "group_private":
+		// 处理群组私聊消息
+		msgseq := echo.GetMappingSeq(msg.ID)
+		echo.AddMappingSeq(msg.ID, msgseq+1)
+		textMsg, _ := GenerateReplyMessage(msg.ID, nil, messageText, msgseq+1)
+		_, err := apiv2.PostC2CMessage(context.TODO(), msg.Author.ID, textMsg)
+		if err != nil {
+			mylog.Printf("发送文本私聊信息失败: %v", err)
+			return err
+		}
+
+	default:
+		return errors.New("未知的消息类型")
+	}
+
+	return nil
 }
