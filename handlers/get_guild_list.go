@@ -30,6 +30,9 @@ func init() {
 func getGuildList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
 	var response GuildListResponse
 
+	// 初始化 response.Data 为一个空数组
+	response.Data = []GuildData{}
+
 	// 创建一个 GuildPager 实例，设置 limit 为 10
 	pager := dto.GuildPager{Limit: "50", After: "0"} // 默认从0开始，取50个
 
