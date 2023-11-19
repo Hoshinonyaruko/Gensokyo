@@ -239,7 +239,7 @@ func encode(record []byte, tempName string) (silkWav []byte) {
 	}
 
 	// 使用临时文件执行silk_codec
-	cmd = exec.Command(tmpFile.Name(), "pts", "-i", pcmPath, "-o", silkPath, "-s", "24000")
+	cmd = exec.Command(tmpFile.Name(), "pts", "-i", pcmPath, "-o", silkPath, "-s", strconv.Itoa(sampleRate))
 	if err := cmd.Run(); err != nil {
 		mylog.Errorf("silk encode error: %v", err)
 		return nil

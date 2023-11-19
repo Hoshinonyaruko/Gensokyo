@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"context"
+
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/tencent-connect/botgo/openapi"
@@ -19,21 +21,51 @@ func init() {
 }
 
 func getGuildChannelList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
-
 	var response GuildChannelListResponse
 
-	response.Data = make([]interface{}, 0) // No data at the moment, but can be populated in the future
+	// 解析请求参数
+	guildID := message.Params.GuildID
+
+	// 根据请求参数调用API
+	channels, err := api.Channels(context.TODO(), guildID)
+	if err != nil {
+		// 如果发生错误，记录日志并返回null
+		mylog.Printf("Error fetching channels: %v", err)
+		client.SendMessage(map[string]interface{}{"data": nil})
+		return
+	}
+
+	// 构建响应数据
+	for _, channel := range channels {
+		channelInfo := map[string]interface{}{
+			"owner_guild_id":    guildID,
+			"channel_id":        channel.ID,
+			"channel_type":      channel.Type,
+			"channel_name":      channel.Name,
+			"create_time":       0, // Default value as actual value is not available
+			"creator_tiny_id":   channel.OwnerID,
+			"talk_permission":   channel.Permissions,
+			"visible_type":      channel.Position,
+			"current_slow_mode": 0, // Default value as actual value is not available
+		}
+
+		// Append the channel information to the response data
+		response.Data = append(response.Data, channelInfo)
+	}
+
+	// Set other fields of the response
 	response.Message = ""
 	response.RetCode = 0
 	response.Status = "ok"
 	response.Echo = message.Echo
 
-	// Convert the members slice to a map
+	// Convert the response to a map for sending
 	outputMap := structToMap(response)
 
 	mylog.Printf("get_guild_channel_list: %s", outputMap)
 
-	err := client.SendMessage(outputMap) //发回去
+	// Send the response
+	err = client.SendMessage(outputMap)
 	if err != nil {
 		mylog.Printf("Error sending message via client: %v", err)
 	}
