@@ -40,7 +40,6 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 	if err != nil {
 		return fmt.Errorf("failed to convert ChannelID to int: %v", err)
 	}
-
 	// 映射str的userid到int
 	userid64, err := idmap.StoreIDv2(data.Author.ID)
 	if err != nil {
@@ -54,6 +53,9 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 		return nil
 	}
 	messageID := int(messageID64)
+	if data.Attachments[0].URL != "" {
+		p.Autobind(data)
+	}
 	// 如果在Array模式下, 则处理Message为Segment格式
 	var segmentedMessages interface{} = messageText
 	if config.GetArrayValue() {

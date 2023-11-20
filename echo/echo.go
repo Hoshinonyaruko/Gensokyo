@@ -23,6 +23,12 @@ type StringToIntMappingSeq struct {
 	mapping map[string]int
 }
 
+// StringToInt64MappingSeq 用于存储 string 到 int64 的映射(file接口频率限制)
+type StringToInt64MappingSeq struct {
+	mu      sync.Mutex
+	mapping map[string]int64
+}
+
 var globalEchoMapping = &EchoMapping{
 	msgTypeMapping: make(map[string]string),
 	msgIDMapping:   make(map[string]string),
@@ -33,6 +39,10 @@ var globalInt64ToIntMapping = &Int64ToIntMapping{
 
 var globalStringToIntMappingSeq = &StringToIntMappingSeq{
 	mapping: make(map[string]int),
+}
+
+var globalStringToInt64MappingSeq = &StringToInt64MappingSeq{
+	mapping: make(map[string]int64),
 }
 
 func (e *EchoMapping) GenerateKey(appid string, s int64) string {
@@ -95,4 +105,18 @@ func GetMappingSeq(key string) int {
 	globalStringToIntMappingSeq.mu.Lock()
 	defer globalStringToIntMappingSeq.mu.Unlock()
 	return globalStringToIntMappingSeq.mapping[key]
+}
+
+// AddMapping 添加一个新的映射
+func AddMappingFileTimeLimit(key string, value int64) {
+	globalStringToInt64MappingSeq.mu.Lock()
+	defer globalStringToInt64MappingSeq.mu.Unlock()
+	globalStringToInt64MappingSeq.mapping[key] = value
+}
+
+// GetMapping 根据给定的 string 键获取映射值
+func GetMappingFileTimeLimit(key string) int64 {
+	globalStringToInt64MappingSeq.mu.Lock()
+	defer globalStringToInt64MappingSeq.mu.Unlock()
+	return globalStringToInt64MappingSeq.mapping[key]
 }
