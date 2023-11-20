@@ -485,30 +485,44 @@ func (p *Processors) Autobind(data interface{}) error {
 		mylog.Printf("Error storing ID: %v", err)
 		return nil
 	}
-
-	if strconv.FormatInt(userid64, 10) == vuinstr {
-		mylog.Errorf("vuin already binded")
-		return nil
+	// 单独检查vuin和gid的绑定状态
+	vuinBound := strconv.FormatInt(userid64, 10) == vuinstr
+	gidBound := strconv.FormatInt(GroupID64, 10) == idValuestr
+	// 根据不同情况进行处理
+	if !vuinBound && !gidBound {
+		// 两者都未绑定，更新两个映射
+		if err := updateMappings(userid64, vuinValue, GroupID64, idValue); err != nil {
+			return err
+		}
+	} else if !vuinBound {
+		// 只有vuin未绑定，更新vuin映射
+		if err := idmap.UpdateVirtualValuev2(userid64, vuinValue); err != nil {
+			mylog.Printf("Error UpdateVirtualValuev2 for vuin: %v", err)
+			return err
+		}
+	} else if !gidBound {
+		// 只有gid未绑定，更新gid映射
+		if err := idmap.UpdateVirtualValuev2(GroupID64, idValue); err != nil {
+			mylog.Printf("Error UpdateVirtualValuev2 for gid: %v", err)
+			return err
+		}
+	} else {
+		// 两者都已绑定，不执行任何操作
+		mylog.Errorf("Both vuin and gid are already binded")
 	}
 
-	if strconv.FormatInt(GroupID64, 10) == idValuestr {
-		mylog.Errorf("gid already binded")
-		return nil
-	}
+	return nil
+}
 
-	// 更新第一个映射
-	mylog.Printf("%v---->%v", userid64, vuinValue)
+// 更新映射的辅助函数
+func updateMappings(userid64, vuinValue, GroupID64, idValue int64) error {
 	if err := idmap.UpdateVirtualValuev2(userid64, vuinValue); err != nil {
-		mylog.Printf("Error UpdateVirtualValuev2: %v", err)
+		mylog.Printf("Error UpdateVirtualValuev2 for vuin: %v", err)
 		return err
 	}
-
-	// 更新第二个映射
-	mylog.Printf("%v---->%v", GroupID64, idValue)
 	if err := idmap.UpdateVirtualValuev2(GroupID64, idValue); err != nil {
-		mylog.Printf("Error UpdateVirtualValuev2: %v", err)
+		mylog.Printf("Error UpdateVirtualValuev2 for gid: %v", err)
 		return err
 	}
-
 	return nil
 }
