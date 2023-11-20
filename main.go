@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -51,11 +52,18 @@ func main() {
 		sys.InitBase() // 如果不是faststart模式，则执行初始化
 	}
 	if _, err := os.Stat("config.yml"); os.IsNotExist(err) {
-		// 获取内网IP地址
-		ip, err := sys.GetLocalIP()
-		if err != nil {
-			log.Println("Error retrieving the local IP address:", err)
-			return
+		var ip string
+		var err error
+		// 检查操作系统是否为Android
+		if runtime.GOOS == "android" {
+			ip = "127.0.0.1"
+		} else {
+			// 获取内网IP地址
+			ip, err = sys.GetLocalIP()
+			if err != nil {
+				log.Println("Error retrieving the local IP address:", err)
+				ip = "127.0.0.1"
+			}
 		}
 		// 将 <YOUR_SERVER_DIR> 替换成实际的内网IP地址 确保初始状态webui能够被访问
 		configData := strings.Replace(template.ConfigTemplate, "<YOUR_SERVER_DIR>", ip, -1)
