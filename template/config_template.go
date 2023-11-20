@@ -89,6 +89,7 @@ settings:
   develop_bot_id : "1234"           #开发者环境需自行获取botid 填入 用户请不要设置这两行...开发者调试用
   sandbox_mode : false              #默认false 如果你只希望沙箱频道使用,请改为true
   dev_message_id : false            #在沙盒和测试环境使用无限制msg_id 仅沙盒有效,正式环境请关闭,内测结束后,tx侧未来会移除
+  send_error : true                 #将报错用文本发出,避免机器人被审核报无响应
 
   title : "Gensokyo © 2023 - Hoshinonyaruko"              #程序的标题 如果多个机器人 可根据标题区分
  
