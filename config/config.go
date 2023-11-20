@@ -76,6 +76,8 @@ type Settings struct {
 	ImageLimitB            int      `yaml:"image_limit"`
 	RecordSampleRate       int      `yaml:"record_sampleRate"`
 	RecordBitRate          int      `yaml:"record_bitRate"`
+	NoWhiteResponse        string   `yaml:"No_White_Response"`
+	SendError              bool     `yaml:"send_error"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -898,3 +900,28 @@ func GetRecordBitRate() int {
 
 	return instance.Settings.RecordBitRate
 }
+
+// 获取NoWhiteResponse的值
+func GetNoWhiteResponse() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to NoWhiteResponse value.")
+		return ""
+	}
+	return instance.Settings.NoWhiteResponse
+}
+
+// 获取GetSendError的值
+func GetSendError() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetSendError value.")
+		return true
+	}
+	return instance.Settings.SendError
+}
+

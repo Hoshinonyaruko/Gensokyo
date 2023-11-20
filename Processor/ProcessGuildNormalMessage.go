@@ -26,7 +26,7 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 		//获取s
 		s := client.GetGlobalS()
 		//转换at
-		messageText := handlers.RevertTransformedText(data)
+		messageText := handlers.RevertTransformedText(data, "guild", p.Api, p.Apiv2)
 		if messageText == "" {
 			mylog.Printf("信息被自定义黑白名单拦截")
 			return nil
@@ -125,7 +125,7 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 		//转成int再互转
 		idmap.WriteConfigv2(fmt.Sprint(ChannelID64), "guild_id", data.GuildID)
 		//转换at
-		messageText := handlers.RevertTransformedText(data)
+		messageText := handlers.RevertTransformedText(data, "guild", p.Api, p.Apiv2)
 		if messageText == "" {
 			mylog.Printf("信息被自定义黑白名单拦截")
 			return nil

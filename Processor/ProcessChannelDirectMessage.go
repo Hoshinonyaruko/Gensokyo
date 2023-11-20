@@ -67,7 +67,7 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 		}
 		messageID := int(messageID64)
 		//转换at
-		messageText := handlers.RevertTransformedText(data)
+		messageText := handlers.RevertTransformedText(data, "guild_private", p.Api, p.Apiv2)
 		if messageText == "" {
 			mylog.Printf("信息被自定义黑白名单拦截")
 			return nil
@@ -127,7 +127,7 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 			//获取s
 			s := client.GetGlobalS()
 			//转换at
-			messageText := handlers.RevertTransformedText(data)
+			messageText := handlers.RevertTransformedText(data, "guild_private", p.Api, p.Apiv2)
 			if messageText == "" {
 				mylog.Printf("信息被自定义黑白名单拦截")
 				return nil
@@ -220,7 +220,7 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 			//直接储存 适用于私信场景私聊
 			idmap.WriteConfigv2(data.ChannelID, "guild_id", data.GuildID)
 			//转换at
-			messageText := handlers.RevertTransformedText(data)
+			messageText := handlers.RevertTransformedText(data, "guild_private", p.Api, p.Apiv2)
 			if messageText == "" {
 				mylog.Printf("信息被自定义黑白名单拦截")
 				return nil

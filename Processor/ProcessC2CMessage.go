@@ -50,8 +50,11 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 			log.Fatalf("Error storing ID: %v", err)
 		}
 		messageID := int(messageID64)
+		if len(data.Attachments) > 0 && data.Attachments[0].URL != "" {
+			p.Autobind(data)
+		}
 		//转换at
-		messageText := handlers.RevertTransformedText(data)
+		messageText := handlers.RevertTransformedText(data, "group_private", p.Api, p.Apiv2)
 		if messageText == "" {
 			mylog.Printf("信息被自定义黑白名单拦截")
 			return nil
@@ -107,7 +110,7 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 		//将私聊信息转化为群信息(特殊需求情况下)
 
 		//转换at
-		messageText := handlers.RevertTransformedText(data)
+		messageText := handlers.RevertTransformedText(data, "group_private", p.Api, p.Apiv2)
 		if messageText == "" {
 			mylog.Printf("信息被自定义黑白名单拦截")
 			return nil

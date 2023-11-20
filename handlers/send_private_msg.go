@@ -136,6 +136,11 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 				// 生成消息
 				msgseq := echo.GetMappingSeq(messageID)
 				echo.AddMappingSeq(messageID, msgseq+1)
+				//时间限制
+				lastSendTimestamp := echo.GetMappingFileTimeLimit(messageID)
+				now := time.Now()
+				millis := now.UnixMilli()
+				diff := millis - lastSendTimestamp
 				groupReply := generateGroupMessage(messageID, singleItem, "", msgseq+1)
 
 				// 进行类型断言
@@ -144,11 +149,25 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 					mylog.Printf("Error: Expected RichMediaMessage type for key %s.", key)
 					continue // 如果断言失败，跳过当前 url
 				}
-
-				// 发送消息
-				_, err := apiv2.PostC2CMessage(context.TODO(), UserID, richMediaMessage)
-				if err != nil {
-					mylog.Printf("发送 %s 私聊信息失败: %v", key, err)
+				richMediaMessageCopy := *richMediaMessage // 创建 richMediaMessage 的副本
+				mylog.Printf("上次发图(ms): %+v\n", diff)
+				if diff < 1000 {
+					waitDuration := time.Duration(1200-diff) * time.Millisecond
+					mylog.Printf("等待 %v...\n", waitDuration)
+					time.AfterFunc(waitDuration, func() {
+						mylog.Println("延迟完成")
+						_, err := apiv2.PostC2CMessage(context.TODO(), UserID, richMediaMessageCopy)
+						echo.AddMappingFileTimeLimit(messageID, millis)
+						if err != nil {
+							mylog.Printf("发送 %s 私聊信息失败: %v", key, err)
+						}
+					})
+				} else { // 发送消息
+					_, err := apiv2.PostC2CMessage(context.TODO(), UserID, richMediaMessage)
+					echo.AddMappingFileTimeLimit(messageID, millis)
+					if err != nil {
+						mylog.Printf("发送 %s 私聊信息失败: %v", key, err)
+					}
 				}
 
 				// 发送成功回执
@@ -184,16 +203,30 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 
 	var guildID, channelID string
 	var err error
+	GroupID := message.Params.GroupID.(string)
 
 	if optionalGuildID != nil && optionalChannelID != nil {
 		guildID = *optionalGuildID
 		channelID = *optionalChannelID
 	} else {
-		//默认私信场景 通过仅有的userid来还原频道私信需要的guildid
-		guildID, channelID, err = getGuildIDFromMessage(message)
-		if err != nil {
-			mylog.Printf("获取 guild_id 和 channel_id 出错: %v", err)
-			return
+		//频道私信,虚拟成群 通过仅有的group来还原频道私信需要的guildid channelID
+		if GroupID != "" {
+			guildID, err = idmap.ReadConfigv2(GroupID, "guild_id")
+			if err != nil {
+				mylog.Printf("根据GroupID获取guild_id失败: %v", err)
+				return
+			}
+			channelID, err = idmap.RetrieveRowByIDv2(GroupID)
+			if err != nil {
+				mylog.Printf("根据GroupID获取channelID失败: %v", err)
+				return
+			}
+		} else { //默认私信场景 通过仅有的userid来还原频道私信需要的guildid channelID
+			guildID, channelID, err = getGuildIDFromMessage(message)
+			if err != nil {
+				mylog.Printf("获取 guild_id 和 channel_id 出错: %v", err)
+				return
+			}
 		}
 	}
 	RawUserID := message.Params.UserID.(string)

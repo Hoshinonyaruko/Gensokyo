@@ -56,8 +56,11 @@ type GroupList struct {
 
 func getGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
 	//群还不支持,这里取得是频道的,如果后期支持了群,那都请求,一起返回
+	var groupList GroupList
 	actiontype := "guild"
 	if actiontype == "guild" {
+		// 初始化 groupList.Data 为一个空数组
+		groupList.Data = []Group{}
 		// 检查时间差异
 		if time.Since(lastCallTime) > 5*time.Minute {
 			// 如果超过5分钟，则重置分页状态
@@ -83,7 +86,6 @@ func getGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 				return
 			}
 		}
-		var groups []Group
 		for _, guild := range guilds {
 			joinedAtTime, err := guild.JoinedAt.Time()
 			if err != nil {
@@ -100,7 +102,7 @@ func getGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 				MaxMemberCount:  strconv.FormatInt(guild.MaxMembers, 10),
 				MemberCount:     strconv.Itoa(guild.MemberCount),
 			}
-			groups = append(groups, group)
+			groupList.Data = append(groupList.Data, group)
 			// 获取每个guild的channel信息
 			channels, err := api.Channels(context.TODO(), guild.ID) // 使用guild.ID作为参数
 			if err != nil {
@@ -123,15 +125,13 @@ func getGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 					MaxMemberCount:  "", // 频道没有直接对应的最大成员数字段
 					MemberCount:     "", // 频道没有直接对应的成员数字段
 				}
-				groups = append(groups, channelGroup)
+				groupList.Data = append(groupList.Data, channelGroup)
 			}
 		}
-		groupList := GroupList{
-			Data:    groups,
-			Message: "",
-			RetCode: 0,
-			Status:  "ok",
-		}
+		groupList.Message = ""
+		groupList.RetCode = 0
+		groupList.Status = "ok"
+
 		if message.Echo == "" {
 			groupList.Echo = "0"
 		} else {
