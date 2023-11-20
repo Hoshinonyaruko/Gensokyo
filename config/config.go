@@ -924,3 +924,4 @@ func GetSendError() bool {
 	}
 	return instance.Settings.SendError
 }
+
