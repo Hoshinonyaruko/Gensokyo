@@ -150,6 +150,7 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 					continue // 如果断言失败，跳过当前 url
 				}
 				richMediaMessageCopy := *richMediaMessage // 创建 richMediaMessage 的副本
+				mylog.Printf("上次发图(ms): %+v\n", diff)
 				if diff < 1000 {
 					waitDuration := time.Duration(1200-diff) * time.Millisecond
 					mylog.Printf("等待 %v...\n", waitDuration)

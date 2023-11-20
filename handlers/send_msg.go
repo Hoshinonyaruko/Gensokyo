@@ -144,15 +144,34 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 				}
 
 				mylog.Printf("richMediaMessage: %+v\n", richMediaMessage)
+				richMediaMessageCopy := *richMediaMessage // 创建 richMediaMessage 的副本
+				mylog.Printf("上次发图(ms): %+v\n", diff)
 				if diff < 1000 {
 					waitDuration := time.Duration(1200-diff) * time.Millisecond
 					mylog.Printf("等待 %v...\n", waitDuration)
 					time.AfterFunc(waitDuration, func() {
 						mylog.Println("延迟完成")
-						_, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), richMediaMessage)
+						_, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), richMediaMessageCopy)
 						echo.AddMappingFileTimeLimit(messageID, millis)
 						if err != nil {
-							mylog.Printf("发送 %s 信息失败_send_group_msg: %v", key, err)
+							mylog.Printf("发送 %s 信息失败_send_msg: %v", key, err)
+							if config.GetSendError() { //把报错当作文本发出去
+								msgseq := echo.GetMappingSeq(messageID)
+								echo.AddMappingSeq(messageID, msgseq+1)
+								groupReply := generateGroupMessage(messageID, nil, err.Error(), msgseq+1)
+								// 进行类型断言
+								groupMessage, ok := groupReply.(*dto.MessageToCreate)
+								if !ok {
+									mylog.Println("Error: Expected MessageToCreate type.")
+									return // 或其他错误处理
+								}
+								groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
+								//重新为err赋值
+								_, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
+								if err != nil {
+									mylog.Printf("发送文本报错信息失败: %v", err)
+								}
+							}
 						}
 					})
 				} else {
