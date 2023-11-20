@@ -129,6 +129,11 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 				singleItem[key] = []string{url} // 创建一个只包含一个 URL 的 singleItem
 				msgseq := echo.GetMappingSeq(messageID)
 				echo.AddMappingSeq(messageID, msgseq+1)
+				//时间限制
+				lastSendTimestamp := echo.GetMappingFileTimeLimit(messageID)
+				now := time.Now()
+				millis := now.UnixMilli()
+				diff := millis - lastSendTimestamp
 				groupReply := generateGroupMessage(messageID, singleItem, "", msgseq+1)
 
 				// 进行类型断言
@@ -139,9 +144,23 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 				}
 
 				mylog.Printf("richMediaMessage: %+v\n", richMediaMessage)
-				_, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), richMediaMessage)
-				if err != nil {
-					mylog.Printf("发送 %s 信息失败_send_msg: %v", key, err)
+				if diff < 1000 {
+					waitDuration := time.Duration(1200-diff) * time.Millisecond
+					mylog.Printf("等待 %v...\n", waitDuration)
+					time.AfterFunc(waitDuration, func() {
+						mylog.Println("延迟完成")
+						_, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), richMediaMessage)
+						echo.AddMappingFileTimeLimit(messageID, millis)
+						if err != nil {
+							mylog.Printf("发送 %s 信息失败_send_group_msg: %v", key, err)
+						}
+					})
+				} else {
+					_, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), richMediaMessage)
+					echo.AddMappingFileTimeLimit(messageID, millis)
+					if err != nil {
+						mylog.Printf("发送 %s 信息失败_send_group_msg: %v", key, err)
+					}
 				}
 				//发送成功回执
 				SendResponse(client, err, &message)

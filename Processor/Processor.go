@@ -424,3 +424,91 @@ func SendMessage(messageText string, data interface{}, messageType string, api o
 
 	return nil
 }
+
+// autobind 函数接受 interface{} 类型的数据
+// commit by 紫夜 2023-11-19
+func (p *Processors) Autobind(data interface{}) error {
+	var realID string
+	var groupID string
+	var attachmentURL string
+
+	// 群at
+	switch v := data.(type) {
+	case *dto.WSGroupATMessageData:
+		realID = v.Author.ID
+		groupID = v.GroupID
+		attachmentURL = v.Attachments[0].URL
+		//群私聊
+	case *dto.WSC2CMessageData:
+		realID = v.Author.ID
+		groupID = v.GroupID
+		attachmentURL = v.Attachments[0].URL
+	default:
+		return fmt.Errorf("未知的数据类型")
+	}
+
+	// 从 URL 中提取 newRowValue (vuin)
+	vuinRegex := regexp.MustCompile(`vuin=(\d+)`)
+	vuinMatches := vuinRegex.FindStringSubmatch(attachmentURL)
+	if len(vuinMatches) < 2 {
+		mylog.Errorf("无法从 URL 中提取 vuin")
+		return nil
+	}
+	vuinstr := vuinMatches[1]
+	vuinValue, err := strconv.ParseInt(vuinMatches[1], 10, 64)
+	if err != nil {
+		return err
+	}
+	// 从 URL 中提取第二个 newRowValue (群号)
+	idRegex := regexp.MustCompile(`gchatpic_new/(\d+)/`)
+	idMatches := idRegex.FindStringSubmatch(attachmentURL)
+	if len(idMatches) < 2 {
+		mylog.Errorf("无法从 URL 中提取 ID")
+		return nil
+	}
+	idValuestr := idMatches[1]
+	idValue, err := strconv.ParseInt(idMatches[1], 10, 64)
+	if err != nil {
+		return err
+	}
+
+	//获取虚拟值
+	// 映射str的GroupID到int
+	GroupID64, err := idmap.StoreIDv2(groupID)
+	if err != nil {
+		mylog.Errorf("failed to convert ChannelID to int: %v", err)
+		return nil
+	}
+	// 映射str的userid到int
+	userid64, err := idmap.StoreIDv2(realID)
+	if err != nil {
+		mylog.Printf("Error storing ID: %v", err)
+		return nil
+	}
+
+	if strconv.FormatInt(userid64, 10) == vuinstr {
+		mylog.Errorf("vuin already binded")
+		return nil
+	}
+
+	if strconv.FormatInt(GroupID64, 10) == idValuestr {
+		mylog.Errorf("gid already binded")
+		return nil
+	}
+
+	// 更新第一个映射
+	mylog.Printf("%v---->%v", userid64, vuinValue)
+	if err := idmap.UpdateVirtualValuev2(userid64, vuinValue); err != nil {
+		mylog.Printf("Error UpdateVirtualValuev2: %v", err)
+		return err
+	}
+
+	// 更新第二个映射
+	mylog.Printf("%v---->%v", GroupID64, idValue)
+	if err := idmap.UpdateVirtualValuev2(GroupID64, idValue); err != nil {
+		mylog.Printf("Error UpdateVirtualValuev2: %v", err)
+		return err
+	}
+
+	return nil
+}

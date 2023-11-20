@@ -50,6 +50,9 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 			log.Fatalf("Error storing ID: %v", err)
 		}
 		messageID := int(messageID64)
+		if data.Attachments[0].URL != "" {
+			p.Autobind(data)
+		}
 		//转换at
 		messageText := handlers.RevertTransformedText(data, "group_private", p.Api, p.Apiv2)
 		if messageText == "" {
