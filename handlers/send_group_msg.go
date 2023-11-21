@@ -133,6 +133,9 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				echo.AddMappingSeq(messageID, msgseq+1)
 				//时间限制
 				lastSendTimestamp := echo.GetMappingFileTimeLimit(messageID)
+				if lastSendTimestamp == 0 {
+					lastSendTimestamp = echo.GetFileTimeLimit()
+				}
 				now := time.Now()
 				millis := now.UnixMilli()
 				diff := millis - lastSendTimestamp
@@ -153,6 +156,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 						mylog.Println("延迟完成")
 						_, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), richMediaMessageCopy)
 						echo.AddMappingFileTimeLimit(messageID, millis)
+						echo.AddFileTimeLimit(millis)
 						if err != nil {
 							mylog.Printf("发送 %s 信息失败_send_group_msg: %v", key, err)
 							if config.GetSendError() { //把报错当作文本发出去
@@ -177,8 +181,26 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				} else {
 					_, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), richMediaMessage)
 					echo.AddMappingFileTimeLimit(messageID, millis)
+					echo.AddFileTimeLimit(millis)
 					if err != nil {
 						mylog.Printf("发送 %s 信息失败_send_group_msg: %v", key, err)
+						if config.GetSendError() { //把报错当作文本发出去
+							msgseq := echo.GetMappingSeq(messageID)
+							echo.AddMappingSeq(messageID, msgseq+1)
+							groupReply := generateGroupMessage(messageID, nil, err.Error(), msgseq+1)
+							// 进行类型断言
+							groupMessage, ok := groupReply.(*dto.MessageToCreate)
+							if !ok {
+								mylog.Println("Error: Expected MessageToCreate type.")
+								return // 或其他错误处理
+							}
+							groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
+							//重新为err赋值
+							_, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
+							if err != nil {
+								mylog.Printf("发送文本报错信息失败: %v", err)
+							}
+						}
 					}
 				}
 				//发送成功回执
