@@ -36,8 +36,18 @@ func CombinedMiddleware(api openapi.OpenAPI, apiV2 openapi.OpenAPI) gin.HandlerF
 		if strings.HasPrefix(c.Request.URL.Path, "/webui/api") {
 			// 处理API请求
 			appIDStr := config.GetAppIDStr()
+			//todo 完善logs的 get方法 来获取历史日志
 			// 检查路径是否匹配 `/api/{uin}/process/logs`
 			if strings.HasPrefix(c.Param("filepath"), "/api/") && strings.HasSuffix(c.Param("filepath"), "/process/logs") {
+				if c.GetHeader("Upgrade") == "websocket" {
+					mylog.WsHandlerWithDependencies(c)
+				} else {
+					getProcessLogs(c)
+				}
+				return
+			}
+			//主页日志
+			if c.Param("filepath") == "/api/logs" {
 				if c.GetHeader("Upgrade") == "websocket" {
 					mylog.WsHandlerWithDependencies(c)
 				} else {
@@ -342,6 +352,7 @@ func HandleProcessStatusRequest(c *gin.Context) {
 	c.JSON(http.StatusOK, responseData)
 }
 
+// 待完善 从mylog通道取出日志信息,然后一股脑返回
 func getProcessLogs(c *gin.Context) {
 	c.JSON(200, []interface{}{})
 }
