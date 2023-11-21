@@ -17,15 +17,18 @@ require (
 	github.com/mvdan/xurls v1.1.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20200410134404-eec4a21b6bb0 // indirect
 	github.com/wdvxdr1123/go-silk v0.0.0-20220304095002-f67345df09ea // indirect
+	golang.org/x/time v0.4.0 // indirect
 	modernc.org/libc v1.8.1 // indirect
 	modernc.org/mathutil v1.2.2 // indirect
 	modernc.org/memory v1.0.4 // indirect
 )
 
 replace github.com/tencent-connect/botgo => ./botgo
+
 replace github.com/wdvxdr1123/go-silk => ./go-silk
 
 require (
+	github.com/aliyun/aliyun-oss-go-sdk v3.0.1+incompatible
 	github.com/bytedance/sonic v1.9.1 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect

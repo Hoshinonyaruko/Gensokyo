@@ -171,7 +171,9 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 								}
 								groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
 								//重新为err赋值
+								mylog.Printf("准备发送文本报错信息: %v", groupMessage)
 								_, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
+								mylog.Printf("发送文本报错信息成功: %v", groupMessage)
 								if err != nil {
 									mylog.Printf("发送文本报错信息失败: %v", err)
 								}
