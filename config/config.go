@@ -78,6 +78,9 @@ type Settings struct {
 	RecordBitRate          int      `yaml:"record_bitRate"`
 	NoWhiteResponse        string   `yaml:"No_White_Response"`
 	SendError              bool     `yaml:"send_error"`
+	AddAtGroup             bool     `yaml:"add_at_group"`
+	SendErrorPicAsUrl      bool     `yaml:"send_error_pic_as_url"`
+	UrlPicTransfer         bool     `yaml:"url_pic_transfer"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -925,3 +928,38 @@ func GetSendError() bool {
 	return instance.Settings.SendError
 }
 
+// 获取GetAddAtGroup的值
+func GetAddAtGroup() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetAddGroupAt value.")
+		return true
+	}
+	return instance.Settings.AddAtGroup
+}
+
+// 获取GetSendErrorPicAsUrl的值
+func GetSendErrorPicAsUrl() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetErrorPicAsUrl value.")
+		return true
+	}
+	return instance.Settings.SendErrorPicAsUrl
+}
+
+// 获取GetUrlPicTransfer的值
+func GetUrlPicTransfer() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetUrlPicTransfer value.")
+		return true
+	}
+	return instance.Settings.UrlPicTransfer
+}
