@@ -29,6 +29,17 @@ type StringToInt64MappingSeq struct {
 	mapping map[string]int64
 }
 
+// Int64Stack 用于存储 int64 的栈
+type Int64Stack struct {
+	mu    sync.Mutex
+	stack []int64
+}
+
+// 定义一个全局的 Int64Stack 实例
+var globalInt64Stack = &Int64Stack{
+	stack: make([]int64, 0),
+}
+
 var globalEchoMapping = &EchoMapping{
 	msgTypeMapping: make(map[string]string),
 	msgIDMapping:   make(map[string]string),
@@ -119,4 +130,29 @@ func GetMappingFileTimeLimit(key string) int64 {
 	globalStringToInt64MappingSeq.mu.Lock()
 	defer globalStringToInt64MappingSeq.mu.Unlock()
 	return globalStringToInt64MappingSeq.mapping[key]
+}
+
+// Add 添加一个新的 int64 到全局栈中
+func AddFileTimeLimit(value int64) {
+	globalInt64Stack.mu.Lock()
+	defer globalInt64Stack.mu.Unlock()
+
+	// 添加新元素到栈顶
+	globalInt64Stack.stack = append(globalInt64Stack.stack, value)
+
+	// 如果栈的大小超过 10，移除最早添加的元素
+	if len(globalInt64Stack.stack) > 10 {
+		globalInt64Stack.stack = globalInt64Stack.stack[1:]
+	}
+}
+
+// Get 获取全局栈顶的元素
+func GetFileTimeLimit() int64 {
+	globalInt64Stack.mu.Lock()
+	defer globalInt64Stack.mu.Unlock()
+
+	if len(globalInt64Stack.stack) == 0 {
+		return 0 // 当栈为空时返回 0
+	}
+	return globalInt64Stack.stack[len(globalInt64Stack.stack)-1]
 }
