@@ -73,6 +73,7 @@ settings:
   remove_prefix : false             #是否忽略公域机器人指令前第一个/
   remove_at : false                 #是否忽略公域机器人指令前第一个[CQ:aq,qq=机器人] 场景(公域机器人,但插件未适配at开头)
   remove_bot_at_group : true        #因为群聊机器人不支持发at,开启本开关会自动隐藏群机器人发出的at(不影响频道场景)
+  add_at_group : false              #自动在群聊指令前加上at,某些机器人写法特别,必须有at才反应时,请打开,默认请关闭(如果需要at,不需要at指令混杂,请优化代码适配群场景,群场景目前没有at概念)
 
   white_prefix_mode : false         #公域 过审用 指令白名单模式开关 如果审核严格 请开启并设置白名单指令 以白名单开头的指令会被通过,反之被拦截
   white_prefixs : [""]              #可设置多个 比如设置 机器人 测试 则只有信息以机器人 测试开头会相应 remove_prefix remove_at 需为true时生效
@@ -90,6 +91,8 @@ settings:
   sandbox_mode : false              #默认false 如果你只希望沙箱频道使用,请改为true
   dev_message_id : false            #在沙盒和测试环境使用无限制msg_id 仅沙盒有效,正式环境请关闭,内测结束后,tx侧未来会移除
   send_error : true                 #将报错用文本发出,避免机器人被审核报无响应
+  send_error_pic_as_url : false     #临时解决22009报错
+  url_pic_transfer : false          #可与url_pic_transfer配合使用 也可单独使用 把图片url(任意来源图链)变成你备案的白名单url 需要较高上下行+ssl+自备案域名+设置白名单域名(是目前gsk门槛最高的配置)
 
   title : "Gensokyo © 2023 - Hoshinonyaruko"              #程序的标题 如果多个机器人 可根据标题区分
  
