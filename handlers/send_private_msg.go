@@ -138,6 +138,9 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 				echo.AddMappingSeq(messageID, msgseq+1)
 				//时间限制
 				lastSendTimestamp := echo.GetMappingFileTimeLimit(messageID)
+				if lastSendTimestamp == 0 {
+					lastSendTimestamp = echo.GetFileTimeLimit()
+				}
 				now := time.Now()
 				millis := now.UnixMilli()
 				diff := millis - lastSendTimestamp
@@ -158,6 +161,7 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 						mylog.Println("延迟完成")
 						_, err := apiv2.PostC2CMessage(context.TODO(), UserID, richMediaMessageCopy)
 						echo.AddMappingFileTimeLimit(messageID, millis)
+						echo.AddFileTimeLimit(millis)
 						if err != nil {
 							mylog.Printf("发送 %s 私聊信息失败: %v", key, err)
 						}
@@ -165,6 +169,7 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 				} else { // 发送消息
 					_, err := apiv2.PostC2CMessage(context.TODO(), UserID, richMediaMessage)
 					echo.AddMappingFileTimeLimit(messageID, millis)
+					echo.AddFileTimeLimit(millis)
 					if err != nil {
 						mylog.Printf("发送 %s 私聊信息失败: %v", key, err)
 					}
