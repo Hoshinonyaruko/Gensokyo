@@ -27,6 +27,10 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 		mylog.Printf("信息被自定义黑白名单拦截")
 		return nil
 	}
+	//群没有at,但用户可以选择加一个
+	if config.GetAddAtGroup() {
+		messageText = "[CQ:at,qq=" + config.GetAppIDStr() + "] " + messageText
+	}
 	//框架内指令
 	p.HandleFrameworkCommand(messageText, data, "group")
 	// 转换appid
