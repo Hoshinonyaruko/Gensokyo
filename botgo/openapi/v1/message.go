@@ -191,7 +191,7 @@ func getGroupURLBySendType(msgType dto.SendType) uri {
 }
 
 // PostGroupMessage 回复群消息
-func (o *openAPI) PostGroupMessage(ctx context.Context, groupID string, msg dto.APIMessage) (*dto.Message, error) {
+func (o *openAPI) PostGroupMessage(ctx context.Context, groupID string, msg dto.APIMessage) (*dto.GroupMessageResponse, error) {
 	resp, err := o.request(ctx).
 		SetResult(dto.Message{}).
 		SetPathParam("group_id", groupID).
@@ -200,7 +200,15 @@ func (o *openAPI) PostGroupMessage(ctx context.Context, groupID string, msg dto.
 	if err != nil {
 		return nil, err
 	}
-	return resp.Result().(*dto.Message), nil
+	msgType := msg.GetSendType()
+	result := &dto.GroupMessageResponse{}
+	switch msgType {
+	case dto.RichMedia:
+		result.MediaResponse = resp.Result().(*dto.MediaResponse)
+	default:
+		result.Message = resp.Result().(*dto.Message)
+	}
+	return result, nil
 }
 
 func getC2CURLBySendType(msgType dto.SendType) uri {

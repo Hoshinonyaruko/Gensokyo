@@ -103,6 +103,70 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		if config.GetDevMsgID() {
 			messageID = "1000"
 		}
+		var singleItem = make(map[string][]string)
+		var imageType, imageUrl string
+		imageCount := 0
+
+		// 检查不同类型的图片并计算数量
+		if imageURLs, ok := foundItems["local_image"]; ok && len(imageURLs) == 1 {
+			imageType = "local_image"
+			imageUrl = imageURLs[0]
+			imageCount++
+		} else if imageURLs, ok := foundItems["url_image"]; ok && len(imageURLs) == 1 {
+			imageType = "url_image"
+			imageUrl = imageURLs[0]
+			imageCount++
+		} else if base64Images, ok := foundItems["base64_image"]; ok && len(base64Images) == 1 {
+			imageType = "base64_image"
+			imageUrl = base64Images[0]
+			imageCount++
+		}
+
+		if imageCount == 1 && messageText != "" {
+			mylog.Printf("发图文混合信息")
+			// 创建包含单个图片的 singleItem
+			singleItem[imageType] = []string{imageUrl}
+			msgseq := echo.GetMappingSeq(messageID)
+			echo.AddMappingSeq(messageID, msgseq+1)
+			groupReply := generateGroupMessage(messageID, singleItem, "", msgseq+1)
+			// 进行类型断言
+			richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
+			if !ok {
+				mylog.Printf("Error: Expected RichMediaMessage type for key ")
+			}
+			// 上传图片并获取FileInfo
+			fileInfo, err := uploadMedia(context.TODO(), message.Params.GroupID.(string), richMediaMessage, apiv2)
+			if err != nil {
+				mylog.Printf("上传图片失败: %v", err)
+				return // 或其他错误处理
+			}
+			// 创建包含文本和图像信息的消息
+			msgseq = echo.GetMappingSeq(messageID)
+			echo.AddMappingSeq(messageID, msgseq+1)
+			groupMessage := &dto.MessageToCreate{
+				Content: messageText, // 添加文本内容
+				Media: dto.Media{
+					FileInfo: fileInfo, // 添加图像信息
+				},
+				MsgID:   messageID,
+				MsgSeq:  msgseq,
+				MsgType: 7, // 假设7是组合消息类型
+			}
+			groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
+
+			// 发送组合消息
+			_, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
+			if err != nil {
+				mylog.Printf("发送组合消息失败: %v", err)
+				return // 或其他错误处理
+			}
+
+			// 发送成功回执
+			SendResponse(client, err, &message)
+
+			delete(foundItems, imageType) // 从foundItems中删除已处理的图片项
+		}
+
 		// 优先发送文本信息
 		if messageText != "" {
 			msgseq := echo.GetMappingSeq(messageID)
@@ -134,14 +198,6 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				//mylog.Println("singleItem:", singleItem)
 				msgseq := echo.GetMappingSeq(messageID)
 				echo.AddMappingSeq(messageID, msgseq+1)
-				//时间限制
-				lastSendTimestamp := echo.GetMappingFileTimeLimit(messageID)
-				if lastSendTimestamp == 0 {
-					lastSendTimestamp = echo.GetFileTimeLimit()
-				}
-				now := time.Now()
-				millis := now.UnixMilli()
-				diff := millis - lastSendTimestamp
 				groupReply := generateGroupMessage(messageID, singleItem, "", msgseq+1)
 				// 进行类型断言
 				richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
@@ -149,95 +205,45 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 					mylog.Printf("Error: Expected RichMediaMessage type for key %s.", key)
 					continue // 跳过这个项，继续下一个
 				}
-				mylog.Printf("richMediaMessage: %+v\n", richMediaMessage)
-				richMediaMessageCopy := *richMediaMessage // 创建 richMediaMessage 的副本
-				mylog.Printf("上次发图(ms): %+v\n", diff)
-				if diff < 1000 {
-					waitDuration := time.Duration(1200-diff) * time.Millisecond
-					mylog.Printf("等待 %v...\n", waitDuration)
-					time.AfterFunc(waitDuration, func() {
-						mylog.Println("延迟完成")
-						_, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), richMediaMessageCopy)
-						echo.AddMappingFileTimeLimit(messageID, millis)
-						echo.AddFileTimeLimit(millis)
+				message_return, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), richMediaMessage)
+				if err != nil {
+					mylog.Printf("发送 %s 信息失败_send_group_msg: %v", key, err)
+					if config.GetSendError() { //把报错当作文本发出去
+						msgseq := echo.GetMappingSeq(messageID)
+						echo.AddMappingSeq(messageID, msgseq+1)
+						groupReply := generateGroupMessage(messageID, nil, err.Error(), msgseq+1)
+						// 进行类型断言
+						groupMessage, ok := groupReply.(*dto.MessageToCreate)
+						if !ok {
+							mylog.Println("Error: Expected MessageToCreate type.")
+							return // 或其他错误处理
+						}
+						groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
+						//重新为err赋值
+						_, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 						if err != nil {
-							mylog.Printf("发送 %s 信息失败_send_group_msg: %v", key, err)
-							if config.GetSendError() { //把报错当作文本发出去
-								msgseq := echo.GetMappingSeq(messageID)
-								echo.AddMappingSeq(messageID, msgseq+1)
-								groupReply := generateGroupMessage(messageID, nil, err.Error(), msgseq+1)
-								// 进行类型断言
-								groupMessage, ok := groupReply.(*dto.MessageToCreate)
-								if !ok {
-									mylog.Println("Error: Expected MessageToCreate type.")
-									return // 或其他错误处理
-								}
-								groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
-								//重新为err赋值
-								_, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
-								if err != nil {
-									mylog.Printf("发送文本报错信息失败: %v", err)
-								}
-							}
-							if config.GetSendErrorPicAsUrl() {
-								msgseq := echo.GetMappingSeq(messageID)
-								echo.AddMappingSeq(messageID, msgseq+1)
-								groupReply := generateGroupMessage(messageID, nil, richMediaMessageCopy.URL, msgseq+1)
-								// 进行类型断言
-								groupMessage, ok := groupReply.(*dto.MessageToCreate)
-								if !ok {
-									mylog.Println("Error: Expected MessageToCreate type.")
-									return // 或其他错误处理
-								}
-								groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
-								//重新为err赋值
-								_, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
-								if err != nil {
-									mylog.Printf("发送图片报错后转url发送失败: %v", err)
-								}
-							}
+							mylog.Printf("发送文本报错信息失败: %v", err)
 						}
-					})
-				} else {
-					_, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), richMediaMessage)
-					echo.AddMappingFileTimeLimit(messageID, millis)
-					echo.AddFileTimeLimit(millis)
+					}
+				}
+				if message_return.MediaResponse.FileInfo != "" {
+					msgseq := echo.GetMappingSeq(messageID)
+					echo.AddMappingSeq(messageID, msgseq+1)
+					media := dto.Media{
+						FileInfo: message_return.MediaResponse.FileInfo,
+					}
+					groupMessage := &dto.MessageToCreate{
+						Content: " ",
+						MsgID:   messageID,
+						MsgSeq:  msgseq,
+						MsgType: 7, // 默认文本类型
+						Media:   media,
+					}
+					groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
+					//重新为err赋值
+					_, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 					if err != nil {
-						mylog.Printf("发送 %s 信息失败_send_group_msg: %v", key, err)
-						if config.GetSendError() { //把报错当作文本发出去
-							msgseq := echo.GetMappingSeq(messageID)
-							echo.AddMappingSeq(messageID, msgseq+1)
-							groupReply := generateGroupMessage(messageID, nil, err.Error(), msgseq+1)
-							// 进行类型断言
-							groupMessage, ok := groupReply.(*dto.MessageToCreate)
-							if !ok {
-								mylog.Println("Error: Expected MessageToCreate type.")
-								return // 或其他错误处理
-							}
-							groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
-							//重新为err赋值
-							_, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
-							if err != nil {
-								mylog.Printf("发送文本报错信息失败: %v", err)
-							}
-						}
-						if config.GetSendErrorPicAsUrl() {
-							msgseq := echo.GetMappingSeq(messageID)
-							echo.AddMappingSeq(messageID, msgseq+1)
-							groupReply := generateGroupMessage(messageID, nil, richMediaMessageCopy.URL, msgseq+1)
-							// 进行类型断言
-							groupMessage, ok := groupReply.(*dto.MessageToCreate)
-							if !ok {
-								mylog.Println("Error: Expected MessageToCreate type.")
-								return // 或其他错误处理
-							}
-							groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
-							//重新为err赋值
-							_, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
-							if err != nil {
-								mylog.Printf("发送图片报错后转url发送失败: %v", err)
-							}
-						}
+						mylog.Printf("发送图片失败: %v", err)
 					}
 				}
 				//发送成功回执
@@ -294,7 +300,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 	}
 }
 
-// 整理和组合富媒体信息
+// 上传富媒体信息
 func generateGroupMessage(id string, foundItems map[string][]string, messageText string, msgseq int) interface{} {
 	if imageURLs, ok := foundItems["local_image"]; ok && len(imageURLs) > 0 {
 		// 从本地路径读取图片
@@ -344,7 +350,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 			FileType:   1, // 1代表图片
 			URL:        imageURL,
 			Content:    "", // 这个字段文档没有了
-			SrvSendMsg: true,
+			SrvSendMsg: false,
 		}
 	} else if RecordURLs, ok := foundItems["local_record"]; ok && len(RecordURLs) > 0 {
 		// 从本地路径读取语音
@@ -385,7 +391,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 			FileType:   3, // 3代表语音
 			URL:        imageURL,
 			Content:    "", // 这个字段文档没有了
-			SrvSendMsg: true,
+			SrvSendMsg: false,
 		}
 	} else if imageURLs, ok := foundItems["url_image"]; ok && len(imageURLs) > 0 {
 		var newpiclink string
@@ -450,7 +456,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 			FileType:   1,          // 1代表图片
 			URL:        newpiclink, // 新图片链接
 			Content:    "",         // 这个字段文档没有了
-			SrvSendMsg: true,
+			SrvSendMsg: false,
 		}
 	} else if voiceURLs, ok := foundItems["base64_record"]; ok && len(voiceURLs) > 0 {
 		// 适配base64 slik
@@ -486,7 +492,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 				FileType:   3, // 3代表语音
 				URL:        imageURL,
 				Content:    "", // 这个字段文档没有了
-				SrvSendMsg: true,
+				SrvSendMsg: false,
 			}
 		}
 	} else if base64_image, ok := foundItems["base64_image"]; ok && len(base64_image) > 0 {
@@ -523,7 +529,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 				FileType:   1, // 1代表图片
 				URL:        imageURL,
 				Content:    "", // 这个字段文档没有了
-				SrvSendMsg: true,
+				SrvSendMsg: false,
 			}
 		}
 	} else {
@@ -578,4 +584,15 @@ func GetMessageTypeByGroupid(appID string, GroupID interface{}) string {
 
 	key := appID + "_" + GroupIDStr
 	return echo.GetMsgTypeByKey(key)
+}
+
+// uploadMedia 上传媒体并返回FileInfo
+func uploadMedia(ctx context.Context, groupID string, richMediaMessage *dto.RichMediaMessage, apiv2 openapi.OpenAPI) (string, error) {
+	// 调用API来上传媒体
+	messageReturn, err := apiv2.PostGroupMessage(ctx, groupID, richMediaMessage)
+	if err != nil {
+		return "", err
+	}
+	// 返回上传后的FileInfo
+	return messageReturn.MediaResponse.FileInfo, nil
 }
