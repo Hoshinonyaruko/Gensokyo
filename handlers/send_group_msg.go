@@ -227,7 +227,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 						}
 					}
 				}
-				if message_return.MediaResponse.FileInfo != "" {
+				if message_return != nil && message_return.MediaResponse != nil && message_return.MediaResponse.FileInfo != "" {
 					msgseq := echo.GetMappingSeq(messageID)
 					echo.AddMappingSeq(messageID, msgseq+1)
 					media := dto.Media{
