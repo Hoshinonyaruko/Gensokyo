@@ -165,6 +165,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			SendResponse(client, err, &message)
 
 			delete(foundItems, imageType) // 从foundItems中删除已处理的图片项
+			messageText = ""
 		}
 
 		// 优先发送文本信息
