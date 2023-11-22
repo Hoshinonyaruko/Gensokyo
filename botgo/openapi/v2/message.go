@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/go-resty/resty/v2"
 	"github.com/tidwall/gjson"
 
 	"github.com/tencent-connect/botgo/dto"
@@ -191,16 +192,39 @@ func getGroupURLBySendType(msgType dto.SendType) uri {
 }
 
 // PostGroupMessage 回复群消息
-func (o *openAPIv2) PostGroupMessage(ctx context.Context, groupID string, msg dto.APIMessage) (*dto.Message, error) {
-	resp, err := o.request(ctx).
-		SetResult(dto.Message{}).
-		SetPathParam("group_id", groupID).
-		SetBody(msg).
-		Post(o.getURL(getGroupURLBySendType(msg.GetSendType())))
+func (o *openAPIv2) PostGroupMessage(ctx context.Context, groupID string, msg dto.APIMessage) (*dto.GroupMessageResponse, error) {
+	var resp *resty.Response
+	var err error
+
+	msgType := msg.GetSendType()
+	switch msgType {
+	case dto.RichMedia:
+		resp, err = o.request(ctx).
+			SetResult(dto.MediaResponse{}). // 设置为媒体响应类型
+			SetPathParam("group_id", groupID).
+			SetBody(msg).
+			Post(o.getURL(getGroupURLBySendType(msgType)))
+	default:
+		resp, err = o.request(ctx).
+			SetResult(dto.Message{}). // 设置为消息类型
+			SetPathParam("group_id", groupID).
+			SetBody(msg).
+			Post(o.getURL(getGroupURLBySendType(msgType)))
+	}
+
 	if err != nil {
 		return nil, err
 	}
-	return resp.Result().(*dto.Message), nil
+
+	result := &dto.GroupMessageResponse{}
+	switch msgType {
+	case dto.RichMedia:
+		result.MediaResponse = resp.Result().(*dto.MediaResponse)
+	default:
+		result.Message = resp.Result().(*dto.Message)
+	}
+
+	return result, nil
 }
 
 func getC2CURLBySendType(msgType dto.SendType) uri {
