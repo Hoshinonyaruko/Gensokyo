@@ -71,5 +71,4 @@ settings:
   No_White_Response : ""            #默认不兜底,强烈建议设置一个友善的兜底回复,告知审核机器人已无隐藏指令,如:你输入的指令不对哦,@机器人来获取可用指令
   send_error : true                 #将报错用文本发出,避免机器人被审核报无响应
   add_at_group : false              #自动在群聊指令前加上at,某些机器人写法特别,必须有at才反应时,请打开,默认请关闭(如果需要at,不需要at指令混杂,请优化代码适配群场景,群场景目前没有at概念
-  send_error_pic_as_url : false     #临时解决22009报错
-  url_pic_transfer : false          #可与url_pic_transfer配合使用 也可单独使用 把图片url(任意来源图链)变成你备案的白名单url 需要较高上下行+ssl+自备案域名+设置白名单域名(是目前gsk门槛最高的配置)
+  url_pic_transfer : false          #把图片url(任意来源图链)变成你备案的白名单url 需要较高上下行+ssl+自备案域名+设置白名单域名(暂时不需要)

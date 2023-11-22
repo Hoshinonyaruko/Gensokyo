@@ -25,6 +25,11 @@ type RichMediaMessage struct {
 	Content    string `json:"content,omitempty"`
 }
 
+// Meida message内的富媒体消息
+type Media struct {
+	FileInfo string `json:"file_info"`
+}
+
 // GetEventID 事件ID
 func (msg RichMediaMessage) GetEventID() string {
 	return msg.EventID
@@ -42,6 +47,7 @@ type MessageToCreate struct {
 	Embed   *Embed `json:"embed,omitempty"`
 	Ark     *Ark   `json:"ark,omitempty"`
 	Image   string `json:"image,omitempty"`
+	Media   Media  `json:"media,omitempty"`
 	// 要回复的消息id，为空是主动消息，公域机器人会异步审核，不为空是被动消息，公域机器人会校验语料
 	MsgID            string                    `json:"msg_id,omitempty"`
 	MessageReference *MessageReference         `json:"message_reference,omitempty"`

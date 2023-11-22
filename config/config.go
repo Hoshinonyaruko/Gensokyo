@@ -79,7 +79,6 @@ type Settings struct {
 	NoWhiteResponse        string   `yaml:"No_White_Response"`
 	SendError              bool     `yaml:"send_error"`
 	AddAtGroup             bool     `yaml:"add_at_group"`
-	SendErrorPicAsUrl      bool     `yaml:"send_error_pic_as_url"`
 	UrlPicTransfer         bool     `yaml:"url_pic_transfer"`
 }
 
@@ -938,18 +937,6 @@ func GetAddAtGroup() bool {
 		return true
 	}
 	return instance.Settings.AddAtGroup
-}
-
-// 获取GetSendErrorPicAsUrl的值
-func GetSendErrorPicAsUrl() bool {
-	mu.Lock()
-	defer mu.Unlock()
-
-	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetErrorPicAsUrl value.")
-		return true
-	}
-	return instance.Settings.SendErrorPicAsUrl
 }
 
 // 获取GetUrlPicTransfer的值

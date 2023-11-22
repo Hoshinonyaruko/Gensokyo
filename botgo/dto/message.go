@@ -41,6 +41,20 @@ type Message struct {
 	SrcGuildID string `json:"src_guild_id"`
 }
 
+type MediaResponse struct {
+	//UUID
+	FileUUID string `json:"file_uuid"`
+	//file_info
+	FileInfo string `json:"file_info"`
+	TTL      int    `json:"ttl"`
+}
+
+//新增
+type GroupMessageResponse struct {
+	MediaResponse *MediaResponse
+	Message       *Message
+}
+
 // Embed 结构
 type Embed struct {
 	Title       string                `json:"title,omitempty"`
