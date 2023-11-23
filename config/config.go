@@ -80,6 +80,7 @@ type Settings struct {
 	SendError              bool     `yaml:"send_error"`
 	AddAtGroup             bool     `yaml:"add_at_group"`
 	UrlPicTransfer         bool     `yaml:"url_pic_transfer"`
+	LotusPassword          string   `yaml:"lotus_password"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -949,4 +950,16 @@ func GetUrlPicTransfer() bool {
 		return true
 	}
 	return instance.Settings.UrlPicTransfer
+}
+
+// 获取GetLotusPassword的值
+func GetLotusPassword() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetLotusPassword value.")
+		return ""
+	}
+	return instance.Settings.LotusPassword
 }

@@ -133,6 +133,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
 			if !ok {
 				mylog.Printf("Error: Expected RichMediaMessage type for key ")
+				return
 			}
 			// 上传图片并获取FileInfo
 			fileInfo, err := uploadMedia(context.TODO(), message.Params.GroupID.(string), richMediaMessage, apiv2)

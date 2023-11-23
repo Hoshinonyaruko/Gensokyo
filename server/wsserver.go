@@ -59,17 +59,18 @@ func wsHandler(api openapi.OpenAPI, apiV2 openapi.OpenAPI, p *Processor.Processo
 		token = c.Query("access_token")
 	}
 
-	if token == "" {
-		mylog.Printf("Connection failed due to missing token. Headers: %v", c.Request.Header)
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing token"})
-		return
-	}
-
-	// 使用GetWsServerToken()来获取有效的token
+	// 获取配置中的有效 token
 	validToken := config.GetWsServerToken()
-	if token != validToken {
-		mylog.Printf("Connection failed due to incorrect token. Headers: %v, Provided token: %s", c.Request.Header, tokenFromHeader)
-		c.JSON(http.StatusForbidden, gin.H{"error": "Incorrect token"})
+
+	// 如果配置的 token 不为空，但提供的 token 为空或不匹配
+	if validToken != "" && (token == "" || token != validToken) {
+		if token == "" {
+			mylog.Printf("Connection failed due to missing token. Headers: %v", c.Request.Header)
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing token"})
+		} else {
+			mylog.Printf("Connection failed due to incorrect token. Headers: %v, Provided token: %s", c.Request.Header, token)
+			c.JSON(http.StatusForbidden, gin.H{"error": "Incorrect token"})
+		}
 		return
 	}
 
