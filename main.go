@@ -307,8 +307,9 @@ func main() {
 	//正向ws
 	if conf.Settings.AppID != 12345 {
 		if conf.Settings.EnableWsServer {
-			r.GET("/ws", server.WsHandlerWithDependencies(api, apiV2, p))
-			log.Println("正向ws启动成功,监听0.0.0.0:" + serverPort + " 请注意设置ws_server_token,并对外放通端口...")
+			wspath := config.GetWsServerPath()
+			r.GET("/"+wspath, server.WsHandlerWithDependencies(api, apiV2, p))
+			log.Println("正向ws启动成功,监听0.0.0.0:" + serverPort + "/" + wspath + "请注意设置ws_server_token,并对外放通端口...")
 		}
 	}
 	r.POST("/url", url.CreateShortURLHandler)
