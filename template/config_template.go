@@ -48,9 +48,9 @@ settings:
   record_bitRate : 24000            #语音文件的比特率 默认25000 代表 25 kbps 最高无限 请根据带宽 您发送的实际码率调整
 
   #正向ws设置
-
-  enable_ws_server: true            #是否启用正向ws服务器 监听server_dir:port/ws
-  ws_server_token : "12345"         #正向ws的token 不启动正向ws可忽略
+  ws_server_path : "ws"             #默认监听0.0.0.0:port/ws_server_path 若有安全需求,可不放通port到公网,或设置ws_server_token 若想监听/ 可改为""
+  enable_ws_server: true            #是否启用正向ws服务器 监听server_dir:port/ws_server_path
+  ws_server_token : "12345"         #正向ws的token 不启动正向ws可忽略 可为空
 
   #SSL配置类 机器人发送URL设置
 
