@@ -37,6 +37,7 @@ settings:
   lotus: false                                       # lotus特性默认为false,当为true时,将会连接到另一个lotus为false的gensokyo。
                                                      # 使用它提供的图床和idmaps服务(场景:同一个机器人在不同服务器运行,或内网需要发送base64图)。
                                                      # 如果需要发送base64图片,需要设置正确的公网server_dir和开放对应的port
+  lotus_password : ""                                # lotus鉴权 设置后,从gsk需要保持相同密码来访问主gsk
 
   #增强配置项                                           
 
