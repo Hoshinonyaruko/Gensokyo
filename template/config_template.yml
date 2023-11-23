@@ -30,9 +30,8 @@ settings:
                                                      # 使用它提供的图床和idmaps服务(场景:同一个机器人在不同服务器运行,或内网需要发送base64图)。
                                                      # 如果需要发送base64图片,需要设置正确的公网server_dir和开放对应的port
   master_id : ["1","2"]             #群场景尚未开放获取管理员和列表能力,手动从日志中获取需要设置为管理,的user_id并填入(适用插件有权限判断场景)
-  enable_ws_server: true            #是否启用正向ws服务器 监听server_dir:port/ws
-  ws_server_token : "12345"         #正向ws的token 不启动正向ws可忽略
-  ws_server_token : "12345"         #正向ws的token 不启动正向ws可忽略
+  enable_ws_server: true            #是否启用正向ws服务器 监听server_dir:port/ws_server_path
+  ws_server_token : "12345"         #正向ws的token 不启动正向ws可忽略 可为""
   identify_file: true               #自动生成域名校验文件,在q.qq.com配置信息URL,在server_dir填入自己已备案域名,正确解析到机器人所在服务器ip地址,机器人即可发送链接
   crt: ""                           #证书路径 从你的域名服务商或云服务商申请签发SSL证书(qq要求SSL) 
   key: ""                           #密钥路径 Apache（crt文件、key文件）示例: "C:\\123.key" \需要双写成\\
@@ -73,3 +72,4 @@ settings:
   add_at_group : false              #自动在群聊指令前加上at,某些机器人写法特别,必须有at才反应时,请打开,默认请关闭(如果需要at,不需要at指令混杂,请优化代码适配群场景,群场景目前没有at概念
   url_pic_transfer : false          #把图片url(任意来源图链)变成你备案的白名单url 需要较高上下行+ssl+自备案域名+设置白名单域名(暂时不需要)
   lotus_password : ""               # lotus鉴权 设置后,从gsk需要保持相同密码来访问主gsk
+  ws_server_path : "ws"             #默认监听0.0.0.0:port/ws_server_path 若有安全需求,可不放通port到公网,或设置ws_server_token 若想监听/ 可改为""

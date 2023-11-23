@@ -81,6 +81,7 @@ type Settings struct {
 	AddAtGroup             bool     `yaml:"add_at_group"`
 	UrlPicTransfer         bool     `yaml:"url_pic_transfer"`
 	LotusPassword          string   `yaml:"lotus_password"`
+	WsServerPath           string   `yaml:"ws_server_path"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -962,4 +963,16 @@ func GetLotusPassword() string {
 		return ""
 	}
 	return instance.Settings.LotusPassword
+}
+
+// 获取GetWsServerPath的值
+func GetWsServerPath() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetWsServerPath value.")
+		return ""
+	}
+	return instance.Settings.WsServerPath
 }
