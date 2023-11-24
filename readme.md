@@ -84,7 +84,7 @@ gensokyo兼容 [OneBot-v11](https://github.com/botuniverse/onebot-11) ，并在�
 - [x] 支持array和信息段
 - [x] 支持全域,频道,频道私聊,群,群私聊
 - [x] 完善的重连,健壮的连接能力.
-- [x] 持续更新
+- [x] 持续更新~
 
 
 ### 实现
