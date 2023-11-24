@@ -3,7 +3,6 @@ package server
 import (
 	"bytes"
 	"crypto/md5"
-	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
@@ -71,7 +70,7 @@ func UploadBase64ImageHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 			return
 		}
 
-		fileName := generateRandomMd5() + "." + fileExt
+		fileName := getFileMd5(imageBytes) + "." + fileExt
 		directoryPath := "./channel_temp/"
 		savePath := directoryPath + fileName
 
@@ -137,7 +136,7 @@ func UploadBase64RecordHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 			return
 		}
 
-		fileName := generateRandomMd5() + ".silk"
+		fileName := getFileMd5(RecordBytes) + ".silk"
 		directoryPath := "./channel_temp/"
 		savePath := directoryPath + fileName
 
@@ -226,13 +225,8 @@ func getFileExtensionFromImageFormat(format string) string {
 }
 
 // 生成随机md5图片名,防止碰撞
-func generateRandomMd5() string {
-	randomBytes := make([]byte, 16)
-	_, err := rand.Read(randomBytes)
-	if err != nil {
-		return ""
-	}
-	md5Hash := md5.Sum(randomBytes)
+func getFileMd5(base64file []byte) string {
+	md5Hash := md5.Sum(base64file)
 	return hex.EncodeToString(md5Hash[:])
 }
 
