@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -88,7 +89,10 @@ func CombinedMiddleware(api openapi.OpenAPI, apiV2 openapi.OpenAPI) gin.HandlerF
 			}
 			//进程监控
 			if c.Param("filepath") == "/api/status" && c.Request.Method == http.MethodGet {
-				handleSysInfo(c)
+				// 检查操作系统是否不为Android
+				if runtime.GOOS != "android" {
+					handleSysInfo(c)
+				}
 				return
 			}
 			//更新当前选中机器人的配置并重启应用(保持地址不变)
