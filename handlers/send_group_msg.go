@@ -300,9 +300,11 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 	case "guild_private":
 		//用group_id还原出channelid 这是虚拟成群的私聊信息
 		var RChannelID string
+		var Vuserid string
 		message.Params.ChannelID = message.Params.GroupID.(string)
-		if config.GetIdmapPro() {
-			_, RChannelID, err = idmap.RetrieveRowByIDv2Pro("guild_private", message.Params.ChannelID)
+		Vuserid = message.Params.UserID.(string)
+		if Vuserid != "" && config.GetIdmapPro() {
+			RChannelID, _, err = idmap.RetrieveRowByIDv2Pro(message.Params.ChannelID, Vuserid)
 			mylog.Printf("测试,通过Proid获取的RChannelID:%v", RChannelID)
 		} else {
 			// 使用RetrieveRowByIDv2还原真实的ChannelID

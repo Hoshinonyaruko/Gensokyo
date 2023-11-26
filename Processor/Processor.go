@@ -284,7 +284,7 @@ func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}
 	case *dto.WSMessageData:
 		realid2 = v.ChannelID
 	case *dto.WSDirectMessageData:
-		realid2 = v.GuildID
+		realid2 = v.ChannelID
 	case *dto.WSC2CMessageData:
 		realid2 = "group_private"
 	}
