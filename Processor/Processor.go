@@ -656,6 +656,8 @@ func (p *Processors) Autobind(data interface{}) error {
 		if err := updateMappings(userid64, vuinValue, GroupID64, idValue); err != nil {
 			return err
 		}
+		// idmaps pro也更新
+		idmap.UpdateVirtualValuev2Pro(GroupID64, idValue, userid64, vuinValue)
 	} else if !vuinBound {
 		// 只有vuin未绑定，更新vuin映射
 		if err := idmap.UpdateVirtualValuev2(userid64, vuinValue); err != nil {
