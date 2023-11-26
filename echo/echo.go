@@ -60,6 +60,10 @@ func (e *EchoMapping) GenerateKey(appid string, s int64) string {
 	return appid + "_" + strconv.FormatInt(s, 10)
 }
 
+func (e *EchoMapping) GenerateKeyv2(appid string, groupid int64, userid int64) string {
+	return appid + "_" + strconv.FormatInt(groupid, 10) + "_" + strconv.FormatInt(userid, 10)
+}
+
 // 添加echo对应的类型
 func AddMsgType(appid string, s int64, msgType string) {
 	key := globalEchoMapping.GenerateKey(appid, s)
@@ -71,6 +75,14 @@ func AddMsgType(appid string, s int64, msgType string) {
 // 添加echo对应的messageid
 func AddMsgID(appid string, s int64, msgID string) {
 	key := globalEchoMapping.GenerateKey(appid, s)
+	globalEchoMapping.mu.Lock()
+	defer globalEchoMapping.mu.Unlock()
+	globalEchoMapping.msgIDMapping[key] = msgID
+}
+
+// 添加group和userid对应的messageid
+func AddMsgIDv2(appid string, groupid int64, userid int64, msgID string) {
+	key := globalEchoMapping.GenerateKeyv2(appid, groupid, userid)
 	globalEchoMapping.mu.Lock()
 	defer globalEchoMapping.mu.Unlock()
 	globalEchoMapping.msgIDMapping[key] = msgID

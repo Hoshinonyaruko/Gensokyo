@@ -315,11 +315,19 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 	if config.GetWhitePrefixMode() {
 		// 获取白名单数组
 		whitePrefixes := config.GetWhitePrefixs()
+		// 加锁以安全地读取 TemporaryCommands
+		idmap.MutexT.Lock()
+		temporaryCommands := make([]string, len(idmap.TemporaryCommands))
+		copy(temporaryCommands, idmap.TemporaryCommands)
+		idmap.MutexT.Unlock()
+
+		// 合并白名单和临时指令
+		allPrefixes := append(whitePrefixes, temporaryCommands...)
 		// 默认设置为不匹配
 		matched := false
 
 		// 遍历白名单数组，检查是否有匹配项
-		for _, prefix := range whitePrefixes {
+		for _, prefix := range allPrefixes {
 			if strings.HasPrefix(messageText, prefix) {
 				// 找到匹配项，保留 messageText 并跳出循环
 				matched = true

@@ -33,7 +33,6 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		// 当 message.Echo 是字符串类型时执行此块
 		msgType = echo.GetMsgTypeByKey(echoStr)
 	}
-
 	//如果获取不到 就用user_id获取信息类型
 	if msgType == "" {
 		msgType = GetMessageTypeByUserid(config.GetAppIDStr(), message.Params.UserID)
@@ -85,15 +84,43 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				mylog.Println("echo取群组发信息对应的message_id:", messageID)
 			}
 		}
-		//通过bolt数据库还原真实的GroupID
-		originalGroupID, err := idmap.RetrieveRowByIDv2(message.Params.GroupID.(string))
-		if err != nil {
-			mylog.Printf("Error retrieving original GroupID: %v", err)
-			return
+		var originalGroupID string
+		// 检查UserID是否为nil
+		if message.Params.UserID != nil && config.GetIdmapPro() {
+			// 如果UserID不是nil且配置为使用Pro版本，则调用RetrieveRowByIDv2Pro
+			originalGroupID, _, err = idmap.RetrieveRowByIDv2Pro(message.Params.GroupID.(string), message.Params.UserID.(string))
+			if err != nil {
+				mylog.Printf("Error1 retrieving original GroupID: %v", err)
+			}
+			mylog.Printf("测试,通过Proid获取的originalGroupID:%v", originalGroupID)
+			if originalGroupID == "" {
+				originalGroupID, err = idmap.RetrieveRowByIDv2(message.Params.GroupID.(string))
+				if err != nil {
+					mylog.Printf("Error2 retrieving original GroupID: %v", err)
+					return
+				}
+			}
+		} else {
+			// 如果UserID是nil或配置不使用Pro版本，则调用RetrieveRowByIDv2
+			originalGroupID, err = idmap.RetrieveRowByIDv2(message.Params.GroupID.(string))
+			if err != nil {
+				mylog.Printf("Error retrieving original GroupID: %v", err)
+				return
+			}
 		}
 		message.Params.GroupID = originalGroupID
 		mylog.Println("群组发信息messageText:", messageText)
 		//mylog.Println("foundItems:", foundItems)
+		if messageID == "" {
+			// 检查 UserID 是否为 nil
+			if message.Params.UserID != nil {
+				messageID = GetMessageIDByUseridAndGroupid(config.GetAppIDStr(), message.Params.UserID, message.Params.GroupID)
+				mylog.Println("通过GetMessageIDByUseridAndGroupid函数获取的message_id:", message.Params.GroupID, messageID)
+			} else {
+				// 如果 UserID 是 nil，可以在这里处理，例如记录日志或采取其他措施
+				mylog.Println("UserID 为 nil，跳过 GetMessageIDByUseridAndGroupid 调用")
+			}
+		}
 		// 如果messageID为空，通过函数获取
 		if messageID == "" {
 			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), message.Params.GroupID)
@@ -255,8 +282,14 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 	case "guild":
 		//用GroupID给ChannelID赋值,因为我们是把频道虚拟成了群
 		message.Params.ChannelID = message.Params.GroupID.(string)
-		// 使用RetrieveRowByIDv2还原真实的ChannelID
-		RChannelID, err := idmap.RetrieveRowByIDv2(message.Params.ChannelID)
+		var RChannelID string
+		if message.Params.UserID != nil && config.GetIdmapPro() {
+			RChannelID, _, err = idmap.RetrieveRowByIDv2Pro(message.Params.ChannelID, message.Params.UserID.(string))
+			mylog.Printf("测试,通过Proid获取的RChannelID:%v", RChannelID)
+		} else {
+			// 使用RetrieveRowByIDv2还原真实的ChannelID
+			RChannelID, err = idmap.RetrieveRowByIDv2(message.Params.ChannelID)
+		}
 		if err != nil {
 			mylog.Printf("error retrieving real RChannelID: %v", err)
 		}
@@ -266,9 +299,17 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		handleSendGuildChannelMsg(client, api, apiv2, message)
 	case "guild_private":
 		//用group_id还原出channelid 这是虚拟成群的私聊信息
+		var RChannelID string
+		var Vuserid string
 		message.Params.ChannelID = message.Params.GroupID.(string)
-		// 使用RetrieveRowByIDv2还原真实的ChannelID
-		RChannelID, err := idmap.RetrieveRowByIDv2(message.Params.ChannelID)
+		Vuserid = message.Params.UserID.(string)
+		if Vuserid != "" && config.GetIdmapPro() {
+			RChannelID, _, err = idmap.RetrieveRowByIDv2Pro(message.Params.ChannelID, Vuserid)
+			mylog.Printf("测试,通过Proid获取的RChannelID:%v", RChannelID)
+		} else {
+			// 使用RetrieveRowByIDv2还原真实的ChannelID
+			RChannelID, err = idmap.RetrieveRowByIDv2(message.Params.ChannelID)
+		}
 		if err != nil {
 			mylog.Printf("error retrieving real ChannelID: %v", err)
 		}

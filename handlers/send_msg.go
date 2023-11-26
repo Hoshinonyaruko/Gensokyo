@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"fmt"
 	"strconv"
 	"time"
@@ -11,7 +10,6 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
-	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/openapi"
 )
 
@@ -26,7 +24,6 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 		// 当 message.Echo 是字符串类型时执行此块
 		msgType = echo.GetMsgTypeByKey(echoStr)
 	}
-
 	//如果获取不到 就用group_id获取信息类型
 	if msgType == "" {
 		appID := config.GetAppIDStr()
@@ -72,10 +69,19 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 	case "guild":
 		//用GroupID给ChannelID赋值,因为我们是把频道虚拟成了群
 		message.Params.ChannelID = message.Params.GroupID.(string)
-		// 使用RetrieveRowByIDv2还原真实的ChannelID
-		RChannelID, err := idmap.RetrieveRowByIDv2(message.Params.ChannelID)
-		if err != nil {
-			mylog.Printf("error retrieving real RChannelID: %v", err)
+		var RChannelID string
+		if config.GetIdmapPro() {
+			// 使用RetrieveRowByIDv2还原真实的ChannelID
+			RChannelID, _, err = idmap.RetrieveRowByIDv2Pro(message.Params.ChannelID, message.Params.UserID.(string))
+			if err != nil {
+				mylog.Printf("error retrieving real RChannelID: %v", err)
+			}
+		} else {
+			// 使用RetrieveRowByIDv2还原真实的ChannelID
+			RChannelID, err = idmap.RetrieveRowByIDv2(message.Params.ChannelID)
+			if err != nil {
+				mylog.Printf("error retrieving real RChannelID: %v", err)
+			}
 		}
 		message.Params.ChannelID = RChannelID
 		handleSendGuildChannelMsg(client, api, apiv2, message)
@@ -87,86 +93,7 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 		handleSendGuildChannelPrivateMsg(client, api, apiv2, message, nil, nil)
 	case "group_private":
 		//私聊信息
-		//还原真实的userid
-		UserID, err := idmap.RetrieveRowByIDv2(message.Params.UserID.(string))
-		if err != nil {
-			mylog.Printf("Error reading config: %v", err)
-			return
-		}
-
-		// 解析消息内容
-		messageText, foundItems := parseMessageContent(message.Params)
-
-		// 使用 echo 获取消息ID
-		var messageID string
-		if config.GetLazyMessageId() {
-			//由于实现了Params的自定义unmarshell 所以可以类型安全的断言为string
-			messageID = echo.GetLazyMessagesId(UserID)
-			mylog.Printf("GetLazyMessagesId: %v", messageID)
-		}
-		if messageID == "" {
-			if echoStr, ok := message.Echo.(string); ok {
-				messageID = echo.GetMsgIDByKey(echoStr)
-				mylog.Println("echo取私聊发信息对应的message_id:", messageID)
-			}
-		}
-		// 如果messageID为空，通过函数获取
-		if messageID == "" {
-			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), UserID)
-			mylog.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
-		}
-		//开发环境用
-		if config.GetDevMsgID() {
-			messageID = "1000"
-		}
-		mylog.Println("私聊发信息messageText:", messageText)
-		//mylog.Println("foundItems:", foundItems)
-
-		// 优先发送文本信息
-		if messageText != "" {
-			msgseq := echo.GetMappingSeq(messageID)
-			echo.AddMappingSeq(messageID, msgseq+1)
-			groupReply := generateGroupMessage(messageID, nil, messageText, msgseq+1)
-
-			// 进行类型断言
-			groupMessage, ok := groupReply.(*dto.MessageToCreate)
-			if !ok {
-				mylog.Println("Error: Expected MessageToCreate type.")
-				return
-			}
-
-			groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
-			_, err = apiv2.PostC2CMessage(context.TODO(), UserID, groupMessage)
-			if err != nil {
-				mylog.Printf("发送文本私聊信息失败: %v", err)
-			}
-			//发送成功回执
-			SendResponse(client, err, &message)
-		}
-
-		// 遍历foundItems并发送每种信息
-		for key, urls := range foundItems {
-			for _, url := range urls {
-				var singleItem = make(map[string][]string)
-				singleItem[key] = []string{url} // 创建一个只包含一个 URL 的 singleItem
-				msgseq := echo.GetMappingSeq(messageID)
-				echo.AddMappingSeq(messageID, msgseq+1)
-				groupReply := generateGroupMessage(messageID, singleItem, "", msgseq+1)
-
-				// 进行类型断言
-				richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
-				if !ok {
-					mylog.Printf("Error: Expected RichMediaMessage type for key %s.", key)
-					continue // 跳过这个项，继续下一个
-				}
-				_, err = apiv2.PostC2CMessage(context.TODO(), UserID, richMediaMessage)
-				if err != nil {
-					mylog.Printf("发送 %s 私聊信息失败: %v", key, err)
-				}
-				//发送成功回执
-				SendResponse(client, err, &message)
-			}
-		}
+		handleSendPrivateMsg(client, api, apiv2, message)
 	default:
 		mylog.Printf("1Unknown message type: %s", msgType)
 	}
@@ -210,5 +137,53 @@ func GetMessageIDByUseridOrGroupid(appID string, userID interface{}) string {
 		return ""
 	}
 	key := appID + "_" + fmt.Sprint(userid64)
+	return echo.GetMsgIDByKey(key)
+}
+
+// 通过user_id获取messageID
+func GetMessageIDByUseridAndGroupid(appID string, userID interface{}, groupID interface{}) string {
+	// 从appID和userID生成key
+	var userIDStr string
+	switch u := userID.(type) {
+	case int:
+		userIDStr = strconv.Itoa(u)
+	case int64:
+		userIDStr = strconv.FormatInt(u, 10)
+	case float64:
+		userIDStr = strconv.FormatFloat(u, 'f', 0, 64)
+	case string:
+		userIDStr = u
+	default:
+		// 可能需要处理其他类型或报错
+		return ""
+	}
+	// 从appID和userID生成key
+	var GroupIDStr string
+	switch u := groupID.(type) {
+	case int:
+		GroupIDStr = strconv.Itoa(u)
+	case int64:
+		GroupIDStr = strconv.FormatInt(u, 10)
+	case float64:
+		GroupIDStr = strconv.FormatFloat(u, 'f', 0, 64)
+	case string:
+		GroupIDStr = u
+	default:
+		// 可能需要处理其他类型或报错
+		return ""
+	}
+	//将真实id转为int
+	userid64, err := idmap.StoreIDv2(userIDStr)
+	if err != nil {
+		mylog.Fatalf("Error storing ID 241: %v", err)
+		return ""
+	}
+	//将真实id转为int
+	groupid64, err := idmap.StoreIDv2(GroupIDStr)
+	if err != nil {
+		mylog.Fatalf("Error storing ID 256: %v", err)
+		return ""
+	}
+	key := appID + "_" + fmt.Sprint(userid64) + "_" + fmt.Sprint(groupid64)
 	return echo.GetMsgIDByKey(key)
 }

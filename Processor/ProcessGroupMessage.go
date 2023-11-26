@@ -38,17 +38,34 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 
 	// 构造echo
 	echostr := AppIDString + "_" + strconv.FormatInt(s, 10)
-
-	// 映射str的GroupID到int
-	GroupID64, err := idmap.StoreIDv2(data.GroupID)
-	if err != nil {
-		return fmt.Errorf("failed to convert ChannelID to int: %v", err)
-	}
-	// 映射str的userid到int
-	userid64, err := idmap.StoreIDv2(data.Author.ID)
-	if err != nil {
-		mylog.Printf("Error storing ID: %v", err)
-		return nil
+	var userid64 int64
+	var GroupID64 int64
+	var err error
+	if config.GetIdmapPro() {
+		//将真实id转为int userid64
+		GroupID64, userid64, err = idmap.StoreIDv2Pro(data.GroupID, data.Author.ID)
+		if err != nil {
+			mylog.Fatalf("Error storing ID: %v", err)
+		}
+		//当参数不全
+		_, _ = idmap.StoreIDv2(data.GroupID)
+		_, _ = idmap.StoreIDv2(data.Author.ID)
+		if !config.GetHashIDValue() {
+			mylog.Fatalf("避坑日志:你开启了高级id转换,请设置hash_id为true,并且删除idmaps并重启")
+		}
+	} else {
+		// 映射str的GroupID到int
+		GroupID64, err = idmap.StoreIDv2(data.GroupID)
+		if err != nil {
+			mylog.Errorf("failed to convert ChannelID to int: %v", err)
+			return nil
+		}
+		// 映射str的userid到int
+		userid64, err = idmap.StoreIDv2(data.Author.ID)
+		if err != nil {
+			mylog.Printf("Error storing ID: %v", err)
+			return nil
+		}
 	}
 	//映射str的messageID到int
 	messageID64, err := idmap.StoreIDv2(data.ID)
@@ -109,9 +126,11 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 	echo.AddMsgType(AppIDString, s, "group")
 	//为不支持双向echo的ob服务端映射
 	echo.AddMsgID(AppIDString, GroupID64, data.ID)
-	echo.AddMsgType(AppIDString, GroupID64, "group")
+	//将当前的userid和groupid和msgid进行一个更稳妥的映射
+	echo.AddMsgIDv2(AppIDString, GroupID64, userid64, data.ID)
 	//储存当前群或频道号的类型
 	idmap.WriteConfigv2(fmt.Sprint(GroupID64), "type", "group")
+	//映射类型
 	echo.AddMsgType(AppIDString, GroupID64, "group")
 	//懒message_id池
 	echo.AddLazyMessageId(strconv.FormatInt(GroupID64, 10), data.ID, time.Now())

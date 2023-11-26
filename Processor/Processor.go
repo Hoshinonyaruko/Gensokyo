@@ -3,6 +3,8 @@ package Processor
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -259,8 +261,8 @@ func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}
 	// 去除字符串前后的空格
 	cleanedMessage = strings.TrimSpace(cleanedMessage)
 	var err error
-	var now, new string
-	var realid string
+	var now, new, newpro1, newpro2 string
+	var realid, realid2 string
 	switch v := data.(type) {
 	case *dto.WSGroupATMessageData:
 		realid = v.Author.ID
@@ -273,13 +275,39 @@ func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}
 	case *dto.WSC2CMessageData:
 		realid = v.Author.ID
 	}
+
+	switch v := data.(type) {
+	case *dto.WSGroupATMessageData:
+		realid2 = v.GroupID
+	case *dto.WSATMessageData:
+		realid2 = v.ChannelID
+	case *dto.WSMessageData:
+		realid2 = v.ChannelID
+	case *dto.WSDirectMessageData:
+		realid2 = v.ChannelID
+	case *dto.WSC2CMessageData:
+		realid2 = "group_private"
+	}
+
 	// 获取MasterID数组
 	masterIDs := config.GetMasterID()
 	// 根据realid获取new
 	now, new, err = idmap.RetrieveVirtualValuev2(realid)
+	if config.GetIdmapPro() {
+		newpro1, newpro2, err = idmap.RetrieveVirtualValuev2Pro(realid2, realid)
+	}
 	// 检查真实值或虚拟值是否在数组中
-	realValueIncluded := contains(masterIDs, realid)
-	virtualValueIncluded := contains(masterIDs, new)
+	var realValueIncluded, virtualValueIncluded bool
+
+	// 如果 masterIDs 数组为空，则这两个值恒为 true
+	if len(masterIDs) == 0 {
+		realValueIncluded = true
+		virtualValueIncluded = true
+	} else {
+		// 否则，检查真实值或虚拟值是否在数组中
+		realValueIncluded = contains(masterIDs, realid)
+		virtualValueIncluded = contains(masterIDs, new)
+	}
 
 	// me指令处理逻辑
 	if strings.HasPrefix(cleanedMessage, config.GetMePrefix()) {
@@ -288,56 +316,190 @@ func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}
 			SendMessage(err.Error(), data, Type, p.Api, p.Apiv2)
 			return err
 		}
-
 		// 发送成功信息
-		SendMessage("目前状态:\n当前真实值 "+now+"\n当前虚拟值 "+new+"\n"+config.GetBindPrefix()+" 当前虚拟值"+" 目标虚拟值", data, Type, p.Api, p.Apiv2)
+		if config.GetIdmapPro() {
+			// 构造清晰的对应关系信息
+			userMapping := fmt.Sprintf("当前真实值（用户）/当前虚拟值（用户） = [%s/%s]", realid, newpro2)
+			groupMapping := fmt.Sprintf("当前真实值（群/频道）/当前虚拟值（群/频道） = [%s/%s]", realid2, newpro1)
+
+			// 构造 bind 指令的使用说明
+			bindInstruction := fmt.Sprintf("bind 指令: %s 当前虚拟值(用户) 目标虚拟值(用户) [当前虚拟值(群/频道) 目标虚拟值(群/频道)]", config.GetBindPrefix())
+
+			// 发送整合后的消息
+			message := fmt.Sprintf("idmaps-pro状态:\n%s\n%s\n%s", userMapping, groupMapping, bindInstruction)
+			SendMessage(message, data, Type, p.Api, p.Apiv2)
+		} else {
+			SendMessage("目前状态:\n当前真实值 "+now+"\n当前虚拟值 "+new+"\nbind指令:"+config.GetBindPrefix()+" 当前虚拟值"+" 目标虚拟值", data, Type, p.Api, p.Apiv2)
+		}
 		return nil
 	}
 
-	if realValueIncluded || virtualValueIncluded {
-		// bind指令处理逻辑
-		if strings.HasPrefix(cleanedMessage, config.GetBindPrefix()) {
-			// 分割指令以获取参数
-			parts := strings.Fields(cleanedMessage)
-			if len(parts) != 3 {
-				mylog.Printf("bind指令参数错误\n正确的格式" + config.GetBindPrefix() + " 当前虚拟值 新虚拟值")
-				return nil
-			}
-
-			// 将字符串转换为 int64
-			oldRowValue, err := strconv.ParseInt(parts[1], 10, 64)
+	if realValueIncluded || virtualValueIncluded || isValidTemporaryCommand(strings.Fields(cleanedMessage)[0]) {
+		// 执行 bind 操作
+		if config.GetIdmapPro() {
+			err := performBindOperationV2(cleanedMessage, data, Type, p.Api, p.Apiv2, newpro1)
 			if err != nil {
-				return err
+				mylog.Printf("bind遇到错误:%v", err)
 			}
-
-			newRowValue, err := strconv.ParseInt(parts[2], 10, 64)
+		} else {
+			err := performBindOperation(cleanedMessage, data, Type, p.Api, p.Apiv2)
 			if err != nil {
-				return err
+				mylog.Printf("bind遇到错误:%v", err)
 			}
-
-			// 调用 UpdateVirtualValue
-			err = idmap.UpdateVirtualValuev2(oldRowValue, newRowValue)
-			if err != nil {
-				SendMessage(err.Error(), data, Type, p.Api, p.Apiv2)
-				return err
-			}
-			now, new, err := idmap.RetrieveRealValuev2(newRowValue)
-			if err != nil {
-				SendMessage(err.Error(), data, Type, p.Api, p.Apiv2)
-			} else {
-				SendMessage("绑定成功,目前状态:\n当前真实值 "+now+"\n当前虚拟值 "+new, data, Type, p.Api, p.Apiv2)
-			}
-
 		}
-
 		return nil
 	} else {
 		if strings.HasPrefix(cleanedMessage, config.GetBindPrefix()) {
-			mylog.Printf("您没有权限,请设置master_id,发送/me 获取虚拟值或真实值填入其中")
-			SendMessage("您没有权限,请设置master_id,发送/me 获取虚拟值或真实值填入其中", data, Type, p.Api, p.Apiv2)
+			// 生成临时指令
+			tempCmd := handleNoPermission()
+			mylog.Printf("您没有权限,使用临时指令：%s 忽略权限检查,或将masterid设置为空数组", tempCmd)
+			SendMessage("您没有权限,请配置config.yml或查看日志,使用临时指令", data, Type, p.Api, p.Apiv2)
 		}
 		return nil
 	}
+}
+
+// 生成由两个英文字母构成的唯一临时指令
+func generateTemporaryCommand() (string, error) {
+	bytes := make([]byte, 1) // 生成1字节的随机数，足以表示2个十六进制字符
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err // 处理随机数生成错误
+	}
+	command := hex.EncodeToString(bytes)[:2] // 将1字节转换为2个十六进制字符
+	return command, nil
+}
+
+// 生成并添加一个新的临时指令
+func handleNoPermission() string {
+	idmap.MutexT.Lock()
+	defer idmap.MutexT.Unlock()
+
+	cmd, _ := generateTemporaryCommand()
+	idmap.TemporaryCommands = append(idmap.TemporaryCommands, cmd)
+	return cmd
+}
+
+// 检查指令是否是有效的临时指令
+func isValidTemporaryCommand(cmd string) bool {
+	idmap.MutexT.Lock()
+	defer idmap.MutexT.Unlock()
+
+	for i, tempCmd := range idmap.TemporaryCommands {
+		if tempCmd == cmd {
+			// 删除已验证的临时指令
+			idmap.TemporaryCommands = append(idmap.TemporaryCommands[:i], idmap.TemporaryCommands[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+
+// 执行 bind 操作的逻辑
+func performBindOperation(cleanedMessage string, data interface{}, Type string, p openapi.OpenAPI, p2 openapi.OpenAPI) error {
+	// 分割指令以获取参数
+	parts := strings.Fields(cleanedMessage)
+	if len(parts) != 3 {
+		mylog.Printf("bind指令参数错误\n正确的格式" + config.GetBindPrefix() + " 当前虚拟值 新虚拟值")
+		return nil
+	}
+
+	// 将字符串转换为 int64
+	oldRowValue, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil {
+		return err
+	}
+
+	newRowValue, err := strconv.ParseInt(parts[2], 10, 64)
+	if err != nil {
+		return err
+	}
+
+	// 调用 UpdateVirtualValue
+	err = idmap.UpdateVirtualValuev2(oldRowValue, newRowValue)
+	if err != nil {
+		SendMessage(err.Error(), data, Type, p, p2)
+		return err
+	}
+	now, new, err := idmap.RetrieveRealValuev2(newRowValue)
+	if err != nil {
+		SendMessage(err.Error(), data, Type, p, p2)
+	} else {
+		SendMessage("绑定成功,目前状态:\n当前真实值 "+now+"\n当前虚拟值 "+new, data, Type, p, p2)
+	}
+
+	return nil
+}
+
+func performBindOperationV2(cleanedMessage string, data interface{}, Type string, p openapi.OpenAPI, p2 openapi.OpenAPI, GroupVir string) error {
+	// 分割指令以获取参数
+	parts := strings.Fields(cleanedMessage)
+
+	// 检查参数数量
+	if len(parts) < 3 || len(parts) > 5 {
+		mylog.Printf("bind指令参数错误\n正确的格式: " + config.GetBindPrefix() + " 当前虚拟值(用户) 新虚拟值(用户) [当前虚拟值(群) 新虚拟值(群)]")
+		return nil
+	}
+
+	// 当前虚拟值 用户
+	oldVirtualValue1, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil {
+		return err
+	}
+	//新的虚拟值 用户
+	newVirtualValue1, err := strconv.ParseInt(parts[2], 10, 64)
+	if err != nil {
+		return err
+	}
+
+	// 设置默认值
+	var oldRowValue, newRowValue int64
+
+	// 如果提供了第3个和第4个参数，则解析它们
+	if len(parts) > 3 {
+		oldRowValue, err = parseOrDefault(parts[3], GroupVir)
+		if err != nil {
+			return err
+		}
+
+		newRowValue, err = parseOrDefault(parts[4], GroupVir)
+		if err != nil {
+			return err
+		}
+	} else {
+		// 如果没有提供这些参数，则直接使用 GroupVir
+		oldRowValue, err = strconv.ParseInt(GroupVir, 10, 64)
+		if err != nil {
+			return err
+		}
+		newRowValue = oldRowValue // 使用相同的值
+	}
+
+	// 调用 UpdateVirtualValue
+	err = idmap.UpdateVirtualValuev2Pro(oldRowValue, newRowValue, oldVirtualValue1, newVirtualValue1)
+	if err != nil {
+		SendMessage(err.Error(), data, Type, p, p2)
+		return err
+	}
+
+	now, new, err := idmap.RetrieveRealValuesv2Pro(newRowValue, newVirtualValue1)
+	if err != nil {
+		SendMessage(err.Error(), data, Type, p, p2)
+	} else {
+		newVirtualValue1Str := strconv.FormatInt(newRowValue, 10)
+		newVirtualValue2Str := strconv.FormatInt(newVirtualValue1, 10)
+		SendMessage("绑定成功,目前状态:\n当前真实值(群)"+now+"\n当前真实值(用户)"+new+"\n当前虚拟值(群)"+newVirtualValue1Str+"当前虚拟值(用户)"+newVirtualValue2Str, data, Type, p, p2)
+	}
+
+	return nil
+}
+
+// parseOrDefault 将字符串转换为int64，如果无法转换或为0，则使用默认值
+func parseOrDefault(s string, defaultValue string) (int64, error) {
+	value, err := strconv.ParseInt(s, 10, 64)
+	if err == nil && value != 0 {
+		return value, nil
+	}
+	return strconv.ParseInt(defaultValue, 10, 64)
 }
 
 // contains 检查数组中是否包含指定的字符串

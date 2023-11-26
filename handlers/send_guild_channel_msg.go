@@ -51,7 +51,6 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 		messageText, foundItems := parseMessageContent(params)
 
 		channelID := params.ChannelID
-		//mylog.Printf("发送文本信息失败: %v,%v", channelID, channelID)
 		// 使用 echo 获取消息ID
 		var messageID string
 		if config.GetLazyMessageId() {
@@ -65,7 +64,6 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 				mylog.Println("echo取频道发信息对应的message_id:", messageID)
 			}
 		}
-		// 如果messageID为空，通过函数获取
 		if messageID == "" {
 			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), channelID)
 			mylog.Println("通过GetMessageIDByUseridOrGroupid函数获取的message_id:", messageID)
@@ -129,8 +127,10 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 		params := message.Params
 		channelID := params.ChannelID
 		guildID := params.GuildID
+		var RChannelID string
+		var err error
 		// 使用RetrieveRowByIDv2还原真实的ChannelID
-		RChannelID, err := idmap.RetrieveRowByIDv2(channelID)
+		RChannelID, err = idmap.RetrieveRowByIDv2(channelID)
 		if err != nil {
 			mylog.Printf("error retrieving real UserID: %v", err)
 		}
