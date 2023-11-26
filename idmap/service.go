@@ -13,10 +13,18 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/boltdb/bolt"
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
+)
+
+var (
+	// 用于存储临时指令的全局变量
+	TemporaryCommands []string
+	// 用于保证线程安全的互斥锁
+	MutexT sync.Mutex
 )
 
 const (
@@ -143,6 +151,52 @@ func StoreID(id string) (int64, error) {
 	return newRow, err
 }
 
+// 群号 然后 用户号
+func StoreIDPro(id string, subid string) (int64, int64, error) {
+	var newRowID, newSubRowID int64
+	var err error
+
+	err = db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(BucketName))
+
+		// 生成正向键
+		forwardKey := fmt.Sprintf("%s:%s", id, subid)
+
+		// 检查正向键是否已经存在
+		existingForwardValue := b.Get([]byte(forwardKey))
+		if existingForwardValue != nil {
+			// 解析已存在的值
+			fmt.Sscanf(string(existingForwardValue), "%d:%d", &newRowID, &newSubRowID)
+			return nil
+		}
+
+		// 生成新的ID和SubID
+		newRowID, err = generateRowID(id, 9) // 使用generateRowID来生成
+		if err != nil {
+			return err
+		}
+
+		newSubRowID, err = generateRowID(subid, 9) // 同样的方法生成SubID
+		if err != nil {
+			return err
+		}
+		//反向键
+		reverseKey := fmt.Sprintf("%d:%d", newRowID, newSubRowID)
+		//正向值
+		forwardValue := fmt.Sprintf("%d:%d", newRowID, newSubRowID)
+		//反向值
+		reverseValue := fmt.Sprintf("%s:%s", id, subid)
+
+		// 存储正向键和反向键
+		b.Put([]byte(forwardKey), []byte(forwardValue))
+		b.Put([]byte(reverseKey), []byte(reverseValue))
+
+		return nil
+	})
+
+	return newRowID, newSubRowID, err
+}
+
 // StoreIDv2 根据a储存b
 func StoreIDv2(id string) (int64, error) {
 	if config.GetLotusValue() {
@@ -185,6 +239,53 @@ func StoreIDv2(id string) (int64, error) {
 	return StoreID(id)
 }
 
+// 群号 然后 用户号
+func StoreIDv2Pro(id string, subid string) (int64, int64, error) {
+	if config.GetLotusValue() {
+		// 使用网络请求方式
+		serverDir := config.GetServer_dir()
+		portValue := config.GetPortValue()
+
+		// 根据portValue确定协议
+		protocol := "http"
+		if portValue == "443" {
+			protocol = "https"
+		}
+
+		// 构建请求URL
+		url := fmt.Sprintf("%s://%s:%s/getid?type=8&id=%s&subid=%s", protocol, serverDir, portValue, id, subid)
+		resp, err := http.Get(url)
+		if err != nil {
+			return 0, 0, fmt.Errorf("failed to send request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		// 解析响应
+		var response map[string]interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+			return 0, 0, fmt.Errorf("failed to decode response: %v", err)
+		}
+		if resp.StatusCode != http.StatusOK {
+			return 0, 0, fmt.Errorf("error response from server: %s", response["error"])
+		}
+
+		newRowValue, ok := response["row"].(float64)
+		if !ok {
+			return 0, 0, fmt.Errorf("invalid response format for row")
+		}
+
+		newSubRowValue, ok := response["subRow"].(float64)
+		if !ok {
+			return 0, 0, fmt.Errorf("invalid response format for subRow")
+		}
+
+		return int64(newRowValue), int64(newSubRowValue), nil
+	}
+
+	// 如果lotus为假,调用本地StoreIDPro
+	return StoreIDPro(id, subid)
+}
+
 // 根据b得到a
 func RetrieveRowByID(rowid string) (string, error) {
 	var id string
@@ -202,6 +303,81 @@ func RetrieveRowByID(rowid string) (string, error) {
 	})
 
 	return id, err
+}
+
+// 群号 然后 用户号
+func RetrieveRowByIDv2Pro(newRowID string, newSubRowID string) (string, string, error) {
+	if config.GetLotusValue() {
+		// 使用网络请求方式
+		serverDir := config.GetServer_dir()
+		portValue := config.GetPortValue()
+
+		// 根据portValue确定协议
+		protocol := "http"
+		if portValue == "443" {
+			protocol = "https"
+		}
+
+		// 构建请求URL
+		url := fmt.Sprintf("%s://%s:%s/getid?type=9&id=%s&subid=%s", protocol, serverDir, portValue, newRowID, newSubRowID)
+		resp, err := http.Get(url)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to send request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		// 解析响应
+		var response map[string]interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+			return "", "", fmt.Errorf("failed to decode response: %v", err)
+		}
+		if resp.StatusCode != http.StatusOK {
+			return "", "", fmt.Errorf("error response from server: %s", response["error"])
+		}
+
+		id, ok := response["id"].(string)
+		if !ok {
+			return "", "", fmt.Errorf("invalid response format for id")
+		}
+
+		subid, ok := response["subid"].(string)
+		if !ok {
+			return "", "", fmt.Errorf("invalid response format for subid")
+		}
+
+		return id, subid, nil
+	}
+
+	// 如果lotus为假,调用本地数据库
+	return RetrieveRowByIDPro(newRowID, newSubRowID)
+}
+
+// 群号 还有用户号
+func RetrieveRowByIDPro(newRowID, newSubRowID string) (string, string, error) {
+	var id, subid string
+
+	err := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(BucketName))
+
+		// 根据新的行号和子行号检索ID和SubID
+		reverseKey := fmt.Sprintf("%s:%s", newRowID, newSubRowID)
+		reverseValueBytes := b.Get([]byte(reverseKey))
+		if reverseValueBytes == nil {
+			return ErrKeyNotFound
+		}
+
+		reverseValue := string(reverseValueBytes)
+		parts := strings.Split(reverseValue, ":")
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid format for reverse key value")
+		}
+
+		id, subid = parts[0], parts[1]
+
+		return nil
+	})
+
+	return id, subid, err
 }
 
 // RetrieveRowByIDv2 根据b得到a
@@ -472,6 +648,7 @@ func RetrieveVirtualValue(realValue string) (string, string, error) {
 	return realValue, fmt.Sprintf("%d", virtualValue), nil
 }
 
+// 更新真实值对应的虚拟值
 func UpdateVirtualValuev2(oldRowValue, newRowValue int64) error {
 	if config.GetLotusValue() {
 		// 构建请求URL
@@ -498,6 +675,7 @@ func UpdateVirtualValuev2(oldRowValue, newRowValue int64) error {
 	return UpdateVirtualValue(oldRowValue, newRowValue)
 }
 
+// RetrieveRealValuev2 根据虚拟值获取真实值
 func RetrieveRealValuev2(virtualValue int64) (string, string, error) {
 	if config.GetLotusValue() {
 		serverDir := config.GetServer_dir()
@@ -572,4 +750,231 @@ func RetrieveVirtualValuev2(realValue string) (string, string, error) {
 
 	// 如果lotus为假,就保持原来的RetrieveVirtualValue的方法
 	return RetrieveVirtualValue(realValue)
+}
+
+// 根据2个真实值 获取2个虚拟值 群号 然后 用户号
+func RetrieveVirtualValuev2Pro(realValue string, realValueSub string) (string, string, error) {
+	if config.GetLotusValue() {
+		// 使用网络请求方式
+		serverDir := config.GetServer_dir()
+		portValue := config.GetPortValue()
+
+		// 根据portValue确定协议
+		protocol := "http"
+		if portValue == "443" {
+			protocol = "https"
+		}
+
+		// 构建请求URL
+		url := fmt.Sprintf("%s://%s:%s/getid?type=9&id=%s&subid=%s", protocol, serverDir, portValue, realValue, realValueSub)
+		resp, err := http.Get(url)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to send request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		// 解析响应
+		var response map[string]interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+			return "", "", fmt.Errorf("failed to decode response: %v", err)
+		}
+		if resp.StatusCode != http.StatusOK {
+			return "", "", fmt.Errorf("error response from server: %s", response["error"])
+		}
+
+		firstValue, ok := response["firstValue"].(string)
+		if !ok {
+			return "", "", fmt.Errorf("invalid response format for first value")
+		}
+
+		secondValue, ok := response["secondValue"].(string)
+		if !ok {
+			return "", "", fmt.Errorf("invalid response format for second value")
+		}
+
+		return firstValue, secondValue, nil
+	}
+
+	// 如果lotus为假,调用本地RetrieveVirtualValuePro
+	return RetrieveVirtualValuePro(realValue, realValueSub)
+}
+
+// 根据2个真实值 获取2个虚拟值 群号 然后 用户号
+func RetrieveVirtualValuePro(realValue string, realValueSub string) (string, string, error) {
+	var newRowID, newSubRowID string
+
+	err := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(BucketName))
+
+		// 构建正向键
+		forwardKey := fmt.Sprintf("%s:%s", realValue, realValueSub)
+
+		// 从数据库检索正向键对应的值
+		forwardValueBytes := b.Get([]byte(forwardKey))
+		if forwardValueBytes == nil {
+			return ErrKeyNotFound
+		}
+
+		forwardValue := string(forwardValueBytes)
+		parts := strings.Split(forwardValue, ":")
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid format for forward key value")
+		}
+
+		newRowID, newSubRowID = parts[0], parts[1]
+
+		return nil
+	})
+
+	if err != nil {
+		return "", "", err
+	}
+
+	return newRowID, newSubRowID, nil
+}
+
+// RetrieveRealValuePro 根据两个虚拟值获取相应的两个真实值 群号 然后 用户号
+func RetrieveRealValuePro(virtualValue1, virtualValue2 int64) (string, string, error) {
+	var realValue1, realValue2 string
+
+	err := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(BucketName))
+
+		// 根据两个虚拟值构造键
+		compositeKey := fmt.Sprintf("%d:%d", virtualValue1, virtualValue2)
+		compositeValueBytes := b.Get([]byte(compositeKey))
+		if compositeValueBytes == nil {
+			return fmt.Errorf("no real values found for virtual values: %d, %d", virtualValue1, virtualValue2)
+		}
+
+		// 解析获取到的真实值
+		compositeValue := string(compositeValueBytes)
+		parts := strings.Split(compositeValue, ":")
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid format for composite key value: %s", compositeValue)
+		}
+
+		realValue1, realValue2 = parts[0], parts[1]
+
+		return nil
+	})
+
+	if err != nil {
+		return "", "", err
+	}
+
+	return realValue1, realValue2, nil
+}
+
+// RetrieveRealValuesv2Pro 根据两个虚拟值获取两个真实值 群号 然后 用户号
+func RetrieveRealValuesv2Pro(virtualValue int64, virtualValueSub int64) (string, string, error) {
+	if config.GetLotusValue() {
+		// 使用网络请求方式
+		serverDir := config.GetServer_dir()
+		portValue := config.GetPortValue()
+
+		// 根据portValue确定协议
+		protocol := "http"
+		if portValue == "443" {
+			protocol = "https"
+		}
+
+		// 构建请求URL
+		url := fmt.Sprintf("%s://%s:%s/getrealvalues?type=11&id=%d&subid=%d", protocol, serverDir, portValue, virtualValue, virtualValueSub)
+		resp, err := http.Get(url)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to send request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		// 解析响应
+		var response map[string]interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+			return "", "", fmt.Errorf("failed to decode response: %v", err)
+		}
+		if resp.StatusCode != http.StatusOK {
+			return "", "", fmt.Errorf("error response from server: %s", response["error"])
+		}
+
+		firstRealValue, ok := response["firstRealValue"].(string)
+		if !ok {
+			return "", "", fmt.Errorf("invalid response format for first real value")
+		}
+
+		secondRealValue, ok := response["secondRealValue"].(string)
+		if !ok {
+			return "", "", fmt.Errorf("invalid response format for second real value")
+		}
+
+		return firstRealValue, secondRealValue, nil
+	}
+
+	// 如果lotus为假,调用本地函数
+	return RetrieveRealValuePro(virtualValue, virtualValueSub)
+}
+
+// UpdateVirtualValuePro 更新一对旧虚拟值到新虚拟值的映射 旧群号 新群号 旧用户 新用户
+func UpdateVirtualValuePro(oldVirtualValue1, newVirtualValue1, oldVirtualValue2, newVirtualValue2 int64) error {
+	return db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(BucketName))
+		// 构造旧和新的复合键
+		oldCompositeKey := fmt.Sprintf("%d:%d", oldVirtualValue1, oldVirtualValue2)
+		newCompositeKey := fmt.Sprintf("%d:%d", newVirtualValue1, newVirtualValue2)
+		// 检查旧复合键是否存在
+		compositeValueBytes := b.Get([]byte(oldCompositeKey))
+		if compositeValueBytes == nil {
+			return fmt.Errorf("不存在的复合虚拟值：%d-%d", oldVirtualValue1, oldVirtualValue2)
+		}
+		// 检查新复合键是否已经存在
+		if b.Get([]byte(newCompositeKey)) != nil {
+			return fmt.Errorf("该复合虚拟值已存在：%d-%d", newVirtualValue1, newVirtualValue2)
+		}
+		// 删除旧的复合键和正向键
+		if err := b.Delete([]byte(oldCompositeKey)); err != nil {
+			return err
+		}
+		if err := b.Delete(compositeValueBytes); err != nil {
+			return err
+		}
+		// 反向键
+		if err := b.Put([]byte(newCompositeKey), []byte(compositeValueBytes)); err != nil {
+			return err
+		}
+		// 正向键
+		if err := b.Put(compositeValueBytes, []byte(newCompositeKey)); err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
+// UpdateVirtualValuev2Pro 根据配置更新两对虚拟值 旧群 新群 旧用户 新用户
+func UpdateVirtualValuev2Pro(oldVirtualValue1, newVirtualValue1, oldVirtualValue2, newVirtualValue2 int64) error {
+	if config.GetLotusValue() {
+		// 构建请求URL
+		serverDir := config.GetServer_dir()
+		portValue := config.GetPortValue()
+		protocol := "http"
+		if portValue == "443" {
+			protocol = "https"
+		}
+
+		url := fmt.Sprintf("%s://%s:%s/updatevalues?type=12&oldVirtualValue1=%d&newVirtualValue1=%d&oldVirtualValue2=%d&newVirtualValue2=%d",
+			protocol, serverDir, portValue, oldVirtualValue1, newVirtualValue1, oldVirtualValue2, newVirtualValue2)
+
+		resp, err := http.Get(url)
+		if err != nil {
+			return fmt.Errorf("failed to send request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		// 检查响应状态
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("error response from server")
+		}
+		return nil
+	}
+
+	return UpdateVirtualValuePro(oldVirtualValue1, newVirtualValue1, oldVirtualValue2, newVirtualValue2)
 }
