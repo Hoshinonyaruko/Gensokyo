@@ -37,20 +37,43 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 		AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 		echostr := AppIDString + "_" + strconv.FormatInt(s, 10)
 
-		//将真实id转为int userid64
-		userid64, err := idmap.StoreIDv2(data.Author.ID)
-		if err != nil {
-			log.Fatalf("Error storing ID: %v", err)
+		var userid64 int64
+		var ChannelID64 int64
+		var err error
+		if config.GetIdmapPro() {
+			//将真实id转为int userid64
+			_, _, err = idmap.StoreIDv2Pro(data.ChannelID, data.Author.ID)
+			if err != nil {
+				mylog.Fatalf("Error storing ID: %v", err)
+			}
+			//将真实id转为int userid64
+			userid64, err = idmap.StoreIDv2(data.Author.ID)
+			if err != nil {
+				mylog.Fatalf("Error storing ID: %v", err)
+			}
+			ChannelID64, err = idmap.StoreIDv2(data.ChannelID)
+			if err != nil {
+				mylog.Printf("Error storing ID: %v", err)
+				return nil
+			}
+			if !config.GetHashIDValue() {
+				mylog.Fatalf("避坑日志:你开启了高级id转换,请设置hash_id为true,并且删除idmaps并重启")
+			}
+		} else {
+			//将真实id转为int userid64
+			userid64, err = idmap.StoreIDv2(data.Author.ID)
+			if err != nil {
+				mylog.Fatalf("Error storing ID: %v", err)
+			}
+			//将channelid写入数据库,可取出guild_id
+			ChannelID64, err = idmap.StoreIDv2(data.ChannelID)
+			if err != nil {
+				mylog.Printf("Error storing ID: %v", err)
+				return nil
+			}
 		}
-
 		//将真实id写入数据库,可取出ChannelID
 		idmap.WriteConfigv2(data.Author.ID, "channel_id", data.ChannelID)
-		//将channelid写入数据库,可取出guild_id
-		ChannelID64, err := idmap.StoreIDv2(data.ChannelID)
-		if err != nil {
-			mylog.Printf("Error storing ID: %v", err)
-			return nil
-		}
 		//转成int再互转
 		idmap.WriteConfigv2(fmt.Sprint(ChannelID64), "guild_id", data.GuildID)
 		//直接储存 适用于私信场景私聊
@@ -210,10 +233,40 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 		} else {
 			//将频道信息转化为群信息(特殊需求情况下)
 			//将channelid写入bolt,可取出guild_id
-			ChannelID64, err := idmap.StoreIDv2(data.ChannelID)
-			if err != nil {
-				mylog.Printf("Error storing ID: %v", err)
-				return nil
+			var userid64 int64
+			var ChannelID64 int64
+			var err error
+			if config.GetIdmapPro() {
+				//将真实id转为int userid64
+				_, _, err = idmap.StoreIDv2Pro(data.ChannelID, data.Author.ID)
+				if err != nil {
+					mylog.Fatalf("Error storing ID: %v", err)
+				}
+				//将真实id转为int userid64
+				userid64, err = idmap.StoreIDv2(data.Author.ID)
+				if err != nil {
+					mylog.Fatalf("Error storing ID: %v", err)
+				}
+				ChannelID64, err = idmap.StoreIDv2(data.ChannelID)
+				if err != nil {
+					mylog.Printf("Error storing ID: %v", err)
+					return nil
+				}
+				if !config.GetHashIDValue() {
+					mylog.Fatalf("避坑日志:你开启了高级id转换,请设置hash_id为true,并且删除idmaps并重启")
+				}
+			} else {
+				//将真实id转为int userid64
+				userid64, err = idmap.StoreIDv2(data.Author.ID)
+				if err != nil {
+					mylog.Fatalf("Error storing ID: %v", err)
+				}
+				//将真实channelid和虚拟做映射
+				ChannelID64, err = idmap.StoreIDv2(data.ChannelID)
+				if err != nil {
+					mylog.Printf("Error storing ID: %v", err)
+					return nil
+				}
 			}
 			//转成int再互转 适用于群场景私聊
 			idmap.WriteConfigv2(fmt.Sprint(ChannelID64), "guild_id", data.GuildID)
@@ -225,16 +278,13 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 				mylog.Printf("信息被自定义黑白名单拦截")
 				return nil
 			}
+			//框架内指令
+			p.HandleFrameworkCommand(messageText, data, "guild_private")
 			//转换appid
 			AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 			//构造echo
 			echostr := AppIDString + "_" + strconv.FormatInt(s, 10)
-			//映射str的userid到int
-			userid64, err := idmap.StoreIDv2(data.Author.ID)
-			if err != nil {
-				mylog.Printf("Error storing ID: %v", err)
-				return nil
-			}
+
 			//userid := int(userid64)
 			//映射str的messageID到int
 			messageID64, err := idmap.StoreIDv2(data.ID)
@@ -294,6 +344,9 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 			echo.AddMsgID(AppIDString, userid64, data.ID)
 			//为频道私聊转群聊映射
 			echo.AddMsgID(AppIDString, ChannelID64, data.ID)
+			//将当前的userid和groupid和msgid进行一个更稳妥的映射
+			echo.AddMsgIDv2(AppIDString, ChannelID64, userid64, data.ID)
+			//映射类型
 			echo.AddMsgType(AppIDString, userid64, "guild_private")
 			//储存当前群或频道号的类型
 			idmap.WriteConfigv2(fmt.Sprint(ChannelID64), "type", "guild_private")

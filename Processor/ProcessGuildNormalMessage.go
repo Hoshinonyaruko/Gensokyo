@@ -96,6 +96,7 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 		echo.AddMsgType(AppIDString, s, "guild")
 		//为不支持双向echo的ob11服务端映射
 		echo.AddMsgID(AppIDString, userid64, data.ID)
+		//映射类型
 		echo.AddMsgType(AppIDString, userid64, "guild")
 		//储存当前群或频道号的类型
 		idmap.WriteConfigv2(data.ChannelID, "type", "guild")
@@ -116,12 +117,36 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 		//将频道转化为一个群
 		//获取s
 		s := client.GetGlobalS()
-		//将channelid写入ini,可取出guild_id
-		ChannelID64, err := idmap.StoreIDv2(data.ChannelID)
-		if err != nil {
-			mylog.Printf("Error storing ID: %v", err)
-			return nil
+		var userid64 int64
+		var ChannelID64 int64
+		var err error
+		if config.GetIdmapPro() {
+			//将真实id转为int userid64
+			ChannelID64, userid64, err = idmap.StoreIDv2Pro(data.ChannelID, data.Author.ID)
+			if err != nil {
+				mylog.Fatalf("Error storing ID: %v", err)
+			}
+			//当参数不全时
+			_, _ = idmap.StoreIDv2(data.ChannelID)
+			_, _ = idmap.StoreIDv2(data.Author.ID)
+			if !config.GetHashIDValue() {
+				mylog.Fatalf("避坑日志:你开启了高级id转换,请设置hash_id为true,并且删除idmaps并重启")
+			}
+		} else {
+			//将channelid写入ini,可取出guild_id
+			ChannelID64, err = idmap.StoreIDv2(data.ChannelID)
+			if err != nil {
+				mylog.Printf("Error storing ID: %v", err)
+				return nil
+			}
+			//映射str的userid到int
+			userid64, err = idmap.StoreIDv2(data.Author.ID)
+			if err != nil {
+				mylog.Printf("Error storing ID: %v", err)
+				return nil
+			}
 		}
+
 		//转成int再互转
 		idmap.WriteConfigv2(fmt.Sprint(ChannelID64), "guild_id", data.GuildID)
 		//转换at
@@ -136,13 +161,6 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 		AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 		//构造echo
 		echostr := AppIDString + "_" + strconv.FormatInt(s, 10)
-		//映射str的userid到int
-		userid64, err := idmap.StoreIDv2(data.Author.ID)
-		if err != nil {
-			mylog.Printf("Error storing ID: %v", err)
-			return nil
-		}
-		//userid := int(userid64)
 		//映射str的messageID到int
 		messageID64, err := idmap.StoreIDv2(data.ID)
 		if err != nil {
@@ -199,7 +217,8 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 		echo.AddMsgType(AppIDString, s, "guild")
 		//为不支持双向echo的ob服务端映射
 		echo.AddMsgID(AppIDString, ChannelID64, data.ID)
-		echo.AddMsgType(AppIDString, ChannelID64, "guild")
+		//将当前的userid和groupid和msgid进行一个更稳妥的映射
+		echo.AddMsgIDv2(AppIDString, ChannelID64, userid64, data.ID)
 		//储存当前群或频道号的类型
 		idmap.WriteConfigv2(fmt.Sprint(ChannelID64), "type", "guild")
 		echo.AddMsgType(AppIDString, ChannelID64, "guild")

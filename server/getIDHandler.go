@@ -102,6 +102,92 @@ func GetIDHandler(c *gin.Context) {
 			return
 		}
 
+		_, virtualValue, err := idmap.RetrieveVirtualValuev2(realValue)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"virtual": virtualValue})
+	case 8:
+		// 调用新的 StoreIDv2Pro
+		subid := c.Query("subid")
+		if subid == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "subid parameter is required for type 8"})
+			return
+		}
+		newRow, newSubRow, err := idmap.StoreIDv2Pro(idOrRow, subid)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"row": newRow, "subRow": newSubRow})
+
+	case 9:
+		// 调用新的 RetrieveRowByIDv2Pro
+		subid := c.Query("subid")
+		if subid == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "subid parameter is required for type 9"})
+			return
+		}
+		id, subid, err := idmap.RetrieveRowByIDv2Pro(idOrRow, subid)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"id": id, "subid": subid})
+	case 10:
+		subid := c.Query("subid")
+		if idOrRow == "" || subid == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "id and subid parameters are required for type 10"})
+			return
+		}
+
+		firstValue, secondValue, err := idmap.RetrieveVirtualValuev2Pro(idOrRow, subid) // 确保函数名称正确
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"firstValue": firstValue, "secondValue": secondValue})
+	case 11:
+		subid := c.Query("subid")
+		if idOrRow == "" || subid == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "id and subid parameters are required for type 11"})
+			return
+		}
+		virtualValue, err := strconv.ParseInt(idOrRow, 10, 64)
+		virtualValueSub, err := strconv.ParseInt(subid, 10, 64)
+		firstRealValue, secondRealValue, err := idmap.RetrieveRealValuesv2Pro(virtualValue, virtualValueSub)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"firstRealValue": firstRealValue, "secondRealValue": secondRealValue})
+	case 12:
+		oldVirtualValue1Str := c.Query("oldVirtualValue1")
+		newVirtualValue1Str := c.Query("newVirtualValue1")
+		oldVirtualValue2Str := c.Query("oldVirtualValue2")
+		newVirtualValue2Str := c.Query("newVirtualValue2")
+
+		// 将字符串转换为int64
+		oldVirtualValue1, err := strconv.ParseInt(oldVirtualValue1Str, 10, 64)
+		newVirtualValue1, err := strconv.ParseInt(newVirtualValue1Str, 10, 64)
+		oldVirtualValue2, err := strconv.ParseInt(oldVirtualValue2Str, 10, 64)
+		newVirtualValue2, err := strconv.ParseInt(newVirtualValue2Str, 10, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input values"})
+			return
+		}
+
+		err = idmap.UpdateVirtualValuev2Pro(oldVirtualValue1, newVirtualValue1, oldVirtualValue2, newVirtualValue2)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Virtual values updated successfully"})
+
 	}
 
 }

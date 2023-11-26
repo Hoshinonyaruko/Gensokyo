@@ -82,6 +82,7 @@ type Settings struct {
 	UrlPicTransfer         bool     `yaml:"url_pic_transfer"`
 	LotusPassword          string   `yaml:"lotus_password"`
 	WsServerPath           string   `yaml:"ws_server_path"`
+	IdmapPro               bool     `yaml:"idmap_pro"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -975,4 +976,16 @@ func GetWsServerPath() string {
 		return ""
 	}
 	return instance.Settings.WsServerPath
+}
+
+// 获取GetIdmapPro的值
+func GetIdmapPro() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetIdmapPro value.")
+		return false
+	}
+	return instance.Settings.IdmapPro
 }
