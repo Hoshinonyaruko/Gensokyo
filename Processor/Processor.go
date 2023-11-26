@@ -297,8 +297,17 @@ func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}
 		newpro1, newpro2, err = idmap.RetrieveVirtualValuev2Pro(realid2, realid)
 	}
 	// 检查真实值或虚拟值是否在数组中
-	realValueIncluded := contains(masterIDs, realid)
-	virtualValueIncluded := contains(masterIDs, new)
+	var realValueIncluded, virtualValueIncluded bool
+
+	// 如果 masterIDs 数组为空，则这两个值恒为 true
+	if len(masterIDs) == 0 {
+		realValueIncluded = true
+		virtualValueIncluded = true
+	} else {
+		// 否则，检查真实值或虚拟值是否在数组中
+		realValueIncluded = contains(masterIDs, realid)
+		virtualValueIncluded = contains(masterIDs, new)
+	}
 
 	// me指令处理逻辑
 	if strings.HasPrefix(cleanedMessage, config.GetMePrefix()) {
