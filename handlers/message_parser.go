@@ -246,6 +246,8 @@ func transformMessageText(messageText string) string {
 // 处理at和其他定形文到onebotv11格式(cq码)
 func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI, apiv2 openapi.OpenAPI) string {
 	var msg *dto.Message
+	var menumsg bool
+	var messageText string
 	switch v := data.(type) {
 	case *dto.WSGroupATMessageData:
 		msg = (*dto.Message)(v)
@@ -260,8 +262,16 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 	default:
 		return ""
 	}
-	//处理前 先去前后空
-	messageText := strings.TrimSpace(msg.Content)
+	menumsg = false
+	//单独一个空格的信息的空格用户并不希望去掉
+	if msg.Content == " " {
+		menumsg = true
+	}
+
+	if !menumsg {
+		//处理前 先去前后空
+		messageText = strings.TrimSpace(msg.Content)
+	}
 
 	// 将messageText里的BotID替换成AppID
 	messageText = strings.ReplaceAll(messageText, BotID, AppID)
@@ -299,8 +309,10 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 	//结构 <@!>空格/内容
 	//如果移除了前部at,信息就会以空格开头,因为只移去了最前面的at,但at后紧跟随一个空格
 	if config.GetRemoveAt() {
-		//再次去前后空
-		messageText = strings.TrimSpace(messageText)
+		if !menumsg {
+			//再次去前后空
+			messageText = strings.TrimSpace(messageText)
+		}
 	}
 
 	// 检查是否需要移除前缀
@@ -393,6 +405,7 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 func ConvertToSegmentedMessage(data interface{}) []map[string]interface{} {
 	// 强制类型转换，获取Message结构
 	var msg *dto.Message
+	var menumsg bool
 	switch v := data.(type) {
 	case *dto.WSGroupATMessageData:
 		msg = (*dto.Message)(v)
@@ -407,7 +420,11 @@ func ConvertToSegmentedMessage(data interface{}) []map[string]interface{} {
 	default:
 		return nil
 	}
-
+	menumsg = false
+	//单独一个空格的信息的空格用户并不希望去掉
+	if msg.Content == " " {
+		menumsg = true
+	}
 	var messageSegments []map[string]interface{}
 
 	// 处理Attachments字段来构建图片消息
@@ -485,7 +502,9 @@ func ConvertToSegmentedMessage(data interface{}) []map[string]interface{} {
 	//如果移除了前部at,信息就会以空格开头,因为只移去了最前面的at,但at后紧跟随一个空格
 	if config.GetRemoveAt() {
 		//再次去前后空
-		msg.Content = strings.TrimSpace(msg.Content)
+		if !menumsg {
+			msg.Content = strings.TrimSpace(msg.Content)
+		}
 	}
 
 	// 检查是否需要移除前缀
