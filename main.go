@@ -308,7 +308,7 @@ func main() {
 	if conf.Settings.AppID != 12345 {
 		if conf.Settings.EnableWsServer {
 			wspath := config.GetWsServerPath()
-			if wspath != "nil" {
+			if wspath == "nil" {
 				r.GET("", server.WsHandlerWithDependencies(api, apiV2, p))
 				log.Println("正向ws启动成功,监听0.0.0.0:" + serverPort + "请注意设置ws_server_token(可空),并对外放通端口...")
 			} else {
