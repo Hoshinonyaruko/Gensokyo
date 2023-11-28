@@ -339,8 +339,10 @@ func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}
 		return nil
 	}
 
-	// 首先检查是否是有效的临时指令，这将绕过权限检查1次
-	if isValidTemporaryCommand(strings.Fields(cleanedMessage)[0]) {
+	fields := strings.Fields(cleanedMessage)
+
+	// 首先确保消息不是空的，然后检查是否是有效的临时指令
+	if len(fields) > 0 && isValidTemporaryCommand(fields[0]) {
 		// 执行 bind 操作
 		if config.GetIdmapPro() {
 			err := performBindOperationV2(cleanedMessage, data, Type, p.Api, p.Apiv2, newpro1)
@@ -520,6 +522,7 @@ func parseOrDefault(s string, defaultValue string) (int64, error) {
 	if err == nil && value != 0 {
 		return value, nil
 	}
+
 	return strconv.ParseInt(defaultValue, 10, 64)
 }
 
