@@ -31,8 +31,7 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 	if config.GetAddAtGroup() {
 		messageText = "[CQ:at,qq=" + config.GetAppIDStr() + "] " + messageText
 	}
-	//框架内指令
-	p.HandleFrameworkCommand(messageText, data, "group")
+
 	// 转换appid
 	AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 
@@ -67,6 +66,8 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 			return nil
 		}
 	}
+	//框架内指令
+	p.HandleFrameworkCommand(messageText, data, "group")
 	//映射str的messageID到int
 	messageID64, err := idmap.StoreIDv2(data.ID)
 	if err != nil {

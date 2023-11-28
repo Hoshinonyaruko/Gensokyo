@@ -129,8 +129,6 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 			mylog.Printf("信息被自定义黑白名单拦截")
 			return nil
 		}
-		//框架内指令
-		p.HandleFrameworkCommand(messageText, data, "group_private")
 		//转换appid
 		AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 		//构造echo
@@ -154,6 +152,8 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 				mylog.Fatalf("Error storing ID: %v", err)
 			}
 		}
+		//框架内指令
+		p.HandleFrameworkCommand(messageText, data, "group_private")
 		//映射str的messageID到int
 		messageID64, err := idmap.StoreIDv2(data.ID)
 		if err != nil {
