@@ -92,7 +92,7 @@ func getGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 				mylog.Println("Error parsing JoinedAt timestamp:", err)
 				continue
 			}
-			joinedAtStr := joinedAtTime.Format(time.RFC3339) // or any other format you prefer
+			joinedAtStr := strconv.FormatInt(joinedAtTime.Unix(), 10) // 转换为 10 位时间戳
 			group := Group{
 				GroupCreateTime: joinedAtStr,
 				GroupID:         guild.ID,
