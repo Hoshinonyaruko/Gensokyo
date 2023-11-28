@@ -266,6 +266,7 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 	//单独一个空格的信息的空格用户并不希望去掉
 	if msg.Content == " " {
 		menumsg = true
+		messageText = " "
 	}
 
 	if !menumsg {
