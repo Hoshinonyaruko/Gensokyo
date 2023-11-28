@@ -260,6 +260,11 @@ func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}
 
 	// 去除字符串前后的空格
 	cleanedMessage = strings.TrimSpace(cleanedMessage)
+	if cleanedMessage == "t" {
+		// 生成临时指令
+		tempCmd := handleNoPermission()
+		mylog.Printf("临时bind指令: %s 可忽略权限检查1次,或将masterid设置为空数组", tempCmd)
+	}
 	var err error
 	var now, new, newpro1, newpro2 string
 	var realid, realid2 string
@@ -334,7 +339,8 @@ func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}
 		return nil
 	}
 
-	if realValueIncluded || virtualValueIncluded || isValidTemporaryCommand(strings.Fields(cleanedMessage)[0]) {
+	// 首先检查是否是有效的临时指令，这将绕过权限检查1次
+	if isValidTemporaryCommand(strings.Fields(cleanedMessage)[0]) {
 		// 执行 bind 操作
 		if config.GetIdmapPro() {
 			err := performBindOperationV2(cleanedMessage, data, Type, p.Api, p.Apiv2, newpro1)
@@ -348,15 +354,30 @@ func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}
 			}
 		}
 		return nil
-	} else {
-		if strings.HasPrefix(cleanedMessage, config.GetBindPrefix()) {
-			// 生成临时指令
-			tempCmd := handleNoPermission()
-			mylog.Printf("您没有权限,使用临时指令：%s 忽略权限检查,或将masterid设置为空数组", tempCmd)
-			SendMessage("您没有权限,请配置config.yml或查看日志,使用临时指令", data, Type, p.Api, p.Apiv2)
+	}
+
+	// 如果不是临时指令，检查是否具有执行bind操作的权限并且消息以特定前缀开始
+	if (realValueIncluded || virtualValueIncluded) && strings.HasPrefix(cleanedMessage, config.GetBindPrefix()) {
+		// 执行 bind 操作
+		if config.GetIdmapPro() {
+			err := performBindOperationV2(cleanedMessage, data, Type, p.Api, p.Apiv2, newpro1)
+			if err != nil {
+				mylog.Printf("bind遇到错误:%v", err)
+			}
+		} else {
+			err := performBindOperation(cleanedMessage, data, Type, p.Api, p.Apiv2)
+			if err != nil {
+				mylog.Printf("bind遇到错误:%v", err)
+			}
 		}
 		return nil
+	} else if strings.HasPrefix(cleanedMessage, config.GetBindPrefix()) {
+		// 生成临时指令
+		tempCmd := handleNoPermission()
+		mylog.Printf("您没有权限,使用临时指令：%s 忽略权限检查,或将masterid设置为空数组", tempCmd)
+		SendMessage("您没有权限,请配置config.yml或查看日志,使用临时指令", data, Type, p.Api, p.Apiv2)
 	}
+	return nil
 }
 
 // 生成由两个英文字母构成的唯一临时指令
