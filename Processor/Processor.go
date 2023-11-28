@@ -522,6 +522,7 @@ func parseOrDefault(s string, defaultValue string) (int64, error) {
 	if err == nil && value != 0 {
 		return value, nil
 	}
+
 	return strconv.ParseInt(defaultValue, 10, 64)
 }
 
