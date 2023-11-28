@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -37,13 +36,13 @@ type Guild struct {
 }
 
 type Group struct {
-	GroupCreateTime string `json:"group_create_time"`
-	GroupID         string `json:"group_id"`
-	GroupLevel      string `json:"group_level"`
+	GroupCreateTime int32  `json:"group_create_time"`
+	GroupID         int64  `json:"group_id"`
+	GroupLevel      int32  `json:"group_level"`
 	GroupMemo       string `json:"group_memo"`
 	GroupName       string `json:"group_name"`
-	MaxMemberCount  string `json:"max_member_count"`
-	MemberCount     string `json:"member_count"`
+	MaxMemberCount  int32  `json:"max_member_count"`
+	MemberCount     int32  `json:"member_count"`
 }
 
 type GroupList struct {
@@ -92,15 +91,16 @@ func getGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 				mylog.Println("Error parsing JoinedAt timestamp:", err)
 				continue
 			}
-			joinedAtStr := strconv.FormatInt(joinedAtTime.Unix(), 10) // 转换为 10 位时间戳
+			groupID, _ := strconv.ParseInt(guild.ID, 10, 64)
+			joinedAtTimestamp := int32(joinedAtTime.Unix()) // 获取 10 位时间戳并转换为 int32 类型
 			group := Group{
-				GroupCreateTime: joinedAtStr,
-				GroupID:         guild.ID,
-				GroupLevel:      guild.OwnerID,
+				GroupCreateTime: joinedAtTimestamp,
+				GroupID:         groupID,
+				GroupLevel:      0,
 				GroupMemo:       guild.Desc,
 				GroupName:       "*" + guild.Name,
-				MaxMemberCount:  strconv.FormatInt(guild.MaxMembers, 10),
-				MemberCount:     strconv.Itoa(guild.MemberCount),
+				MaxMemberCount:  int32(guild.MaxMembers),  // 确保这里也是 int32 类型
+				MemberCount:     int32(guild.MemberCount), // 将这里也转换为 int32 类型
 			}
 			groupList.Data = append(groupList.Data, group)
 			// 获取每个guild的channel信息
@@ -117,13 +117,13 @@ func getGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 					mylog.Printf("Error storing ID: %v", err)
 				}
 				channelGroup := Group{
-					GroupCreateTime: "", // 频道没有直接对应的创建时间字段
-					GroupID:         fmt.Sprint(ChannelID64),
-					GroupLevel:      "", // 频道没有直接对应的级别字段
+					GroupCreateTime: 0, // 频道没有直接对应的创建时间字段
+					GroupID:         ChannelID64,
+					GroupLevel:      0,  // 频道没有直接对应的级别字段
 					GroupMemo:       "", // 频道没有直接对应的描述字段
 					GroupName:       channel.Name,
-					MaxMemberCount:  "", // 频道没有直接对应的最大成员数字段
-					MemberCount:     "", // 频道没有直接对应的成员数字段
+					MaxMemberCount:  0, // 频道没有直接对应的最大成员数字段
+					MemberCount:     0, // 频道没有直接对应的成员数字段
 				}
 				groupList.Data = append(groupList.Data, channelGroup)
 			}
