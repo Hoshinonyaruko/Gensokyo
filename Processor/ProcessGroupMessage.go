@@ -95,6 +95,11 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 		Sender: Sender{
 			Nickname: "",
 			UserID:   userid64,
+			Card:     "",
+			Sex:      "0",
+			Age:      0,
+			Area:     "",
+			Level:    "0",
 		},
 		SubType: "normal",
 		Time:    time.Now().Unix(),

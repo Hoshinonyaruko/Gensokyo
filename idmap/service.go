@@ -1,6 +1,7 @@
 package idmap
 
 import (
+	"bytes"
 	"crypto/md5"
 	"encoding/binary"
 	"encoding/hex"
@@ -1008,4 +1009,33 @@ func FindKeysBySubAndType(sub string, typeSuffix string) ([]string, error) {
 	}
 
 	return ids, nil
+}
+
+// 取相同前缀下的所有key的:后边 比如取群成员列表
+func FindSubKeysById(id string) ([]string, error) {
+	var subKeys []string
+
+	err := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("ids"))
+		if b == nil {
+			return fmt.Errorf("bucket %s not found", "ids")
+		}
+
+		c := b.Cursor()
+		prefix := []byte(id + ":")
+		for k, _ := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, _ = c.Next() {
+			keyParts := bytes.Split(k, []byte(":"))
+			if len(keyParts) == 2 {
+				subKeys = append(subKeys, string(keyParts[1]))
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return subKeys, nil
 }

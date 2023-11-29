@@ -40,6 +40,12 @@ type Sender struct {
 	TinyID   string `json:"tiny_id"`
 	UserID   int64  `json:"user_id"`
 	Role     string `json:"role,omitempty"`
+	Card     string `json:"card,omitempty"`
+	Sex      string `json:"sex,omitempty"`
+	Age      int32  `json:"age,omitempty"`
+	Area     string `json:"area,omitempty"`
+	Level    string `json:"level,omitempty"`
+	Title    string `json:"title,omitempty"`
 }
 
 // 频道信息事件

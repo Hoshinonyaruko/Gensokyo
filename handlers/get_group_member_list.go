@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
@@ -20,13 +21,22 @@ type Response struct {
 
 // Member Onebot 群成员
 type MemberList struct {
-	UserID       string `json:"user_id"`
-	GroupID      string `json:"group_id"`
-	Nickname     string `json:"nickname"`
-	Role         string `json:"role"`
-	JoinTime     string `json:"join_time"`
-	LastSentTime string `json:"last_sent_time"`
-	Level        string `json:"level,omitempty"` // 我添加了 Level 字段，因为你的示例中有它，但你可以删除它，如果不需要
+	GroupID         int64  `json:"group_id"`
+	UserID          int64  `json:"user_id"`
+	Nickname        string `json:"nickname"`
+	Card            string `json:"card"`
+	Sex             string `json:"sex"`
+	Age             int32  `json:"age"`
+	Area            string `json:"area"`
+	JoinTime        int32  `json:"join_time"`
+	LastSentTime    int32  `json:"last_sent_time"`
+	Level           string `json:"level"`
+	Role            string `json:"role"`
+	Unfriendly      bool   `json:"unfriendly"`
+	Title           string `json:"title"`
+	TitleExpireTime int64  `json:"title_expire_time"`
+	CardChangeable  bool   `json:"card_changeable"`
+	ShutUpTimestamp int64  `json:"shut_up_timestamp"`
 }
 
 func init() {
@@ -43,10 +53,62 @@ func getGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 
 	switch msgType {
 	case "group":
-		mylog.Printf("getGroupMemberList(频道): 目前暂未开放该能力")
+		mylog.Printf("getGroupMemberList(group): 开始从本地获取群成员列表")
+		// 实现的功能
+		var members []MemberList
+
+		// 使用 message.Params.GroupID.(string) 作为 id 来调用 FindSubKeysById
+		userIDs, err := idmap.FindSubKeysById(message.Params.GroupID.(string))
+		if err != nil {
+			mylog.Printf("Error retrieving user IDs: %v", err)
+			return // 或者处理错误
+		}
+
+		// 获取当前时间的前一天，并转换为10位时间戳
+		yesterday := time.Now().AddDate(0, 0, -1).Unix()
+
+		for _, userID := range userIDs {
+			userIDInt, err := strconv.ParseInt(userID, 10, 64)
+			if err != nil {
+				mylog.Printf("Error ParseInt73: %v", err)
+			}
+			groupIDInt, err := strconv.ParseInt(message.Params.GroupID.(string), 10, 64)
+			if err != nil {
+				mylog.Printf("Error ParseInt76: %v", err)
+			}
+			joinTimeInt := int32(yesterday)
+			member := MemberList{
+				UserID:          userIDInt,
+				GroupID:         groupIDInt,
+				Nickname:        "",
+				Card:            "",
+				Sex:             "",
+				Age:             0,
+				Area:            "",
+				JoinTime:        joinTimeInt,
+				LastSentTime:    0,
+				Level:           "0",
+				Role:            "member",
+				Unfriendly:      false,
+				Title:           "",
+				TitleExpireTime: 0,
+				CardChangeable:  false,
+				ShutUpTimestamp: 0,
+			}
+			members = append(members, member)
+		}
+		mylog.Printf("member message.Echors: %+v\n", message.Echo)
+
+		responseJSON := buildResponse(members, message.Echo)
+		mylog.Printf("getGroupMemberList(群): %s\n", responseJSON)
+
+		err = client.SendMessage(responseJSON)
+		if err != nil {
+			mylog.Printf("Error sending message via client: %v", err)
+		}
 		return
 	case "private":
-		mylog.Printf("getGroupMemberList(频道): 目前暂未适配私聊虚拟群场景获取虚拟群列表能力")
+		mylog.Printf("getGroupMemberList(private): 目前暂未适配私聊虚拟群场景获取虚拟群列表能力")
 		return
 	case "guild":
 		//要把group_id还原成guild_id
@@ -84,13 +146,35 @@ func getGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				mylog.Println("Error parsing JoinedAt timestamp:", err)
 				continue
 			}
-			joinedAtStr := joinedAtTime.Format(time.RFC3339) // or any other format
 
+			userIDInt, err := strconv.ParseInt(memberFromAPI.User.ID, 10, 64)
+			if err != nil {
+				mylog.Printf("Error ParseInt152: %v", err)
+			}
+
+			groupIDInt, err := strconv.ParseInt(message.Params.GroupID.(string), 10, 64)
+			if err != nil {
+				mylog.Printf("Error ParseInt156: %v", err)
+			}
+
+			joinTimeInt := int32(joinedAtTime.Unix())
 			member := MemberList{
-				UserID:   memberFromAPI.User.ID,
-				GroupID:  message.Params.GroupID.(string),
-				Nickname: memberFromAPI.Nick,
-				JoinTime: joinedAtStr,
+				UserID:          userIDInt,
+				GroupID:         groupIDInt,
+				Nickname:        memberFromAPI.Nick,
+				Card:            "", // 使用默认值
+				Sex:             "", // 使用默认值
+				Age:             0,  // 使用默认值
+				Area:            "", // 使用默认值
+				JoinTime:        joinTimeInt,
+				LastSentTime:    0,        // 使用默认值
+				Level:           "0",      // 0
+				Role:            "member", //
+				Unfriendly:      false,
+				Title:           "", // 使用默认值
+				TitleExpireTime: 0,  // 使用默认值
+				CardChangeable:  false,
+				ShutUpTimestamp: 0, // 使用默认值
 			}
 			for _, role := range memberFromAPI.Roles {
 				switch role {
@@ -127,12 +211,22 @@ func buildResponse(members []MemberList, echoValue interface{}) map[string]inter
 
 	for i, member := range members {
 		memberMap := map[string]interface{}{
-			"user_id":        member.UserID,
-			"group_id":       member.GroupID,
-			"nickname":       member.Nickname,
-			"role":           member.Role,
-			"join_time":      member.JoinTime,
-			"last_sent_time": member.LastSentTime,
+			"user_id":           member.UserID,
+			"group_id":          member.GroupID,
+			"nickname":          member.Nickname,
+			"card":              member.Card,
+			"sex":               member.Sex,
+			"age":               member.Age,
+			"area":              member.Area,
+			"join_time":         member.JoinTime,
+			"last_sent_time":    member.LastSentTime,
+			"level":             member.Level,
+			"role":              member.Role,
+			"unfriendly":        member.Unfriendly,
+			"title":             member.Title,
+			"title_expire_time": member.TitleExpireTime,
+			"card_changeable":   member.CardChangeable,
+			"shut_up_timestamp": member.ShutUpTimestamp,
 		}
 		data[i] = memberMap
 	}
