@@ -190,6 +190,11 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 			Sender: Sender{
 				Nickname: data.Member.Nick,
 				UserID:   userid64,
+				Card:     data.Member.Nick,
+				Sex:      "0",
+				Age:      0,
+				Area:     "",
+				Level:    "0",
 			},
 			SubType: "normal",
 			Time:    time.Now().Unix(),

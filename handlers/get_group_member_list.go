@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
@@ -43,7 +44,40 @@ func getGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 
 	switch msgType {
 	case "group":
-		mylog.Printf("getGroupMemberList(group): 目前暂未开放该能力")
+		mylog.Printf("getGroupMemberList(group): 开始从本地获取群成员列表")
+		// 实现的功能
+		var members []MemberList
+
+		// 使用 message.Params.GroupID.(string) 作为 id 来调用 FindSubKeysById
+		userIDs, err := idmap.FindSubKeysById(message.Params.GroupID.(string))
+		if err != nil {
+			mylog.Printf("Error retrieving user IDs: %v", err)
+			return // 或者处理错误
+		}
+
+		// 获取当前时间的前一天，并转换为10位时间戳
+		yesterday := time.Now().AddDate(0, 0, -1).Unix()
+
+		for _, userID := range userIDs {
+			member := MemberList{
+				UserID:   userID,
+				GroupID:  message.Params.GroupID.(string),
+				Nickname: "", // 根据需要填充或保留为空
+				JoinTime: strconv.FormatInt(yesterday, 10),
+				Role:     "admin", // 默认权限，可以根据需要修改
+			}
+
+			members = append(members, member)
+		}
+		mylog.Printf("member message.Echors: %+v\n", message.Echo)
+
+		responseJSON := buildResponse(members, message.Echo)
+		mylog.Printf("getGroupMemberList(群): %s\n", responseJSON)
+
+		err = client.SendMessage(responseJSON)
+		if err != nil {
+			mylog.Printf("Error sending message via client: %v", err)
+		}
 		return
 	case "private":
 		mylog.Printf("getGroupMemberList(private): 目前暂未适配私聊虚拟群场景获取虚拟群列表能力")
