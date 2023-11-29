@@ -80,6 +80,7 @@ func handleGetGroupInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		//用GroupID给ChannelID赋值,因为我们是把频道虚拟成了群
 		ChannelID := params.GroupID
 		// 使用RetrieveRowByIDv2还原真实的ChannelID
+		mylog.Printf("测试:%v", ChannelID.(string))
 		RChannelID, err := idmap.RetrieveRowByIDv2(ChannelID.(string))
 		if err != nil {
 			mylog.Printf("error retrieving real ChannelID: %v", err)
