@@ -211,12 +211,22 @@ func buildResponse(members []MemberList, echoValue interface{}) map[string]inter
 
 	for i, member := range members {
 		memberMap := map[string]interface{}{
-			"user_id":        member.UserID,
-			"group_id":       member.GroupID,
-			"nickname":       member.Nickname,
-			"role":           member.Role,
-			"join_time":      member.JoinTime,
-			"last_sent_time": member.LastSentTime,
+			"user_id":           member.UserID,
+			"group_id":          member.GroupID,
+			"nickname":          member.Nickname,
+			"card":              member.Card,
+			"sex":               member.Sex,
+			"age":               member.Age,
+			"area":              member.Area,
+			"join_time":         member.JoinTime,
+			"last_sent_time":    member.LastSentTime,
+			"level":             member.Level,
+			"role":              member.Role,
+			"unfriendly":        member.Unfriendly,
+			"title":             member.Title,
+			"title_expire_time": member.TitleExpireTime,
+			"card_changeable":   member.CardChangeable,
+			"shut_up_timestamp": member.ShutUpTimestamp,
 		}
 		data[i] = memberMap
 	}
