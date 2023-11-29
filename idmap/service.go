@@ -978,3 +978,34 @@ func UpdateVirtualValuev2Pro(oldVirtualValue1, newVirtualValue1, oldVirtualValue
 
 	return UpdateVirtualValuePro(oldVirtualValue1, newVirtualValue1, oldVirtualValue2, newVirtualValue2)
 }
+
+// sub 要匹配的类型 typesuffix 相当于:type 的type
+func FindKeysBySubAndType(sub string, typeSuffix string) ([]string, error) {
+	var ids []string
+
+	err := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(ConfigBucket))
+		if b == nil {
+			return fmt.Errorf("bucket %s not found", ConfigBucket)
+		}
+
+		return b.ForEach(func(k, v []byte) error {
+			key := string(k)
+			value := string(v)
+
+			// 检查键是否以:type结尾，并且值是否匹配sub
+			if strings.HasSuffix(key, typeSuffix) && value == sub {
+				// 提取id部分
+				id := strings.Split(key, ":")[0]
+				ids = append(ids, id)
+			}
+			return nil
+		})
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return ids, nil
+}
