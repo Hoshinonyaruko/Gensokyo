@@ -80,17 +80,17 @@ func getGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			member := MemberList{
 				UserID:          userIDInt,
 				GroupID:         groupIDInt,
-				Nickname:        "",
-				Card:            "",
-				Sex:             "",
+				Nickname:        "主人",
+				Card:            "主人",
+				Sex:             "0",
 				Age:             0,
-				Area:            "",
+				Area:            "0",
 				JoinTime:        joinTimeInt,
 				LastSentTime:    0,
 				Level:           "0",
 				Role:            "member",
 				Unfriendly:      false,
-				Title:           "",
+				Title:           "0",
 				TitleExpireTime: 0,
 				CardChangeable:  false,
 				ShutUpTimestamp: 0,
@@ -162,17 +162,17 @@ func getGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				UserID:          userIDInt,
 				GroupID:         groupIDInt,
 				Nickname:        memberFromAPI.Nick,
-				Card:            "", // 使用默认值
-				Sex:             "", // 使用默认值
-				Age:             0,  // 使用默认值
-				Area:            "", // 使用默认值
+				Card:            "主人", // 使用默认值
+				Sex:             "0",  // 使用默认值
+				Age:             0,    // 使用默认值
+				Area:            "0",  // 使用默认值
 				JoinTime:        joinTimeInt,
 				LastSentTime:    0,        // 使用默认值
 				Level:           "0",      // 0
 				Role:            "member", //
 				Unfriendly:      false,
-				Title:           "", // 使用默认值
-				TitleExpireTime: 0,  // 使用默认值
+				Title:           "0", // 使用默认值
+				TitleExpireTime: 0,   // 使用默认值
 				CardChangeable:  false,
 				ShutUpTimestamp: 0, // 使用默认值
 			}
