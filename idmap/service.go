@@ -1010,7 +1010,6 @@ func FindKeysBySubAndType(sub string, typeSuffix string) ([]string, error) {
 
 	return ids, nil
 }
-
 // 取相同前缀下的所有key的:后边 比如取群成员列表
 func FindSubKeysById(id string) ([]string, error) {
 	var subKeys []string
