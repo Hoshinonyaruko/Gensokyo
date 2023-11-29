@@ -174,6 +174,12 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 			Sender: Sender{
 				Nickname: "",
 				UserID:   userid64,
+				TinyID:   "",
+				Card:     "",
+				Sex:      "0",
+				Age:      0,
+				Area:     "",
+				Level:    "0",
 			},
 			SubType: "normal",
 			Time:    time.Now().Unix(),
