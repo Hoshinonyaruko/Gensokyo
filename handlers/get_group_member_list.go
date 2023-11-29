@@ -43,10 +43,10 @@ func getGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 
 	switch msgType {
 	case "group":
-		mylog.Printf("getGroupMemberList(频道): 目前暂未开放该能力")
+		mylog.Printf("getGroupMemberList(group): 目前暂未开放该能力")
 		return
 	case "private":
-		mylog.Printf("getGroupMemberList(频道): 目前暂未适配私聊虚拟群场景获取虚拟群列表能力")
+		mylog.Printf("getGroupMemberList(private): 目前暂未适配私聊虚拟群场景获取虚拟群列表能力")
 		return
 	case "guild":
 		//要把group_id还原成guild_id
