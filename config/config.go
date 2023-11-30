@@ -83,6 +83,7 @@ type Settings struct {
 	LotusPassword          string   `yaml:"lotus_password"`
 	WsServerPath           string   `yaml:"ws_server_path"`
 	IdmapPro               bool     `yaml:"idmap_pro"`
+	CardAndNick            string   `yaml:"card_nick"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -988,4 +989,16 @@ func GetIdmapPro() bool {
 		return false
 	}
 	return instance.Settings.IdmapPro
+}
+
+// 获取GetCardAndNick的值
+func GetCardAndNick() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetCardAndNick value.")
+		return ""
+	}
+	return instance.Settings.CardAndNick
 }
