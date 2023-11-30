@@ -502,8 +502,13 @@ func performBindOperationV2(cleanedMessage string, data interface{}, Type string
 		}
 		newRowValue = oldRowValue // 使用相同的值
 	}
-
-	// 调用 UpdateVirtualValue
+	// 调用 UpdateVirtualValue(兼顾老转换)
+	err = idmap.UpdateVirtualValuev2(oldVirtualValue1, newVirtualValue1)
+	if err != nil {
+		SendMessage(err.Error(), data, Type, p, p2)
+		return err
+	}
+	// 调用 UpdateVirtualValuev2Pro
 	err = idmap.UpdateVirtualValuev2Pro(oldRowValue, newRowValue, oldVirtualValue1, newVirtualValue1)
 	if err != nil {
 		SendMessage(err.Error(), data, Type, p, p2)
