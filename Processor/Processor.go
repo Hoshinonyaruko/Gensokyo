@@ -693,18 +693,28 @@ func (p *Processors) Autobind(data interface{}) error {
 		}
 		// idmaps pro也更新
 		idmap.UpdateVirtualValuev2Pro(GroupID64, idValue, userid64, vuinValue)
+		// 处理同一个群群友的gid刷新
+		idmap.UpdateKeysWithNewID(groupID, idValuestr)
 	} else if !vuinBound {
 		// 只有vuin未绑定，更新vuin映射
 		if err := idmap.UpdateVirtualValuev2(userid64, vuinValue); err != nil {
 			mylog.Printf("Error UpdateVirtualValuev2 for vuin: %v", err)
 			return err
 		}
+		// idmaps pro也更新,但只更新vuin
+		idmap.UpdateVirtualValuev2Pro(GroupID64, idValue, userid64, vuinValue)
+		// 处理同一个群群友的gid刷新
+		idmap.UpdateKeysWithNewID(groupID, idValuestr)
 	} else if !gidBound {
 		// 只有gid未绑定，更新gid映射
 		if err := idmap.UpdateVirtualValuev2(GroupID64, idValue); err != nil {
 			mylog.Printf("Error UpdateVirtualValuev2 for gid: %v", err)
 			return err
 		}
+		// idmaps pro也更新,但只更新gid
+		idmap.UpdateVirtualValuev2Pro(GroupID64, idValue, userid64, vuinValue)
+		// 处理同一个群群友的gid刷新
+		idmap.UpdateKeysWithNewID(groupID, idValuestr)
 	} else {
 		// 两者都已绑定，不执行任何操作
 		mylog.Errorf("Both vuin and gid are already binded")
