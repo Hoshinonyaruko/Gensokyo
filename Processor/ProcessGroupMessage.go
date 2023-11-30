@@ -93,17 +93,21 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 		SelfID:      int64(p.Settings.AppID),
 		UserID:      userid64,
 		Sender: Sender{
-			Nickname: "",
-			UserID:   userid64,
-			Card:     "",
-			Sex:      "0",
-			Age:      0,
-			Area:     "",
-			Level:    "0",
+			UserID: userid64,
+			Sex:    "0",
+			Age:    0,
+			Area:   "0",
+			Level:  "0",
 		},
 		SubType: "normal",
 		Time:    time.Now().Unix(),
 		Avatar:  "",
+	}
+	//根据条件判断是否增加nick和card
+	var CaN = config.GetCardAndNick()
+	if CaN != "" {
+		groupMsg.Sender.Nickname = CaN
+		groupMsg.Sender.Card = CaN
 	}
 	// 根据条件判断是否添加Echo字段
 	if config.GetTwoWayEcho() {

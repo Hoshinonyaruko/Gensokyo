@@ -319,7 +319,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			mylog.Printf("Error reading config: %v", err)
 			return
 		}
-		handleSendGuildChannelPrivateMsg(client, api, apiv2, message, &value, &message.Params.ChannelID)
+		handleSendGuildChannelPrivateMsg(client, api, apiv2, message, &value, &RChannelID)
 	case "group_private":
 		//用userid还原出openid 这是虚拟成群的群聊私聊信息
 		message.Params.UserID = message.Params.GroupID.(string)
