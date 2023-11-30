@@ -84,6 +84,7 @@ type Settings struct {
 	WsServerPath           string   `yaml:"ws_server_path"`
 	IdmapPro               bool     `yaml:"idmap_pro"`
 	CardAndNick            string   `yaml:"card_nick"`
+	AutoBind               bool     `yaml:"auto_bind"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -1001,4 +1002,16 @@ func GetCardAndNick() string {
 		return ""
 	}
 	return instance.Settings.CardAndNick
+}
+
+// 获取GetAutoBind的值
+func GetAutoBind() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetAutoBind value.")
+		return false
+	}
+	return instance.Settings.AutoBind
 }

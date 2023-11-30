@@ -304,17 +304,17 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 			//频道私信 转 群聊 获取id
 			var originalGroupID string
 			if config.GetIdmapPro() {
-				_, originalGroupID, err = idmap.RetrieveRowByIDv2Pro(channelID, GroupID)
+				_, originalGroupID, err = idmap.RetrieveRowByIDv2Pro(GroupID, RawUserID)
 				if err != nil {
 					mylog.Printf("Error retrieving original GroupID2: %v", err)
-					return
 				}
 				mylog.Printf("测试,通过Proid获取的originalGroupID:%v", originalGroupID)
-			} else {
+			}
+			//降级重试
+			if originalGroupID == "" {
 				originalGroupID, err = idmap.RetrieveRowByIDv2(message.Params.GroupID.(string))
 				if err != nil {
 					mylog.Printf("Error retrieving original GroupID: %v", err)
-					return
 				}
 			}
 			if messageID == "" {

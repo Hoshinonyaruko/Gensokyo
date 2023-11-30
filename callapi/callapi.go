@@ -77,6 +77,29 @@ type ParamsContent struct {
 	UserID    interface{} `json:"user_id"`            // 这里使用interface{}因为它可能是多种类型
 	Duration  int         `json:"duration,omitempty"` // 可选的整数
 	Enable    bool        `json:"enable,omitempty"`   // 可选的布尔值
+	// handle quick operation
+	Context   Context   `json:"context"`   // context 字段
+	Operation Operation `json:"operation"` // operation 字段
+}
+
+// Context 结构体用于存储 context 字段相关信息
+type Context struct {
+	Avatar      string `json:"avatar,omitempty"`       // 用户头像链接
+	Font        int    `json:"font,omitempty"`         // 字体（假设是整数类型）
+	MessageID   int    `json:"message_id,omitempty"`   // 消息 ID
+	MessageSeq  int    `json:"message_seq,omitempty"`  // 消息序列号
+	MessageType string `json:"message_type,omitempty"` // 消息类型
+	PostType    string `json:"post_type,omitempty"`    // 帖子类型
+	SubType     string `json:"sub_type,omitempty"`     // 子类型
+	Time        int64  `json:"time,omitempty"`         // 时间戳
+	UserID      int    `json:"user_id,omitempty"`      // 用户 ID
+	GroupID     int    `json:"group_id,omitempty"`     // 群号
+}
+
+// Operation 结构体用于存储 operation 字段相关信息
+type Operation struct {
+	Reply    string `json:"reply,omitempty"`     // 回复内容
+	AtSender bool   `json:"at_sender,omitempty"` // 是否 @ 发送者
 }
 
 // 自定义一个ParamsContent的UnmarshalJSON 让GroupID同时兼容str和int
