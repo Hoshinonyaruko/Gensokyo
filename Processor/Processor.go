@@ -682,6 +682,12 @@ func (p *Processors) Autobind(data interface{}) error {
 		mylog.Printf("Error storing ID: %v", err)
 		return nil
 	}
+	//转换idmap-pro 虚拟值
+	//将真实id转为int userid64
+	_, _, err = idmap.StoreIDv2Pro(groupID, realID)
+	if err != nil {
+		mylog.Fatalf("Error storing ID689: %v", err)
+	}
 	// 单独检查vuin和gid的绑定状态
 	vuinBound := strconv.FormatInt(userid64, 10) == vuinstr
 	gidBound := strconv.FormatInt(GroupID64, 10) == idValuestr
@@ -692,9 +698,10 @@ func (p *Processors) Autobind(data interface{}) error {
 			return err
 		}
 		// idmaps pro也更新
-		idmap.UpdateVirtualValuev2Pro(GroupID64, idValue, userid64, vuinValue)
-		// 处理同一个群群友的gid刷新
-		idmap.UpdateKeysWithNewID(groupID, idValuestr)
+		err = idmap.UpdateVirtualValuev2Pro(GroupID64, idValue, userid64, vuinValue)
+		if err != nil {
+			mylog.Fatalf("Error storing ID703: %v", err)
+		}
 	} else if !vuinBound {
 		// 只有vuin未绑定，更新vuin映射
 		if err := idmap.UpdateVirtualValuev2(userid64, vuinValue); err != nil {
@@ -703,8 +710,6 @@ func (p *Processors) Autobind(data interface{}) error {
 		}
 		// idmaps pro也更新,但只更新vuin
 		idmap.UpdateVirtualValuev2Pro(GroupID64, idValue, userid64, vuinValue)
-		// 处理同一个群群友的gid刷新
-		idmap.UpdateKeysWithNewID(groupID, idValuestr)
 	} else if !gidBound {
 		// 只有gid未绑定，更新gid映射
 		if err := idmap.UpdateVirtualValuev2(GroupID64, idValue); err != nil {
@@ -713,8 +718,6 @@ func (p *Processors) Autobind(data interface{}) error {
 		}
 		// idmaps pro也更新,但只更新gid
 		idmap.UpdateVirtualValuev2Pro(GroupID64, idValue, userid64, vuinValue)
-		// 处理同一个群群友的gid刷新
-		idmap.UpdateKeysWithNewID(groupID, idValuestr)
 	} else {
 		// 两者都已绑定，不执行任何操作
 		mylog.Errorf("Both vuin and gid are already binded")

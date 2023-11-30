@@ -540,6 +540,71 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 				SrvSendMsg: false,
 			}
 		}
+	} else if imageURLs, ok := foundItems["url_record"]; ok && len(imageURLs) > 0 {
+		var newpiclink string
+		if config.GetUrlPicTransfer() {
+			// 从URL下载图片
+			resp, err := http.Get("http://" + imageURLs[0])
+			if err != nil {
+				mylog.Printf("Error downloading the record: %v", err)
+				return &dto.MessageToCreate{
+					Content: "错误: 下载语音失败",
+					MsgID:   id,
+					MsgSeq:  msgseq,
+					MsgType: 0, // 默认文本类型
+				}
+			}
+			defer resp.Body.Close()
+
+			// 读取图片数据
+			recordData, err := io.ReadAll(resp.Body)
+			if err != nil {
+				mylog.Printf("Error reading the record data: %v", err)
+				return &dto.MessageToCreate{
+					Content: "错误: 读取语音数据失败",
+					MsgID:   id,
+					MsgSeq:  msgseq,
+					MsgType: 0,
+				}
+			}
+
+			// 转换为base64
+			base64Encoded := base64.StdEncoding.EncodeToString(recordData)
+
+			// 上传图片并获取新的URL
+			newURL, err := images.UploadBase64RecordToServer(base64Encoded)
+			if err != nil {
+				mylog.Printf("Error uploading base64 encoded image: %v", err)
+				return &dto.MessageToCreate{
+					Content: "错误: 上传图片失败",
+					MsgID:   id,
+					MsgSeq:  msgseq,
+					MsgType: 0,
+				}
+			}
+			// 将图片链接缩短 避免 url not allow
+			if config.GetLotusValue() {
+				// 连接到另一个gensokyo
+				newURL = url.GenerateShortURL(newURL)
+			} else {
+				// 自己是主节点
+				newURL = url.GenerateShortURL(newURL)
+				// 使用getBaseURL函数来获取baseUrl并与newURL组合
+				newURL = url.GetBaseURL() + "/url/" + newURL
+			}
+			newpiclink = newURL
+		} else {
+			newpiclink = "http://" + imageURLs[0]
+		}
+
+		// 发链接图片
+		return &dto.RichMediaMessage{
+			EventID:    id,
+			FileType:   3,          // 3代表语音
+			URL:        newpiclink, // 新语音链接
+			Content:    "",         // 这个字段文档没有了
+			SrvSendMsg: false,
+		}
 	} else if base64_image, ok := foundItems["base64_image"]; ok && len(base64_image) > 0 {
 		// todo 适配base64图片
 		//因为QQ群没有 form方式上传,所以在gensokyo内置了图床,需公网,或以lotus方式连接位于公网的gensokyo

@@ -150,6 +150,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 	urlImagePattern := regexp.MustCompile(`\[CQ:image,file=https?://(.+)\]`)
 	base64ImagePattern := regexp.MustCompile(`\[CQ:image,file=base64://(.+)\]`)
 	base64RecordPattern := regexp.MustCompile(`\[CQ:record,file=base64://(.+)\]`)
+	urlRecordPattern := regexp.MustCompile(`\[CQ:record,file=https?://(.+)\]`)
 
 	patterns := []struct {
 		key     string
@@ -160,6 +161,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 		{"base64_image", base64ImagePattern},
 		{"base64_record", base64RecordPattern},
 		{"local_record", localRecordPattern},
+		{"url_record", urlRecordPattern},
 	}
 
 	foundItems := make(map[string][]string)
