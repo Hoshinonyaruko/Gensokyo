@@ -92,13 +92,14 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			if err != nil {
 				mylog.Printf("Error1 retrieving original GroupID: %v", err)
 			}
-			mylog.Printf("测试,通过Proid获取的originalGroupID:%v", originalGroupID)
+			mylog.Printf("测试,通过idmaps-pro获取的originalGroupID:%v", originalGroupID)
 			if originalGroupID == "" {
 				originalGroupID, err = idmap.RetrieveRowByIDv2(message.Params.GroupID.(string))
 				if err != nil {
 					mylog.Printf("Error2 retrieving original GroupID: %v", err)
 					return
 				}
+				mylog.Printf("测试,通过idmaps获取的originalGroupID:%v", originalGroupID)
 			}
 		} else {
 			// 如果UserID是nil或配置不使用Pro版本，则调用RetrieveRowByIDv2
