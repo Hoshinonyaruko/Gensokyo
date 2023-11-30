@@ -75,8 +75,10 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 		return nil
 	}
 	messageID := int(messageID64)
-	if len(data.Attachments) > 0 && data.Attachments[0].URL != "" {
-		p.Autobind(data)
+	if config.GetAutoBind() {
+		if len(data.Attachments) > 0 && data.Attachments[0].URL != "" {
+			p.Autobind(data)
+		}
 	}
 	// 如果在Array模式下, 则处理Message为Segment格式
 	var segmentedMessages interface{} = messageText

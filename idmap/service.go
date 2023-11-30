@@ -1039,3 +1039,60 @@ func FindSubKeysById(id string) ([]string, error) {
 
 	return subKeys, nil
 }
+
+// 场景: xxx:yyy zzz:bbb  zzz:bbb xxx:yyy 把xxx(id)替换为newID 比如更换群号
+func UpdateKeysWithNewID(id, newID string) error {
+	return db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(BucketName))
+		if b == nil {
+			return fmt.Errorf("bucket %s not found", BucketName)
+		}
+
+		// 临时存储需要更新的键和反向键
+		keysToUpdate := make(map[string]string)
+
+		// 查找所有以id开头的键
+		err := b.ForEach(func(k, v []byte) error {
+			key := string(k)
+			if strings.HasPrefix(key, id+":") {
+				value := string(v)
+				keysToUpdate[key] = value
+			}
+			return nil
+		})
+
+		if err != nil {
+			return err
+		}
+
+		// 更新找到的键和对应的反向键
+		for key, reverseKey := range keysToUpdate {
+			newKey := strings.Replace(key, id, newID, 1)
+
+			// 获取原反向键的值
+			reverseValueBytes := b.Get([]byte(reverseKey))
+			if reverseValueBytes == nil {
+				return fmt.Errorf("reverse key %s not found", reverseKey)
+			}
+
+			// 更新原键
+			err := b.Delete([]byte(key))
+			if err != nil {
+				return err
+			}
+			err = b.Put([]byte(newKey), []byte(reverseKey))
+			if err != nil {
+				return err
+			}
+
+			// 更新反向键的值
+			newReverseValue := strings.Replace(string(reverseValueBytes), id, newID, 1)
+			err = b.Put([]byte(reverseKey), []byte(newReverseValue))
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
