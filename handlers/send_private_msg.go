@@ -242,6 +242,27 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 				messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), UserID)
 				mylog.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
 			}
+		} else {
+			//频道私信 转 私信
+			if GroupID != "" && config.GetIdmapPro() {
+				_, UserID, err = idmap.RetrieveRowByIDv2Pro(GroupID, RawUserID)
+				if err != nil {
+					mylog.Printf("Error reading config: %v", err)
+					return
+				}
+				mylog.Printf("测试,通过Proid获取的UserID:%v", UserID)
+			} else {
+				UserID, err = idmap.RetrieveRowByIDv2(RawUserID)
+				if err != nil {
+					mylog.Printf("Error reading config: %v", err)
+					return
+				}
+			}
+			// 如果messageID为空，通过函数获取
+			if messageID == "" {
+				messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), UserID)
+				mylog.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
+			}
 		}
 	} else {
 		if guildID == "" && channelID == "" {
@@ -275,6 +296,27 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 			mylog.Println("群组(私信虚拟成的)发信息messageText:", messageText)
 			//mylog.Println("foundItems:", foundItems)
 			// 如果messageID为空，通过函数获取
+			if messageID == "" {
+				messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), originalGroupID)
+				mylog.Println("通过GetMessageIDByUseridOrGroupid函数获取的message_id:", originalGroupID, messageID)
+			}
+		} else {
+			//频道私信 转 群聊 获取id
+			var originalGroupID string
+			if config.GetIdmapPro() {
+				_, originalGroupID, err = idmap.RetrieveRowByIDv2Pro(channelID, GroupID)
+				if err != nil {
+					mylog.Printf("Error retrieving original GroupID2: %v", err)
+					return
+				}
+				mylog.Printf("测试,通过Proid获取的originalGroupID:%v", originalGroupID)
+			} else {
+				originalGroupID, err = idmap.RetrieveRowByIDv2(message.Params.GroupID.(string))
+				if err != nil {
+					mylog.Printf("Error retrieving original GroupID: %v", err)
+					return
+				}
+			}
 			if messageID == "" {
 				messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), originalGroupID)
 				mylog.Println("通过GetMessageIDByUseridOrGroupid函数获取的message_id:", originalGroupID, messageID)
