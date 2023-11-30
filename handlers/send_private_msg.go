@@ -72,7 +72,8 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		var UserID string
 		if config.GetIdmapPro() {
 			//还原真实的userid
-			_, UserID, err = idmap.RetrieveRowByIDv2Pro("group_private", message.Params.UserID.(string))
+			//mylog.Printf("group_private:%v", message.Params.UserID.(string))
+			_, UserID, err = idmap.RetrieveRowByIDv2Pro("690426430", message.Params.UserID.(string))
 			if err != nil {
 				mylog.Printf("Error reading config: %v", err)
 				return

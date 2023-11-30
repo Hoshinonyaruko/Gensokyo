@@ -139,9 +139,11 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 		//映射str的userid到int
 		var userid64 int64
 		var err error
+		var magic int64
 		if config.GetIdmapPro() {
 			//将真实id转为int userid64
-			_, userid64, err = idmap.StoreIDv2Pro("group_private", data.Author.ID)
+			magic, userid64, err = idmap.StoreIDv2Pro("group_private", data.Author.ID)
+			mylog.Printf("魔法数字:%v", magic) //690426430
 			if err != nil {
 				mylog.Fatalf("Error storing ID: %v", err)
 			}
