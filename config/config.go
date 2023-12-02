@@ -85,6 +85,7 @@ type Settings struct {
 	IdmapPro               bool     `yaml:"idmap_pro"`
 	CardAndNick            string   `yaml:"card_nick"`
 	AutoBind               bool     `yaml:"auto_bind"`
+	CustomBotName          string   `yaml:"custom_bot_name"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -1014,4 +1015,16 @@ func GetAutoBind() bool {
 		return false
 	}
 	return instance.Settings.AutoBind
+}
+
+// 获取GetCustomBotName的值
+func GetCustomBotName() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetCustomBotName value.")
+		return "Gensokyo全域机器人"
+	}
+	return instance.Settings.CustomBotName
 }

@@ -42,9 +42,9 @@ func (c *WebSocketClient) SendMessage(message map[string]interface{}) error {
 	err = c.conn.WriteMessage(websocket.TextMessage, msgBytes)
 	if err != nil {
 		mylog.Println("Error sending message:", err)
-		if !c.isReconnecting {
-			go c.Reconnect()
-		}
+		// if !c.isReconnecting {
+		// 	go c.Reconnect()
+		// }
 		// 发送失败，将消息放入channel
 		go func() {
 			c.sendFailures <- message
@@ -61,10 +61,10 @@ func (c *WebSocketClient) handleIncomingMessages(ctx context.Context, cancel con
 		_, msg, err := c.conn.ReadMessage()
 		if err != nil {
 			mylog.Println("WebSocket connection closed:", err)
-			// cancel() // 取消心跳 goroutine
-			// if !c.isReconnecting {
-			// 	go c.Reconnect()
-			// }
+			cancel() // 取消心跳 goroutine
+			if !c.isReconnecting {
+				go c.Reconnect()
+			}
 			return // 退出循环，不再尝试读取消息
 		}
 
