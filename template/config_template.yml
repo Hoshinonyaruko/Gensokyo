@@ -76,3 +76,4 @@ settings:
   idmap_pro : false                 #需开启hash_id配合,高级id转换增强,可以多个真实值bind到同一个虚拟值,对于每个用户,每个群\私聊\判断私聊\频道,都会产生新的虚拟值,但可以多次bind,bind到同一个数字.数据库负担会变大.
   card_nick : ""                    #默认为空,连接mirai-overflow时,请设置为非空,这里是机器人对用户称谓,为空为插件获取,mirai不支持
   auto_bind : true                  #测试功能,后期会移除
+  custom_bot_name : "Gensokyo全域机器人" #自定义机器人名字,会在api调用中返回,默认Gensokyo全域机器人

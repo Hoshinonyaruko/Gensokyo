@@ -29,13 +29,15 @@ func init() {
 func getLoginInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
 
 	var response LoginInfoResponse
+	var botname string
 
 	// Assuming 全局_botid is a global or environment variable
 	globalBotID := config.GetAppID() // Replace with the actual global variable or value
 	userIDStr := fmt.Sprintf("%d", globalBotID)
+	botname = config.GetCustomBotName()
 
 	response.Data = LoginInfoData{
-		Nickname: "gensokyo全域机器人",
+		Nickname: botname,
 		UserID:   userIDStr,
 	}
 	response.Message = ""
