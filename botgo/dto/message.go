@@ -49,10 +49,16 @@ type MediaResponse struct {
 	TTL      int    `json:"ttl"`
 }
 
-//新增
+//群信息结构
 type GroupMessageResponse struct {
 	MediaResponse *MediaResponse
 	Message       *Message
+}
+
+// C2CMessageResponse 用于包装 C2C 消息的响应
+type C2CMessageResponse struct {
+	Message       *Message       `json:"message,omitempty"`
+	MediaResponse *MediaResponse `json:"media_response,omitempty"`
 }
 
 // Embed 结构
