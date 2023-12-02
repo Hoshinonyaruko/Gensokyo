@@ -237,14 +237,37 @@ func getC2CURLBySendType(msgType dto.SendType) uri {
 }
 
 // PostC2CMessage 回复C2C消息
-func (o *openAPIv2) PostC2CMessage(ctx context.Context, userID string, msg dto.APIMessage) (*dto.Message, error) {
-	resp, err := o.request(ctx).
-		SetResult(dto.Message{}).
-		SetPathParam("user_id", userID).
-		SetBody(msg).
-		Post(o.getURL(getC2CURLBySendType(msg.GetSendType())))
+func (o *openAPIv2) PostC2CMessage(ctx context.Context, userID string, msg dto.APIMessage) (*dto.C2CMessageResponse, error) {
+	var resp *resty.Response
+	var err error
+
+	msgType := msg.GetSendType()
+	switch msgType {
+	case dto.RichMedia:
+		resp, err = o.request(ctx).
+			SetResult(dto.MediaResponse{}). // 设置为媒体响应类型
+			SetPathParam("user_id", userID).
+			SetBody(msg).
+			Post(o.getURL(getC2CURLBySendType(msgType)))
+	default:
+		resp, err = o.request(ctx).
+			SetResult(dto.Message{}). // 设置为消息类型
+			SetPathParam("user_id", userID).
+			SetBody(msg).
+			Post(o.getURL(getC2CURLBySendType(msgType)))
+	}
+
 	if err != nil {
 		return nil, err
 	}
-	return resp.Result().(*dto.Message), nil
+
+	result := &dto.C2CMessageResponse{}
+	switch msgType {
+	case dto.RichMedia:
+		result.MediaResponse = resp.Result().(*dto.MediaResponse)
+	default:
+		result.Message = resp.Result().(*dto.Message)
+	}
+
+	return result, nil
 }

@@ -117,6 +117,72 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		mylog.Println("私聊发信息messageText:", messageText)
 		//mylog.Println("foundItems:", foundItems)
 
+		var singleItem = make(map[string][]string)
+		var imageType, imageUrl string
+		imageCount := 0
+
+		// 检查不同类型的图片并计算数量
+		if imageURLs, ok := foundItems["local_image"]; ok && len(imageURLs) == 1 {
+			imageType = "local_image"
+			imageUrl = imageURLs[0]
+			imageCount++
+		} else if imageURLs, ok := foundItems["url_image"]; ok && len(imageURLs) == 1 {
+			imageType = "url_image"
+			imageUrl = imageURLs[0]
+			imageCount++
+		} else if base64Images, ok := foundItems["base64_image"]; ok && len(base64Images) == 1 {
+			imageType = "base64_image"
+			imageUrl = base64Images[0]
+			imageCount++
+		}
+
+		if imageCount == 1 && messageText != "" {
+			mylog.Printf("发私聊图文混合信息")
+			// 创建包含单个图片的 singleItem
+			singleItem[imageType] = []string{imageUrl}
+			msgseq := echo.GetMappingSeq(messageID)
+			echo.AddMappingSeq(messageID, msgseq+1)
+			groupReply := generateGroupMessage(messageID, singleItem, "", msgseq+1)
+			// 进行类型断言
+			richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
+			if !ok {
+				mylog.Printf("Error: Expected RichMediaMessage type for key ")
+				return
+			}
+			// 上传图片并获取FileInfo
+			fileInfo, err := uploadMediaPrivate(context.TODO(), UserID, richMediaMessage, apiv2)
+			if err != nil {
+				mylog.Printf("上传图片失败: %v", err)
+				return // 或其他错误处理
+			}
+			// 创建包含文本和图像信息的消息
+			msgseq = echo.GetMappingSeq(messageID)
+			echo.AddMappingSeq(messageID, msgseq+1)
+			groupMessage := &dto.MessageToCreate{
+				Content: messageText, // 添加文本内容
+				Media: dto.Media{
+					FileInfo: fileInfo, // 添加图像信息
+				},
+				MsgID:   messageID,
+				MsgSeq:  msgseq,
+				MsgType: 7, // 假设7是组合消息类型
+			}
+			groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
+
+			// 发送组合消息
+			_, err = apiv2.PostC2CMessage(context.TODO(), UserID, groupMessage)
+			if err != nil {
+				mylog.Printf("发送组合消息失败: %v", err)
+				return // 或其他错误处理
+			}
+
+			// 发送成功回执
+			SendResponse(client, err, &message)
+
+			delete(foundItems, imageType) // 从foundItems中删除已处理的图片项
+			messageText = ""
+		}
+
 		// 优先发送文本信息
 		if messageText != "" {
 			msgseq := echo.GetMappingSeq(messageID)
@@ -144,19 +210,56 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			for _, url := range urls {
 				var singleItem = make(map[string][]string)
 				singleItem[key] = []string{url} // 创建一个只包含一个 URL 的 singleItem
+				//mylog.Println("singleItem:", singleItem)
 				msgseq := echo.GetMappingSeq(messageID)
 				echo.AddMappingSeq(messageID, msgseq+1)
 				groupReply := generateGroupMessage(messageID, singleItem, "", msgseq+1)
-
 				// 进行类型断言
 				richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
 				if !ok {
 					mylog.Printf("Error: Expected RichMediaMessage type for key %s.", key)
 					continue // 跳过这个项，继续下一个
 				}
-				_, err = apiv2.PostC2CMessage(context.TODO(), UserID, richMediaMessage)
+				message_return, err := apiv2.PostC2CMessage(context.TODO(), UserID, richMediaMessage)
 				if err != nil {
-					mylog.Printf("发送 %s 私聊信息失败: %v", key, err)
+					mylog.Printf("发送 %s 信息失败_send_private_msg: %v", key, err)
+					if config.GetSendError() { //把报错当作文本发出去
+						msgseq := echo.GetMappingSeq(messageID)
+						echo.AddMappingSeq(messageID, msgseq+1)
+						groupReply := generateGroupMessage(messageID, nil, err.Error(), msgseq+1)
+						// 进行类型断言
+						groupMessage, ok := groupReply.(*dto.MessageToCreate)
+						if !ok {
+							mylog.Println("Error: Expected MessageToCreate type.")
+							return // 或其他错误处理
+						}
+						groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
+						//重新为err赋值
+						_, err = apiv2.PostC2CMessage(context.TODO(), UserID, groupMessage)
+						if err != nil {
+							mylog.Printf("发送 %s 私聊信息失败: %v", key, err)
+						}
+					}
+				}
+				if message_return != nil && message_return.MediaResponse != nil && message_return.MediaResponse.FileInfo != "" {
+					msgseq := echo.GetMappingSeq(messageID)
+					echo.AddMappingSeq(messageID, msgseq+1)
+					media := dto.Media{
+						FileInfo: message_return.MediaResponse.FileInfo,
+					}
+					groupMessage := &dto.MessageToCreate{
+						Content: " ",
+						MsgID:   messageID,
+						MsgSeq:  msgseq,
+						MsgType: 7, // 默认文本类型
+						Media:   media,
+					}
+					groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
+					//重新为err赋值
+					_, err = apiv2.PostC2CMessage(context.TODO(), UserID, groupMessage)
+					if err != nil {
+						mylog.Printf("发送 %s 私聊信息失败: %v", key, err)
+					}
 				}
 				//发送成功回执
 				SendResponse(client, err, &message)
@@ -179,7 +282,8 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		tryMessageTypes := []string{"group", "guild", "guild_private"}
 		messageCopy := message // 创建message的副本
 		echo.AddMsgType(config.GetAppIDStr(), idInt64, tryMessageTypes[echo.GetMapping(idInt64)-1])
-		time.Sleep(300 * time.Millisecond)
+		delay := config.GetSendDelay()
+		time.Sleep(time.Duration(delay) * time.Millisecond)
 		handleSendGroupMsg(client, api, apiv2, messageCopy)
 	}
 }
@@ -419,4 +523,15 @@ func getGuildIDFromMessage(message callapi.ActionMessage) (string, string, error
 	}
 
 	return guildID, channelID, nil
+}
+
+// uploadMedia 上传媒体并返回FileInfo
+func uploadMediaPrivate(ctx context.Context, UserID string, richMediaMessage *dto.RichMediaMessage, apiv2 openapi.OpenAPI) (string, error) {
+	// 调用API来上传媒体
+	messageReturn, err := apiv2.PostC2CMessage(ctx, UserID, richMediaMessage)
+	if err != nil {
+		return "", err
+	}
+	// 返回上传后的FileInfo
+	return messageReturn.MediaResponse.FileInfo, nil
 }

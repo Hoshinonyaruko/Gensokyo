@@ -86,6 +86,7 @@ type Settings struct {
 	CardAndNick            string   `yaml:"card_nick"`
 	AutoBind               bool     `yaml:"auto_bind"`
 	CustomBotName          string   `yaml:"custom_bot_name"`
+	SendDelay              int      `yaml:"send_delay"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -1027,4 +1028,16 @@ func GetCustomBotName() string {
 		return "Gensokyo全域机器人"
 	}
 	return instance.Settings.CustomBotName
+}
+
+// 获取send_delay的值
+func GetSendDelay() int {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetSendDelay value.")
+		return 300
+	}
+	return instance.Settings.SendDelay
 }
