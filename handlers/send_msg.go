@@ -108,7 +108,8 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 		tryMessageTypes := []string{"group", "guild", "guild_private"}
 		messageCopy := message // 创建message的副本
 		echo.AddMsgType(config.GetAppIDStr(), idInt64, tryMessageTypes[echo.GetMapping(idInt64)-1])
-		time.Sleep(300 * time.Millisecond)
+		delay := config.GetSendDelay()
+		time.Sleep(time.Duration(delay) * time.Millisecond)
 		handleSendMsg(client, api, apiv2, messageCopy)
 	}
 }
