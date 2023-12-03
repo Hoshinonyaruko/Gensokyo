@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"strconv"
+
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/tencent-connect/botgo/openapi"
 )
@@ -30,7 +32,7 @@ func CreateSendGroupMsgAction(originalMsg callapi.ActionMessage) *callapi.Action
 		return &callapi.ActionMessage{
 			Action: "send_group_msg",
 			Params: callapi.ParamsContent{
-				GroupID: originalMsg.Params.Context.GroupID,
+				GroupID: strconv.Itoa(originalMsg.Params.Context.GroupID), // 将int转换为string
 				Message: originalMsg.Params.Operation.Reply,
 			},
 		}
@@ -39,7 +41,7 @@ func CreateSendGroupMsgAction(originalMsg callapi.ActionMessage) *callapi.Action
 		return &callapi.ActionMessage{
 			Action: "send_private_msg",
 			Params: callapi.ParamsContent{
-				UserID:  originalMsg.Params.Context.UserID,
+				UserID:  strconv.Itoa(originalMsg.Params.Context.UserID), // 将int转换为string
 				Message: originalMsg.Params.Operation.Reply,
 			},
 		}
