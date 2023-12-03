@@ -21,7 +21,7 @@ func init() {
 }
 
 type OnebotGroupInfo struct {
-	Data    []GroupInfo `json:"data"`
+	Data    GroupInfo   `json:"data"`
 	Message string      `json:"message"`
 	RetCode int         `json:"retcode"`
 	Status  string      `json:"status"`
@@ -65,7 +65,7 @@ func ConvertGuildToGroupInfo(guild *dto.Guild, GroupId string, message callapi.A
 
 	// 创建 OnebotGroupInfo 实例并填充数据
 	onebotGroupInfo := &OnebotGroupInfo{
-		Data:    []GroupInfo{*groupInfo},
+		Data:    *groupInfo,
 		Message: "success",
 		RetCode: 0,
 		Status:  "ok",
@@ -139,7 +139,7 @@ func handleGetGroupInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		}
 		// 创建 OnebotGroupInfo 实例并嵌入 GroupInfo
 		groupInfo = &OnebotGroupInfo{
-			Data:    []GroupInfo{*groupInfo1}, // 将 groupInfo 添加到 Data 切片中
+			Data:    *groupInfo1, // 将 groupInfo 添加到 Data 切片中
 			Message: "success",
 			RetCode: 0,
 			Status:  "ok",
