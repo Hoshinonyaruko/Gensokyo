@@ -49,6 +49,8 @@ gensokyo兼容 [OneBot-v11](https://github.com/botuniverse/onebot-11) ，并在�
 
 支持连接koishi,nonebot2,trss,zerobot,MiraiCQ,hoshino..
 
+支持连接tata,派蒙,炸毛,早苗,yobot...
+
 可以与支持onebotV11适配器的项目相连接使用.
 
 实现插件开发和用户开发者无需重新开发,复用过往生态的插件和使用体验.

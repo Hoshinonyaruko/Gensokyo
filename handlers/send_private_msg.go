@@ -296,7 +296,16 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 	var guildID, channelID string
 	var err error
 	var UserID string
-	GroupID := message.Params.GroupID.(string)
+	var GroupID string
+	if message.Params.GroupID != nil {
+		if gid, ok := message.Params.GroupID.(string); ok {
+			GroupID = gid // GroupID 是 string 类型
+		} else {
+			mylog.Printf(" GroupID 不是 string,304")
+		}
+	} else {
+		mylog.Printf("GroupID 为 nil,信息发送正常可忽略")
+	}
 	RawUserID := message.Params.UserID.(string)
 
 	if optionalGuildID != nil && optionalChannelID != nil {
