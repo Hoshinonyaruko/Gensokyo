@@ -738,16 +738,17 @@ func uploadMedia(ctx context.Context, groupID string, richMediaMessage *dto.Rich
 
 // 发送栈中的消息
 func SendStackMessages(apiv2 openapi.OpenAPI) {
-	pairs := echo.PopGlobalStackMulti(10) // 假设每次处理10个消息
+	count := config.GetAtoPCount()
+	pairs := echo.PopGlobalStackMulti(count)
 	for _, pair := range pairs {
 		// 发送消息
 		ret, err := apiv2.PostGroupMessage(context.TODO(), pair.Group, pair.GroupMessage)
 		if err != nil {
 			mylog.Printf("发送组合消息失败: %v", err)
-			continue // 或其他错误处理
+			continue // 其他错误处理
 		}
 
-		// 检查特定的错误码
+		// 检查错误码
 		if ret.Message.Ret == 22009 {
 			mylog.Printf("信息再次发送失败,加入到队列中,下次被动信息进行发送")
 			echo.PushGlobalStack(pair)
