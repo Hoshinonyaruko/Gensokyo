@@ -81,11 +81,17 @@ func UploadBase64ImageHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 			return
 		}
 
-		err = os.WriteFile(savePath, imageBytes, 0644)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "error saving file"})
-			return
+		//如果文件存在则跳过
+		if _, err := os.Stat(savePath); os.IsNotExist(err) {
+			err = os.WriteFile(savePath, imageBytes, 0644)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "error saving file"})
+				return
+			}
+		} else {
+			mylog.Println("File already exists, skipping save.")
 		}
+		
 		var serverPort string
 		serverAddress := config.GetServer_dir()
 		frpport := config.GetFrpPort()
@@ -146,11 +152,16 @@ func UploadBase64RecordHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error creating directory"})
 			return
 		}
-
-		err = os.WriteFile(savePath, RecordBytes, 0644)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "error saving file"})
-			return
+		
+		//如果文件存在则跳过
+		if _, err := os.Stat(savePath); os.IsNotExist(err) {
+			err = os.WriteFile(savePath, RecordBytes, 0644)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "error saving file"})
+				return
+			}
+		} else {
+			mylog.Println("File already exists, skipping save.")
 		}
 
 		serverAddress := config.GetServer_dir()
