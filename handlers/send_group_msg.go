@@ -79,7 +79,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			mylog.Printf("GetLazyMessagesId: %v", messageID)
 			if messageID != "" {
 				//尝试发送栈内信息
-				SendStackMessages(apiv2)
+				SendStackMessages(apiv2, messageID)
 			}
 		}
 		if messageID == "" {
@@ -737,7 +737,7 @@ func uploadMedia(ctx context.Context, groupID string, richMediaMessage *dto.Rich
 }
 
 // 发送栈中的消息
-func SendStackMessages(apiv2 openapi.OpenAPI) {
+func SendStackMessages(apiv2 openapi.OpenAPI, messageid string) {
 	count := config.GetAtoPCount()
 	pairs := echo.PopGlobalStackMulti(count)
 	for _, pair := range pairs {
@@ -746,6 +746,7 @@ func SendStackMessages(apiv2 openapi.OpenAPI) {
 		msgseq := echo.GetMappingSeq(messageID)
 		echo.AddMappingSeq(messageID, msgseq+1)
 		pair.GroupMessage.MsgSeq = msgseq + 1
+		pair.GroupMessage.MsgID = messageid
 		ret, err := apiv2.PostGroupMessage(context.TODO(), pair.Group, pair.GroupMessage)
 		if err != nil {
 			mylog.Printf("发送组合消息失败: %v", err)
