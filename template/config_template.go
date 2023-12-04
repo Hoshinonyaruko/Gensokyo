@@ -48,6 +48,10 @@ settings:
   record_bitRate : 24000            #语音文件的比特率 默认25000 代表 25 kbps 最高无限 请根据带宽 您发送的实际码率调整
   card_nick : ""                    #默认为空,连接mirai-overflow时,请设置为非空,这里是机器人对用户称谓,为空为插件获取,mirai不支持
   auto_bind : true                  #测试功能,后期会移除
+  AMsgRetryAsPMsg_Count : 1         #当主动信息发送失败时,自动转为后续的被动信息发送,需要开启Lazy message id,该配置项为每次跟随被动信息发送的信息数量,最大5,建议1-3
+  reconnect_times : 100             #反向ws连接失败后的重试次数,希望一直重试,可设置9999
+  heart_beat_interval : 10          #反向ws心跳间隔 单位秒 推荐5-10
+  launch_reconnect_times : 1        #启动时尝试反向ws连接次数,建议先打开应用端再开启gensokyo,因为启动时连接会阻塞webui启动,默认只连接一次,可自行增大
 
   #正向ws设置
   ws_server_path : "ws"             #默认监听0.0.0.0:port/ws_server_path 若有安全需求,可不放通port到公网,或设置ws_server_token 若想监听/ 可改为"",若想监听到不带/地址请写nil
