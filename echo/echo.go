@@ -3,6 +3,8 @@ package echo
 import (
 	"strconv"
 	"sync"
+
+	"github.com/tencent-connect/botgo/dto"
 )
 
 type EchoMapping struct {
@@ -33,6 +35,23 @@ type StringToInt64MappingSeq struct {
 type Int64Stack struct {
 	mu    sync.Mutex
 	stack []int64
+}
+
+// MessageGroupPair 用于存储 group 和 groupMessage
+type MessageGroupPair struct {
+	Group        string
+	GroupMessage *dto.MessageToCreate
+}
+
+// 定义全局栈的结构体
+type globalMessageGroup struct {
+	mu    sync.Mutex
+	stack []MessageGroupPair
+}
+
+// 初始化一个全局栈实例
+var globalMessageGroupStack = &globalMessageGroup{
+	stack: make([]MessageGroupPair, 0),
 }
 
 // 定义一个全局的 Int64Stack 实例
@@ -167,4 +186,32 @@ func GetFileTimeLimit() int64 {
 		return 0 // 当栈为空时返回 0
 	}
 	return globalInt64Stack.stack[len(globalInt64Stack.stack)-1]
+}
+
+// PushGlobalStack 向全局栈中添加一个新的 MessageGroupPair
+func PushGlobalStack(pair MessageGroupPair) {
+	globalMessageGroupStack.mu.Lock()
+	defer globalMessageGroupStack.mu.Unlock()
+	globalMessageGroupStack.stack = append(globalMessageGroupStack.stack, pair)
+}
+
+// PopGlobalStackMulti 从全局栈中取出指定数量的 MessageGroupPair
+func PopGlobalStackMulti(count int) []MessageGroupPair {
+	globalMessageGroupStack.mu.Lock()
+	defer globalMessageGroupStack.mu.Unlock()
+
+	// 如果 count 为 0 或栈为空，则不取出元素
+	if count == 0 || len(globalMessageGroupStack.stack) == 0 {
+		return nil
+	}
+
+	if count >= len(globalMessageGroupStack.stack) {
+		result := globalMessageGroupStack.stack
+		globalMessageGroupStack.stack = nil
+		return result
+	}
+
+	result := globalMessageGroupStack.stack[len(globalMessageGroupStack.stack)-count:]
+	globalMessageGroupStack.stack = globalMessageGroupStack.stack[:len(globalMessageGroupStack.stack)-count]
+	return result
 }

@@ -78,3 +78,7 @@ settings:
   auto_bind : true                  #测试功能,后期会移除
   custom_bot_name : "Gensokyo全域机器人" #自定义机器人名字,会在api调用中返回,默认Gensokyo全域机器人
   send_delay : 300                  #单位 毫秒 默认300ms 可以视情况减少到100或者50
+  AMsgRetryAsPMsg_Count : 1         #当主动信息发送失败时,自动转为后续的被动信息发送,需要开启Lazy message id,该配置项为每次跟随被动信息发送的信息数量,最大5,建议1-3
+  reconnect_times : 100             #反向ws连接失败后的重试次数,希望一直重试,可设置9999
+  heart_beat_interval : 10          #反向ws心跳间隔 单位秒 推荐5-10
+  launch_reconnect_times : 1        #启动时尝试反向ws连接次数,建议先打开应用端再开启gensokyo,因为启动时连接会阻塞webui启动,默认只连接一次,可自行增大

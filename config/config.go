@@ -87,6 +87,10 @@ type Settings struct {
 	AutoBind               bool     `yaml:"auto_bind"`
 	CustomBotName          string   `yaml:"custom_bot_name"`
 	SendDelay              int      `yaml:"send_delay"`
+	AtoPCount              int      `yaml:"AMsgRetryAsPMsg_Count"`
+	ReconnecTimes          int      `yaml:"reconnect_times"`
+	HeartBeatInterval      int      `yaml:"heart_beat_interval"`
+	LaunchReconectTimes    int      `yaml:"launch_reconnect_times"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -1040,4 +1044,52 @@ func GetSendDelay() int {
 		return 300
 	}
 	return instance.Settings.SendDelay
+}
+
+// 获取GetAtoPCount的值
+func GetAtoPCount() int {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to AtoPCount value.")
+		return 5
+	}
+	return instance.Settings.AtoPCount
+}
+
+// 获取GetReconnecTimes的值
+func GetReconnecTimes() int {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to ReconnecTimes value.")
+		return 50
+	}
+	return instance.Settings.ReconnecTimes
+}
+
+// 获取GetHeartBeatInterval的值
+func GetHeartBeatInterval() int {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to HeartBeatInterval value.")
+		return 5
+	}
+	return instance.Settings.HeartBeatInterval
+}
+
+// 获取LaunchReconectTimes
+func GetLaunchReconectTimes() int {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to LaunchReconectTimes value.")
+		return 3
+	}
+	return instance.Settings.LaunchReconectTimes
 }

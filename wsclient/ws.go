@@ -91,8 +91,8 @@ func (client *WebSocketClient) Reconnect() {
 		client.isReconnecting = false
 		client.mutex.Unlock()
 	}()
-
-	newClient, err := NewWebSocketClient(client.urlStr, client.botID, client.api, client.apiv2, 30)
+	reconnecttimes := config.GetReconnecTimes()
+	newClient, err := NewWebSocketClient(client.urlStr, client.botID, client.api, client.apiv2, reconnecttimes)
 	if err == nil && newClient != nil {
 		client.mutex.Lock()        // 在替换连接之前锁定
 		oldCancel := client.cancel // 保存旧的取消函数
@@ -152,12 +152,12 @@ func TruncateMessage(message callapi.ActionMessage, maxLength int) string {
 }
 
 // 发送心跳包
-func (c *WebSocketClient) sendHeartbeat(ctx context.Context, botID uint64) {
+func (c *WebSocketClient) sendHeartbeat(ctx context.Context, botID uint64, heartbeatinterval int) {
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.After(10 * time.Second):
+		case <-time.After(time.Duration(heartbeatinterval) * time.Second):
 			message := map[string]interface{}{
 				"post_type":       "meta_event",
 				"meta_event_type": "heartbeat",
@@ -272,8 +272,8 @@ func NewWebSocketClient(urlStr string, botID uint64, api openapi.OpenAPI, apiv2 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	client.cancel = cancel
-
-	go client.sendHeartbeat(ctx, botID)
+	heartbeatinterval := config.GetHeartBeatInterval()
+	go client.sendHeartbeat(ctx, botID, heartbeatinterval)
 	go client.handleIncomingMessages(ctx, cancel)
 
 	return client, nil
