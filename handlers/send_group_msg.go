@@ -746,7 +746,7 @@ func SendStackMessages(apiv2 openapi.OpenAPI, messageid string, originalGroupID 
 	count := config.GetAtoPCount()
 	mylog.Printf("取出数量: %v", count)
 	pairs := echo.PopGlobalStackMulti(count)
-	for _, pair := range pairs {
+	for i, pair := range pairs {
 		mylog.Printf("%v: %v", pair.Group, originalGroupID)
 		if pair.Group == originalGroupID {
 			// 发送消息
@@ -758,7 +758,9 @@ func SendStackMessages(apiv2 openapi.OpenAPI, messageid string, originalGroupID 
 			ret, err := apiv2.PostGroupMessage(context.TODO(), pair.Group, pair.GroupMessage)
 			if err != nil {
 				mylog.Printf("发送组合消息失败: %v", err)
-				continue // 其他错误处理
+				continue
+			} else {
+				echo.RemoveFromGlobalStack(i)
 			}
 
 			// 检查错误码

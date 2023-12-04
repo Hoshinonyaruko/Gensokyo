@@ -195,23 +195,30 @@ func PushGlobalStack(pair MessageGroupPair) {
 	globalMessageGroupStack.stack = append(globalMessageGroupStack.stack, pair)
 }
 
-// PopGlobalStackMulti 从全局栈中取出指定数量的 MessageGroupPair
+// PopGlobalStackMulti 从全局栈中取出指定数量的 MessageGroupPair，但不删除它们
 func PopGlobalStackMulti(count int) []MessageGroupPair {
 	globalMessageGroupStack.mu.Lock()
 	defer globalMessageGroupStack.mu.Unlock()
 
-	// 如果 count 为 0 或栈为空，则不取出元素
 	if count == 0 || len(globalMessageGroupStack.stack) == 0 {
 		return nil
 	}
 
-	if count >= len(globalMessageGroupStack.stack) {
-		result := globalMessageGroupStack.stack
-		globalMessageGroupStack.stack = nil
-		return result
+	if count > len(globalMessageGroupStack.stack) {
+		count = len(globalMessageGroupStack.stack)
 	}
 
-	result := globalMessageGroupStack.stack[len(globalMessageGroupStack.stack)-count:]
-	globalMessageGroupStack.stack = globalMessageGroupStack.stack[:len(globalMessageGroupStack.stack)-count]
-	return result
+	return globalMessageGroupStack.stack[:count]
+}
+
+// RemoveFromGlobalStack 从全局栈中删除指定下标的元素
+func RemoveFromGlobalStack(index int) {
+	globalMessageGroupStack.mu.Lock()
+	defer globalMessageGroupStack.mu.Unlock()
+
+	if index < 0 || index >= len(globalMessageGroupStack.stack) {
+		return // 下标越界检查
+	}
+
+	globalMessageGroupStack.stack = append(globalMessageGroupStack.stack[:index], globalMessageGroupStack.stack[index+1:]...)
 }
