@@ -44,6 +44,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 	mylog.Printf("send_group_msg获取到信息类型:%v", msgType)
 	var idInt64 int64
 	var err error
+	var ret *dto.GroupMessageResponse
 
 	if message.Params.UserID != "" {
 		idInt64, err = ConvertToInt64(message.Params.UserID)
@@ -76,6 +77,10 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			//由于实现了Params的自定义unmarshell 所以可以类型安全的断言为string
 			messageID = echo.GetLazyMessagesId(message.Params.GroupID.(string))
 			mylog.Printf("GetLazyMessagesId: %v", messageID)
+			if messageID != "" {
+				//尝试发送栈内信息
+				SendStackMessages(apiv2)
+			}
 		}
 		if messageID == "" {
 			if echoStr, ok := message.Echo.(string); ok {
@@ -118,7 +123,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				mylog.Println("通过GetMessageIDByUseridAndGroupid函数获取的message_id:", message.Params.GroupID, messageID)
 			} else {
 				// 如果 UserID 是 nil，可以在这里处理，例如记录日志或采取其他措施
-				mylog.Println("UserID 为 nil，跳过 GetMessageIDByUseridAndGroupid 调用")
+				mylog.Println("UserID 为 nil,跳过 GetMessageIDByUseridAndGroupid 调用")
 			}
 		}
 		// 如果messageID为空，通过函数获取
@@ -183,10 +188,17 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
 
 			// 发送组合消息
-			_, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
+			ret, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 			if err != nil {
 				mylog.Printf("发送组合消息失败: %v", err)
 				return // 或其他错误处理
+			}
+			if ret.Message.Ret == 22009 {
+				mylog.Printf("信息发送失败,加入到队列中,下次被动信息进行发送")
+				var pair echo.MessageGroupPair
+				pair.Group = message.Params.GroupID.(string)
+				pair.GroupMessage = groupMessage
+				echo.PushGlobalStack(pair)
 			}
 
 			// 发送成功回执
@@ -211,9 +223,16 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 
 			groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
 			//重新为err赋值
-			_, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
+			ret, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 			if err != nil {
 				mylog.Printf("发送文本群组信息失败: %v", err)
+			}
+			if ret.Message.Ret == 22009 {
+				mylog.Printf("信息发送失败,加入到队列中,下次被动信息进行发送")
+				var pair echo.MessageGroupPair
+				pair.Group = message.Params.GroupID.(string)
+				pair.GroupMessage = groupMessage
+				echo.PushGlobalStack(pair)
 			}
 			//发送成功回执
 			SendResponse(client, err, &message)
@@ -249,9 +268,16 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 						}
 						groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
 						//重新为err赋值
-						_, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
+						ret, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 						if err != nil {
 							mylog.Printf("发送文本报错信息失败: %v", err)
+						}
+						if ret.Message.Ret == 22009 {
+							mylog.Printf("信息发送失败,加入到队列中,下次被动信息进行发送")
+							var pair echo.MessageGroupPair
+							pair.Group = message.Params.GroupID.(string)
+							pair.GroupMessage = groupMessage
+							echo.PushGlobalStack(pair)
 						}
 					}
 				}
@@ -270,9 +296,16 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 					}
 					groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
 					//重新为err赋值
-					_, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
+					ret, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 					if err != nil {
 						mylog.Printf("发送图片失败: %v", err)
+					}
+					if ret.Message.Ret == 22009 {
+						mylog.Printf("信息发送失败,加入到队列中,下次被动信息进行发送")
+						var pair echo.MessageGroupPair
+						pair.Group = message.Params.GroupID.(string)
+						pair.GroupMessage = groupMessage
+						echo.PushGlobalStack(pair)
 					}
 				}
 				//发送成功回执
@@ -701,4 +734,24 @@ func uploadMedia(ctx context.Context, groupID string, richMediaMessage *dto.Rich
 	}
 	// 返回上传后的FileInfo
 	return messageReturn.MediaResponse.FileInfo, nil
+}
+
+// 发送栈中的消息
+func SendStackMessages(apiv2 openapi.OpenAPI) {
+	pairs := echo.PopGlobalStackMulti(10) // 假设每次处理10个消息
+	for _, pair := range pairs {
+		// 发送消息
+		ret, err := apiv2.PostGroupMessage(context.TODO(), pair.Group, pair.GroupMessage)
+		if err != nil {
+			mylog.Printf("发送组合消息失败: %v", err)
+			continue // 或其他错误处理
+		}
+
+		// 检查特定的错误码
+		if ret.Message.Ret == 22009 {
+			mylog.Printf("信息再次发送失败,加入到队列中,下次被动信息进行发送")
+			echo.PushGlobalStack(pair)
+		}
+
+	}
 }

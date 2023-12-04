@@ -39,6 +39,8 @@ type Message struct {
 	MessageReference *MessageReference `json:"message_reference,omitempty"`
 	// 私信场景下，该字段用来标识从哪个频道发起的私信
 	SrcGuildID string `json:"src_guild_id"`
+	//返回的ret 超过主动限制会返回22009
+	Ret int `json:"ret,omitempty"`
 }
 
 type MediaResponse struct {
@@ -47,6 +49,8 @@ type MediaResponse struct {
 	//file_info
 	FileInfo string `json:"file_info"`
 	TTL      int    `json:"ttl"`
+	//返回的ret 超过主动限制会返回22009
+	Ret int `json:"ret,omitempty"`
 }
 
 //群信息结构
