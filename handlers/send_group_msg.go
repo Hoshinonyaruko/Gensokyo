@@ -115,8 +115,8 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		}
 		message.Params.GroupID = originalGroupID
 		if SSM {
-			mylog.Printf("正在使用Msgid:%v 补发之前失败的主动信息,请注意AtoP不要设置超过3,否则可能会影响正常信息发送", messageID)
-			mylog.Printf("originalGroupID:%v ", originalGroupID)
+			//mylog.Printf("正在使用Msgid:%v 补发之前失败的主动信息,请注意AtoP不要设置超过3,否则可能会影响正常信息发送", messageID)
+			//mylog.Printf("originalGroupID:%v ", originalGroupID)
 			SendStackMessages(apiv2, messageID, originalGroupID)
 		}
 		mylog.Println("群组发信息messageText:", messageText)
@@ -744,8 +744,10 @@ func uploadMedia(ctx context.Context, groupID string, richMediaMessage *dto.Rich
 // 发送栈中的消息
 func SendStackMessages(apiv2 openapi.OpenAPI, messageid string, originalGroupID string) {
 	count := config.GetAtoPCount()
+	mylog.Printf("取出数量: %v", count)
 	pairs := echo.PopGlobalStackMulti(count)
 	for _, pair := range pairs {
+		mylog.Printf("%v: %v", pair.Group, originalGroupID)
 		if pair.Group == originalGroupID {
 			// 发送消息
 			messageID := pair.GroupMessage.MsgID
