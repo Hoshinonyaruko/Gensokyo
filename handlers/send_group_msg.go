@@ -742,6 +742,10 @@ func SendStackMessages(apiv2 openapi.OpenAPI) {
 	pairs := echo.PopGlobalStackMulti(count)
 	for _, pair := range pairs {
 		// 发送消息
+		messageID := pair.GroupMessage.MsgID
+		msgseq := echo.GetMappingSeq(messageID)
+		echo.AddMappingSeq(messageID, msgseq+1)
+		pair.GroupMessage.MsgSeq = msgseq + 1
 		ret, err := apiv2.PostGroupMessage(context.TODO(), pair.Group, pair.GroupMessage)
 		if err != nil {
 			mylog.Printf("发送组合消息失败: %v", err)
