@@ -116,6 +116,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		message.Params.GroupID = originalGroupID
 		if SSM {
 			mylog.Printf("正在使用Msgid:%v 补发之前失败的主动信息,请注意AtoP不要设置超过3,否则可能会影响正常信息发送", messageID)
+			mylog.Printf("originalGroupID:%v ", originalGroupID)
 			SendStackMessages(apiv2, messageID, originalGroupID)
 		}
 		mylog.Println("群组发信息messageText:", messageText)
