@@ -197,7 +197,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				mylog.Printf("发送组合消息失败: %v", err)
 				return // 或其他错误处理
 			}
-			if ret.Message.Ret == 22009 {
+			if ret != nil && ret.Message.Ret == 22009 {
 				mylog.Printf("信息发送失败,加入到队列中,下次被动信息进行发送")
 				var pair echo.MessageGroupPair
 				pair.Group = message.Params.GroupID.(string)
@@ -231,7 +231,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			if err != nil {
 				mylog.Printf("发送文本群组信息失败: %v", err)
 			}
-			if ret.Message.Ret == 22009 {
+			if ret != nil && ret.Message.Ret == 22009 {
 				mylog.Printf("信息发送失败,加入到队列中,下次被动信息进行发送")
 				var pair echo.MessageGroupPair
 				pair.Group = message.Params.GroupID.(string)
@@ -276,7 +276,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 						if err != nil {
 							mylog.Printf("发送文本报错信息失败: %v", err)
 						}
-						if ret.Message.Ret == 22009 {
+						if ret != nil && ret.Message.Ret == 22009 {
 							mylog.Printf("信息发送失败,加入到队列中,下次被动信息进行发送")
 							var pair echo.MessageGroupPair
 							pair.Group = message.Params.GroupID.(string)
@@ -304,7 +304,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 					if err != nil {
 						mylog.Printf("发送图片失败: %v", err)
 					}
-					if ret.Message.Ret == 22009 {
+					if ret != nil && ret.Message.Ret == 22009 {
 						mylog.Printf("信息发送失败,加入到队列中,下次被动信息进行发送")
 						var pair echo.MessageGroupPair
 						pair.Group = message.Params.GroupID.(string)
@@ -759,7 +759,7 @@ func SendStackMessages(apiv2 openapi.OpenAPI, messageid string, originalGroupID 
 			}
 
 			// 检查错误码
-			if ret.Message.Ret == 22009 {
+			if ret != nil && ret.Message.Ret == 22009 {
 				mylog.Printf("信息再次发送失败,加入到队列中,下次被动信息进行发送")
 				echo.PushGlobalStack(pair)
 			}
