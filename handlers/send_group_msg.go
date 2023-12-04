@@ -70,7 +70,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 	case "group":
 		// 解析消息内容
 		messageText, foundItems := parseMessageContent(message.Params)
-
+		var SSM bool
 		// 使用 echo 获取消息ID
 		var messageID string
 		if config.GetLazyMessageId() {
@@ -79,7 +79,7 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			mylog.Printf("GetLazyMessagesId: %v", messageID)
 			if messageID != "" {
 				//尝试发送栈内信息
-				SendStackMessages(apiv2, messageID)
+				SSM = true
 			}
 		}
 		if messageID == "" {
@@ -114,6 +114,10 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			}
 		}
 		message.Params.GroupID = originalGroupID
+		if SSM {
+			mylog.Printf("正在使用Msgid:%v 补发之前失败的主动信息,请注意AtoP不要设置超过3,否则可能会影响正常信息发送", messageID)
+			SendStackMessages(apiv2, messageID, originalGroupID)
+		}
 		mylog.Println("群组发信息messageText:", messageText)
 		//mylog.Println("foundItems:", foundItems)
 		if messageID == "" {
@@ -737,26 +741,28 @@ func uploadMedia(ctx context.Context, groupID string, richMediaMessage *dto.Rich
 }
 
 // 发送栈中的消息
-func SendStackMessages(apiv2 openapi.OpenAPI, messageid string) {
+func SendStackMessages(apiv2 openapi.OpenAPI, messageid string, originalGroupID string) {
 	count := config.GetAtoPCount()
 	pairs := echo.PopGlobalStackMulti(count)
 	for _, pair := range pairs {
-		// 发送消息
-		messageID := pair.GroupMessage.MsgID
-		msgseq := echo.GetMappingSeq(messageID)
-		echo.AddMappingSeq(messageID, msgseq+1)
-		pair.GroupMessage.MsgSeq = msgseq + 1
-		pair.GroupMessage.MsgID = messageid
-		ret, err := apiv2.PostGroupMessage(context.TODO(), pair.Group, pair.GroupMessage)
-		if err != nil {
-			mylog.Printf("发送组合消息失败: %v", err)
-			continue // 其他错误处理
-		}
+		if pair.Group == originalGroupID {
+			// 发送消息
+			messageID := pair.GroupMessage.MsgID
+			msgseq := echo.GetMappingSeq(messageID)
+			echo.AddMappingSeq(messageID, msgseq+1)
+			pair.GroupMessage.MsgSeq = msgseq + 1
+			pair.GroupMessage.MsgID = messageid
+			ret, err := apiv2.PostGroupMessage(context.TODO(), pair.Group, pair.GroupMessage)
+			if err != nil {
+				mylog.Printf("发送组合消息失败: %v", err)
+				continue // 其他错误处理
+			}
 
-		// 检查错误码
-		if ret.Message.Ret == 22009 {
-			mylog.Printf("信息再次发送失败,加入到队列中,下次被动信息进行发送")
-			echo.PushGlobalStack(pair)
+			// 检查错误码
+			if ret.Message.Ret == 22009 {
+				mylog.Printf("信息再次发送失败,加入到队列中,下次被动信息进行发送")
+				echo.PushGlobalStack(pair)
+			}
 		}
 
 	}
