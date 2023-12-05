@@ -783,12 +783,12 @@ func RetrieveVirtualValuev2Pro(realValue string, realValueSub string) (string, s
 			return "", "", fmt.Errorf("error response from server: %s", response["error"])
 		}
 
-		firstValue, ok := response["firstValue"].(string)
+		firstValue, ok := response["id"].(string)
 		if !ok {
 			return "", "", fmt.Errorf("invalid response format for first value")
 		}
 
-		secondValue, ok := response["secondValue"].(string)
+		secondValue, ok := response["subid"].(string)
 		if !ok {
 			return "", "", fmt.Errorf("invalid response format for second value")
 		}

@@ -250,7 +250,7 @@ func transformMessageText(messageText string) string {
 }
 
 // 处理at和其他定形文到onebotv11格式(cq码)
-func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI, apiv2 openapi.OpenAPI) string {
+func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI, apiv2 openapi.OpenAPI, vgid int64) string {
 	var msg *dto.Message
 	var menumsg bool
 	var messageText string
@@ -330,36 +330,52 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 		}
 	}
 
-	//检查是否启用白名单模式
+	// 检查是否启用白名单模式
 	if config.GetWhitePrefixMode() {
-		// 获取白名单数组
-		whitePrefixes := config.GetWhitePrefixs()
-		// 加锁以安全地读取 TemporaryCommands
-		idmap.MutexT.Lock()
-		temporaryCommands := make([]string, len(idmap.TemporaryCommands))
-		copy(temporaryCommands, idmap.TemporaryCommands)
-		idmap.MutexT.Unlock()
+		// 获取白名单例外群数组（现在返回 int64 数组）
+		whiteBypass := config.GetWhiteBypass()
+		bypass := false
 
-		// 合并白名单和临时指令
-		allPrefixes := append(whitePrefixes, temporaryCommands...)
-		// 默认设置为不匹配
-		matched := false
-
-		// 遍历白名单数组，检查是否有匹配项
-		for _, prefix := range allPrefixes {
-			if strings.HasPrefix(messageText, prefix) {
-				// 找到匹配项，保留 messageText 并跳出循环
-				matched = true
+		// 检查vgid是否在白名单例外数组中
+		for _, id := range whiteBypass {
+			if id == vgid {
+				bypass = true
 				break
 			}
 		}
 
-		// 如果没有匹配项，则将 messageText 置为兜底回复 兜底回复可空
-		if !matched {
-			messageText = ""
-			SendMessage(config.GetNoWhiteResponse(), data, msgtype, api, apiv2)
+		// 如果vgid不在白名单例外数组中，则应用白名单过滤
+		if !bypass {
+			// 获取白名单数组
+			whitePrefixes := config.GetWhitePrefixs()
+			// 加锁以安全地读取 TemporaryCommands
+			idmap.MutexT.Lock()
+			temporaryCommands := make([]string, len(idmap.TemporaryCommands))
+			copy(temporaryCommands, idmap.TemporaryCommands)
+			idmap.MutexT.Unlock()
+
+			// 合并白名单和临时指令
+			allPrefixes := append(whitePrefixes, temporaryCommands...)
+			// 默认设置为不匹配
+			matched := false
+
+			// 遍历白名单数组，检查是否有匹配项
+			for _, prefix := range allPrefixes {
+				if strings.HasPrefix(messageText, prefix) {
+					// 找到匹配项，保留 messageText 并跳出循环
+					matched = true
+					break
+				}
+			}
+
+			// 如果没有匹配项，则将 messageText 置为兜底回复 兜底回复可空
+			if !matched {
+				messageText = ""
+				SendMessage(config.GetNoWhiteResponse(), data, msgtype, api, apiv2)
+			}
 		}
 	}
+
 	//检查是否启用黑名单模式
 	if config.GetBlackPrefixMode() {
 		// 获取黑名单数组
