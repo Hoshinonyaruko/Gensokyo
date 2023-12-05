@@ -70,7 +70,7 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 			}
 		}
 		//转换at
-		messageText := handlers.RevertTransformedText(data, "group_private", p.Api, p.Apiv2)
+		messageText := handlers.RevertTransformedText(data, "group_private", p.Api, p.Apiv2, userid64)
 		if messageText == "" {
 			mylog.Printf("信息被自定义黑白名单拦截")
 			return nil
@@ -125,12 +125,6 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 	} else {
 		//将私聊信息转化为群信息(特殊需求情况下)
 
-		//转换at
-		messageText := handlers.RevertTransformedText(data, "group_private", p.Api, p.Apiv2)
-		if messageText == "" {
-			mylog.Printf("信息被自定义黑白名单拦截")
-			return nil
-		}
 		//转换appid
 		AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 		//构造echo
@@ -155,6 +149,12 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 			if err != nil {
 				mylog.Fatalf("Error storing ID: %v", err)
 			}
+		}
+		//转换at
+		messageText := handlers.RevertTransformedText(data, "group_private", p.Api, p.Apiv2, userid64)
+		if messageText == "" {
+			mylog.Printf("信息被自定义黑白名单拦截")
+			return nil
 		}
 		//框架内指令
 		p.HandleFrameworkCommand(messageText, data, "group_private")

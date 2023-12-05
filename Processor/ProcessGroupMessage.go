@@ -21,17 +21,6 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 	// 获取s
 	s := client.GetGlobalS()
 
-	// 转换at
-	messageText := handlers.RevertTransformedText(data, "group", p.Api, p.Apiv2)
-	if messageText == "" {
-		mylog.Printf("信息被自定义黑白名单拦截")
-		return nil
-	}
-	//群没有at,但用户可以选择加一个
-	if config.GetAddAtGroup() {
-		messageText = "[CQ:at,qq=" + config.GetAppIDStr() + "] " + messageText
-	}
-
 	// 转换appid
 	AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 
@@ -65,6 +54,16 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 			mylog.Printf("Error storing ID: %v", err)
 			return nil
 		}
+	}
+	// 转换at
+	messageText := handlers.RevertTransformedText(data, "group", p.Api, p.Apiv2, GroupID64)
+	if messageText == "" {
+		mylog.Printf("信息被自定义黑白名单拦截")
+		return nil
+	}
+	//群没有at,但用户可以选择加一个
+	if config.GetAddAtGroup() {
+		messageText = "[CQ:at,qq=" + config.GetAppIDStr() + "] " + messageText
 	}
 	//框架内指令
 	p.HandleFrameworkCommand(messageText, data, "group")
