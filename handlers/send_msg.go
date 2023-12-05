@@ -26,19 +26,19 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 	}
 	//如果获取不到 就用group_id获取信息类型
 	if msgType == "" {
-		appID := config.GetAppIDStr()
-		groupID := message.Params.GroupID
-		mylog.Printf("appID: %s, GroupID: %v\n", appID, groupID)
-
-		msgType = GetMessageTypeByGroupid(appID, groupID)
-		mylog.Printf("msgType: %s\n", msgType)
+		msgType = GetMessageTypeByGroupid(config.GetAppIDStr(), message.Params.GroupID)
 	}
-
 	//如果获取不到 就用user_id获取信息类型
 	if msgType == "" {
 		msgType = GetMessageTypeByUserid(config.GetAppIDStr(), message.Params.UserID)
 	}
-
+	//新增 内存获取不到从数据库获取
+	if msgType == "" {
+		msgType = GetMessageTypeByUseridV2(message.Params.UserID)
+	}
+	if msgType == "" {
+		msgType = GetMessageTypeByGroupidV2(message.Params.GroupID)
+	}
 	var idInt64 int64
 	var err error
 

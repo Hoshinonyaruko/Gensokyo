@@ -2,6 +2,7 @@
 package Processor
 
 import (
+	"fmt"
 	"log"
 	"strconv"
 	"time"
@@ -112,6 +113,8 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 		echo.AddLazyMessageId(strconv.FormatInt(userid64, 10), data.ID, time.Now())
 		//储存类型
 		echo.AddMsgType(AppIDString, userid64, "group_private")
+		//储存当前群或频道号的类型
+		idmap.WriteConfigv2(fmt.Sprint(userid64), "type", "group_private")
 		//储存当前群或频道号的类型 私信不需要
 		//idmap.WriteConfigv2(data.ChannelID, "type", "group_private")
 
@@ -222,6 +225,8 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 		echo.AddMsgID(AppIDString, userid64, data.ID)
 		//映射类型
 		echo.AddMsgType(AppIDString, userid64, "group_private")
+		//储存当前群或频道号的类型
+		idmap.WriteConfigv2(fmt.Sprint(userid64), "type", "group_private")
 		//懒message_id池
 		echo.AddLazyMessageId(strconv.FormatInt(userid64, 10), data.ID, time.Now())
 

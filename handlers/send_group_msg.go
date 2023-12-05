@@ -41,6 +41,13 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 	if msgType == "" {
 		msgType = GetMessageTypeByGroupid(config.GetAppIDStr(), message.Params.GroupID)
 	}
+	//新增 内存获取不到从数据库获取
+	if msgType == "" {
+		msgType = GetMessageTypeByUseridV2(message.Params.UserID)
+	}
+	if msgType == "" {
+		msgType = GetMessageTypeByGroupidV2(message.Params.GroupID)
+	}
 	mylog.Printf("send_group_msg获取到信息类型:%v", msgType)
 	var idInt64 int64
 	var err error
@@ -836,6 +843,30 @@ func GetMessageTypeByUserid(appID string, userID interface{}) string {
 	return echo.GetMsgTypeByKey(key)
 }
 
+// 通过user_id获取类型
+func GetMessageTypeByUseridV2(userID interface{}) string {
+	// 从appID和userID生成key
+	var userIDStr string
+	switch u := userID.(type) {
+	case int:
+		userIDStr = strconv.Itoa(u)
+	case int64:
+		userIDStr = strconv.FormatInt(u, 10)
+	case float64:
+		userIDStr = strconv.FormatFloat(u, 'f', 0, 64)
+	case string:
+		userIDStr = u
+	default:
+		// 可能需要处理其他类型或报错
+		return ""
+	}
+	msgtype, err := idmap.ReadConfigv2(userIDStr, "type")
+	if err != nil {
+		mylog.Printf("GetMessageTypeByUseridV2失败:%v", err)
+	}
+	return msgtype
+}
+
 // 通过group_id获取类型
 func GetMessageTypeByGroupid(appID string, GroupID interface{}) string {
 	// 从appID和userID生成key
@@ -854,6 +885,29 @@ func GetMessageTypeByGroupid(appID string, GroupID interface{}) string {
 
 	key := appID + "_" + GroupIDStr
 	return echo.GetMsgTypeByKey(key)
+}
+
+// 通过group_id获取类型
+func GetMessageTypeByGroupidV2(GroupID interface{}) string {
+	// 从appID和userID生成key
+	var GroupIDStr string
+	switch u := GroupID.(type) {
+	case int:
+		GroupIDStr = strconv.Itoa(u)
+	case int64:
+		GroupIDStr = strconv.FormatInt(u, 10)
+	case string:
+		GroupIDStr = u
+	default:
+		// 可能需要处理其他类型或报错
+		return ""
+	}
+
+	msgtype, err := idmap.ReadConfigv2(GroupIDStr, "type")
+	if err != nil {
+		mylog.Printf("GetMessageTypeByGroupidV2失败:%v", err)
+	}
+	return msgtype
 }
 
 // uploadMedia 上传媒体并返回FileInfo
