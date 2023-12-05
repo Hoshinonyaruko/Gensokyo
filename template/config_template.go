@@ -115,6 +115,7 @@ settings:
 
   bind_prefix : "/bind"             #需设置   #增强配置项  master_id 可触发
   me_prefix : "/me"                 #需设置   #增强配置项  master_id 可触发
+  unlock_prefix : "/unlock"         #频道私信卡住了? gsk可以帮到你 在任意子频道发送unlock 你会收到来自机器人的频道私信
 
   #穿透\cos\oss类配置(可选!)
   frp_port : "0"                    #不使用请保持为0,frp的端口,frp有内外端口,请在frp软件设置gensokyo的port,并将frp显示的对外端口填入这里

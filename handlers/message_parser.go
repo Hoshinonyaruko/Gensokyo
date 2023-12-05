@@ -147,21 +147,25 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 	} else {
 		localRecordPattern = regexp.MustCompile(`\[CQ:record,file=file://([^\]]+?)\]`)
 	}
-	urlImagePattern := regexp.MustCompile(`\[CQ:image,file=https?://(.+)\]`)
+	httpUrlImagePattern := regexp.MustCompile(`\[CQ:image,file=http://(.+)\]`)
+	httpsUrlImagePattern := regexp.MustCompile(`\[CQ:image,file=https://(.+)\]`)
 	base64ImagePattern := regexp.MustCompile(`\[CQ:image,file=base64://(.+)\]`)
 	base64RecordPattern := regexp.MustCompile(`\[CQ:record,file=base64://(.+)\]`)
-	urlRecordPattern := regexp.MustCompile(`\[CQ:record,file=https?://(.+)\]`)
+	httpUrlRecordPattern := regexp.MustCompile(`\[CQ:record,file=http://(.+)\]`)
+	httpsUrlRecordPattern := regexp.MustCompile(`\[CQ:record,file=https://(.+)\]`)
 
 	patterns := []struct {
 		key     string
 		pattern *regexp.Regexp
 	}{
 		{"local_image", localImagePattern},
-		{"url_image", urlImagePattern},
+		{"url_image", httpUrlImagePattern},
+		{"url_images", httpsUrlImagePattern},
 		{"base64_image", base64ImagePattern},
 		{"base64_record", base64RecordPattern},
 		{"local_record", localRecordPattern},
-		{"url_record", urlRecordPattern},
+		{"url_record", httpUrlRecordPattern},
+		{"url_records", httpsUrlRecordPattern},
 	}
 
 	foundItems := make(map[string][]string)
