@@ -28,22 +28,21 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 		// 当 message.Echo 是字符串类型时执行此块
 		msgType = echo.GetMsgTypeByKey(echoStr)
 	}
-
 	//如果获取不到 就用group_id获取信息类型
 	if msgType == "" {
-		appID := config.GetAppIDStr()
-		groupID := message.Params.GroupID
-		mylog.Printf("appID: %s, GroupID: %v\n", appID, groupID)
-
-		msgType = GetMessageTypeByGroupid(appID, groupID)
-		mylog.Printf("msgType: %s\n", msgType)
+		msgType = GetMessageTypeByGroupid(config.GetAppIDStr(), message.Params.GroupID)
 	}
-
 	//如果获取不到 就用user_id获取信息类型
 	if msgType == "" {
 		msgType = GetMessageTypeByUserid(config.GetAppIDStr(), message.Params.UserID)
 	}
-
+	//新增 内存获取不到从数据库获取
+	if msgType == "" {
+		msgType = GetMessageTypeByUseridV2(message.Params.UserID)
+	}
+	if msgType == "" {
+		msgType = GetMessageTypeByGroupidV2(message.Params.GroupID)
+	}
 	switch msgType {
 	//原生guild信息
 	case "guild":
