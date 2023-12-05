@@ -862,7 +862,7 @@ func GetMessageTypeByUseridV2(userID interface{}) string {
 	}
 	msgtype, err := idmap.ReadConfigv2(userIDStr, "type")
 	if err != nil {
-		mylog.Printf("GetMessageTypeByUseridV2失败:%v", err)
+		//mylog.Printf("GetMessageTypeByUseridV2失败:%v", err)
 	}
 	return msgtype
 }
@@ -905,7 +905,7 @@ func GetMessageTypeByGroupidV2(GroupID interface{}) string {
 
 	msgtype, err := idmap.ReadConfigv2(GroupIDStr, "type")
 	if err != nil {
-		mylog.Printf("GetMessageTypeByGroupidV2失败:%v", err)
+		//mylog.Printf("GetMessageTypeByGroupidV2失败:%v", err)
 	}
 	return msgtype
 }
