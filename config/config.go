@@ -92,6 +92,7 @@ type Settings struct {
 	HeartBeatInterval      int      `yaml:"heart_beat_interval"`
 	LaunchReconectTimes    int      `yaml:"launch_reconnect_times"`
 	UnlockPrefix           string   `yaml:"unlock_prefix"`
+	WhiteBypass            []int64  `yaml:"white_bypass"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -1105,4 +1106,14 @@ func GetUnlockPrefix() string {
 		return "/unlock"
 	}
 	return instance.Settings.UnlockPrefix
+}
+
+// 获取白名单例外群数组
+func GetWhiteBypass() []int64 {
+	mu.Lock()
+	defer mu.Unlock()
+	if instance != nil {
+		return instance.Settings.WhiteBypass
+	}
+	return nil // 返回nil，如果instance为nil
 }
