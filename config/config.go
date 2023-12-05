@@ -91,6 +91,7 @@ type Settings struct {
 	ReconnecTimes          int      `yaml:"reconnect_times"`
 	HeartBeatInterval      int      `yaml:"heart_beat_interval"`
 	LaunchReconectTimes    int      `yaml:"launch_reconnect_times"`
+	UnlockPrefix           string   `yaml:"unlock_prefix"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -1092,4 +1093,16 @@ func GetLaunchReconectTimes() int {
 		return 3
 	}
 	return instance.Settings.LaunchReconectTimes
+}
+
+// 获取GetUnlockPrefix
+func GetUnlockPrefix() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to UnlockPrefix value.")
+		return "/unlock"
+	}
+	return instance.Settings.UnlockPrefix
 }

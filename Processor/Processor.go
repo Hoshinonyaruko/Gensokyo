@@ -274,13 +274,18 @@ func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}
 	var err error
 	var now, new, newpro1, newpro2 string
 	var realid, realid2 string
+	var guildid, guilduserid string
 	switch v := data.(type) {
 	case *dto.WSGroupATMessageData:
 		realid = v.Author.ID
 	case *dto.WSATMessageData:
 		realid = v.Author.ID
+		guildid = v.GuildID
+		guilduserid = v.Author.ID
 	case *dto.WSMessageData:
 		realid = v.Author.ID
+		guildid = v.GuildID
+		guilduserid = v.Author.ID
 	case *dto.WSDirectMessageData:
 		realid = v.Author.ID
 	case *dto.WSC2CMessageData:
@@ -318,6 +323,27 @@ func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}
 		// 否则，检查真实值或虚拟值是否在数组中
 		realValueIncluded = contains(masterIDs, realid)
 		virtualValueIncluded = contains(masterIDs, new)
+	}
+
+	//unlock指令
+	if Type == "guild" && strings.HasPrefix(cleanedMessage, config.GetUnlockPrefix()) {
+		dm := &dto.DirectMessageToCreate{
+			SourceGuildID: guildid,
+			RecipientID:   guilduserid,
+		}
+		cdm, err := p.Api.CreateDirectMessage(context.TODO(), dm)
+		if err != nil {
+			mylog.Printf("unlock指令创建dm失败:%v", err)
+		}
+		msg := &dto.MessageToCreate{
+			Content: "欢迎使用Gensokyo框架部署QQ机器人",
+			MsgType: 0,
+			MsgID:   "",
+		}
+		_, err = p.Api.PostDirectMessage(context.TODO(), cdm, msg)
+		if err != nil {
+			mylog.Printf("unlock指令发送失败:%v", err)
+		}
 	}
 
 	// me指令处理逻辑
