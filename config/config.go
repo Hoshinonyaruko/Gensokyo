@@ -1130,3 +1130,4 @@ func GetTransferUrl() bool {
 	}
 	return instance.Settings.TransferUrl
 }
+
