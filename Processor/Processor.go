@@ -714,7 +714,7 @@ func (p *Processors) Autobind(data interface{}) error {
 		return nil
 	}
 	//覆盖赋值
-	if !config.GetIdmapPro() {
+	if config.GetIdmapPro() {
 		//转换idmap-pro 虚拟值
 		//将真实id转为int userid64
 		GroupID64, userid64, err = idmap.StoreIDv2Pro(groupID, realID)
