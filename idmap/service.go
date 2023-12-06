@@ -89,7 +89,7 @@ func generateRowID(id string, length int) (int64, error) {
 }
 
 // 检查id和value是否是转换关系
-func CheckValue(id string, value int64) bool {
+func checkValue(id string, value int64) bool {
 	// 计算int64值的长度
 	length := len(strconv.FormatInt(value, 10))
 
@@ -100,8 +100,8 @@ func CheckValue(id string, value int64) bool {
 		return false
 	}
 
-	// 比较生成的值与给定的值
-	return generatedValue == value
+	// 比较生成的值与给定的值，如果相等返回false，不相等返回true
+	return generatedValue != value
 }
 
 // 根据a储存b
