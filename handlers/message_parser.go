@@ -134,7 +134,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 		mylog.Println("Unsupported message format: params.message field is not a string, map or slice")
 	}
 	//处理at
-	messageText = transformMessageText(messageText)
+	messageText = transformMessageTextAt(messageText)
 
 	//mylog.Printf(messageText)
 
@@ -183,6 +183,8 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 		// 移动替换操作到这里，确保所有匹配都被处理后再进行替换
 		messageText = pattern.pattern.ReplaceAllString(messageText, "")
 	}
+	//最后再处理Url
+	messageText = transformMessageTextUrl(messageText)
 
 	// for key, items := range foundItems {
 	// 	fmt.Printf("Key: %s, Items: %v\n", key, items)
@@ -194,8 +196,8 @@ func isIPAddress(address string) bool {
 	return net.ParseIP(address) != nil
 }
 
-// at处理和链接处理
-func transformMessageText(messageText string) string {
+// at处理
+func transformMessageTextAt(messageText string) string {
 	// 首先，将AppID替换为BotID
 	messageText = strings.ReplaceAll(messageText, AppID, BotID)
 
@@ -224,6 +226,11 @@ func transformMessageText(messageText string) string {
 		}
 		return m
 	})
+	return messageText
+}
+
+// 链接处理
+func transformMessageTextUrl(messageText string) string {
 	//是否处理url
 	if config.GetTransferUrl() {
 		// 判断服务器地址是否是IP地址
