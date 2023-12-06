@@ -702,20 +702,20 @@ func (p *Processors) Autobind(data interface{}) error {
 
 	//获取虚拟值
 	// 映射str的GroupID到int
-	GroupID64, err := idmap.StoreIDv2(groupID)
+	_, err = idmap.StoreIDv2(groupID)
 	if err != nil {
 		mylog.Errorf("failed to convert ChannelID to int: %v", err)
 		return nil
 	}
 	// 映射str的userid到int
-	userid64, err := idmap.StoreIDv2(realID)
+	_, err = idmap.StoreIDv2(realID)
 	if err != nil {
 		mylog.Printf("Error storing ID: %v", err)
 		return nil
 	}
 	//转换idmap-pro 虚拟值
 	//将真实id转为int userid64
-	_, _, err = idmap.StoreIDv2Pro(groupID, realID)
+	GroupID64, userid64, err := idmap.StoreIDv2Pro(groupID, realID)
 	if err != nil {
 		mylog.Fatalf("Error storing ID689: %v", err)
 	}
