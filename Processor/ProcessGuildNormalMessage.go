@@ -178,6 +178,8 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 		if config.GetArrayValue() {
 			segmentedMessages = handlers.ConvertToSegmentedMessage(data)
 		}
+		IsBindedUserId := idmap.CheckValue(data.Author.ID, userid64)
+		IsBindedGroupId := idmap.CheckValue(data.GroupID, ChannelID64)
 		groupMsg := OnebotGroupMessage{
 			RawMessage:  messageText,
 			Message:     segmentedMessages,
@@ -196,9 +198,12 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 				Area:     "",
 				Level:    "0",
 			},
-			SubType: "normal",
-			Time:    time.Now().Unix(),
-			Avatar:  data.Author.Avatar,
+			SubType:         "normal",
+			Time:            time.Now().Unix(),
+			Avatar:          data.Author.Avatar,
+			RealMessageType: "guild",
+			IsBindedUserId:  IsBindedUserId,
+			IsBindedGroupId: IsBindedGroupId,
 		}
 		// 根据条件判断是否添加Echo字段
 		if config.GetTwoWayEcho() {

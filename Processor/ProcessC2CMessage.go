@@ -83,6 +83,7 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 		if config.GetArrayValue() {
 			segmentedMessages = handlers.ConvertToSegmentedMessage(data)
 		}
+		IsBindedUserId := idmap.CheckValue(data.Author.ID, userid64)
 		privateMsg := OnebotPrivateMessage{
 			RawMessage:  messageText,
 			Message:     segmentedMessages,
@@ -95,9 +96,11 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 				Nickname: "", //这个不支持,但加机器人好友,会收到一个事件,可以对应储存获取,用idmaps可以做到.
 				UserID:   userid64,
 			},
-			SubType: "friend",
-			Time:    time.Now().Unix(),
-			Avatar:  "", //todo 同上
+			SubType:         "friend",
+			Time:            time.Now().Unix(),
+			Avatar:          "", //todo 同上
+			RealMessageType: "group_private",
+			IsBindedUserId:  IsBindedUserId,
 		}
 		// 根据条件判断是否添加Echo字段
 		if config.GetTwoWayEcho() {
@@ -169,6 +172,7 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 		}
 		messageID := int(messageID64)
 		//todo 判断array模式 然后对Message处理成array格式
+		IsBindedUserId := idmap.CheckValue(data.Author.ID, userid64)
 		groupMsg := OnebotGroupMessage{
 			RawMessage:  messageText,
 			Message:     messageText,
@@ -186,9 +190,11 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 				Area:   "0",
 				Level:  "0",
 			},
-			SubType: "normal",
-			Time:    time.Now().Unix(),
-			Avatar:  "",
+			SubType:         "normal",
+			Time:            time.Now().Unix(),
+			Avatar:          "",
+			RealMessageType: "group_private",
+			IsBindedUserId:  IsBindedUserId,
 		}
 		//根据条件判断是否增加nick和card
 		var CaN = config.GetCardAndNick()
