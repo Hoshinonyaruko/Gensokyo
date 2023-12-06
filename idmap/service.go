@@ -977,7 +977,7 @@ func UpdateVirtualValuev2Pro(oldVirtualValue1, newVirtualValue1, oldVirtualValue
 			protocol = "https"
 		}
 
-		url := fmt.Sprintf("%s://%s:%s/updatevalues?type=12&oldVirtualValue1=%d&newVirtualValue1=%d&oldVirtualValue2=%d&newVirtualValue2=%d",
+		url := fmt.Sprintf("%s://%s:%s/getid?type=12&oldVirtualValue1=%d&newVirtualValue1=%d&oldVirtualValue2=%d&newVirtualValue2=%d",
 			protocol, serverDir, portValue, oldVirtualValue1, newVirtualValue1, oldVirtualValue2, newVirtualValue2)
 
 		resp, err := http.Get(url)
