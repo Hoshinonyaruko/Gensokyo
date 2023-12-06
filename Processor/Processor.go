@@ -726,7 +726,8 @@ func (p *Processors) Autobind(data interface{}) error {
 	if !vuinBound && !gidBound {
 		// 两者都未绑定，更新两个映射
 		if err := updateMappings(userid64, vuinValue, GroupID64, idValue); err != nil {
-			return err
+			mylog.Printf("Error updateMappings for both: %v", err)
+			//return err
 		}
 		// idmaps pro也更新
 		err = idmap.UpdateVirtualValuev2Pro(GroupID64, idValue, userid64, vuinValue)
@@ -737,7 +738,7 @@ func (p *Processors) Autobind(data interface{}) error {
 		// 只有vuin未绑定，更新vuin映射
 		if err := idmap.UpdateVirtualValuev2(userid64, vuinValue); err != nil {
 			mylog.Printf("Error UpdateVirtualValuev2 for vuin: %v", err)
-			return err
+			//return err
 		}
 		// idmaps pro也更新,但只更新vuin
 		idmap.UpdateVirtualValuev2Pro(GroupID64, idValue, userid64, vuinValue)
@@ -745,7 +746,7 @@ func (p *Processors) Autobind(data interface{}) error {
 		// 只有gid未绑定，更新gid映射
 		if err := idmap.UpdateVirtualValuev2(GroupID64, idValue); err != nil {
 			mylog.Printf("Error UpdateVirtualValuev2 for gid: %v", err)
-			return err
+			//return err
 		}
 		// idmaps pro也更新,但只更新gid
 		idmap.UpdateVirtualValuev2Pro(GroupID64, idValue, userid64, vuinValue)
