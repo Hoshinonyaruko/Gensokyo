@@ -699,25 +699,28 @@ func (p *Processors) Autobind(data interface{}) error {
 	if err != nil {
 		return err
 	}
-
+	var GroupID64, userid64 int64
 	//获取虚拟值
 	// 映射str的GroupID到int
-	_, err = idmap.StoreIDv2(groupID)
+	GroupID64, err = idmap.StoreIDv2(groupID)
 	if err != nil {
 		mylog.Errorf("failed to convert ChannelID to int: %v", err)
 		return nil
 	}
 	// 映射str的userid到int
-	_, err = idmap.StoreIDv2(realID)
+	userid64, err = idmap.StoreIDv2(realID)
 	if err != nil {
 		mylog.Printf("Error storing ID: %v", err)
 		return nil
 	}
-	//转换idmap-pro 虚拟值
-	//将真实id转为int userid64
-	GroupID64, userid64, err := idmap.StoreIDv2Pro(groupID, realID)
-	if err != nil {
-		mylog.Fatalf("Error storing ID689: %v", err)
+	//覆盖赋值
+	if !config.GetIdmapPro() {
+		//转换idmap-pro 虚拟值
+		//将真实id转为int userid64
+		GroupID64, userid64, err = idmap.StoreIDv2Pro(groupID, realID)
+		if err != nil {
+			mylog.Fatalf("Error storing ID689: %v", err)
+		}
 	}
 	// 单独检查vuin和gid的绑定状态
 	vuinBound := strconv.FormatInt(userid64, 10) == vuinstr
