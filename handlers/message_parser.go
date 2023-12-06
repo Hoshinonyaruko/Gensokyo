@@ -224,29 +224,32 @@ func transformMessageText(messageText string) string {
 		}
 		return m
 	})
-	// 判断服务器地址是否是IP地址
-	serverAddress := config.GetServer_dir()
-	isIP := isIPAddress(serverAddress)
-	VisualIP := config.GetVisibleIP()
-	// 使用xurls来查找和替换所有的URL
-	messageText = xurls.Relaxed.ReplaceAllStringFunc(messageText, func(originalURL string) string {
-		// 当服务器地址是IP地址且GetVisibleIP为false时，替换URL为空
-		if isIP && !VisualIP {
-			return ""
-		}
+	//是否处理url
+	if config.GetTransferUrl() {
+		// 判断服务器地址是否是IP地址
+		serverAddress := config.GetServer_dir()
+		isIP := isIPAddress(serverAddress)
+		VisualIP := config.GetVisibleIP()
+		// 使用xurls来查找和替换所有的URL
+		messageText = xurls.Relaxed.ReplaceAllStringFunc(messageText, func(originalURL string) string {
+			// 当服务器地址是IP地址且GetVisibleIP为false时，替换URL为空
+			if isIP && !VisualIP {
+				return ""
+			}
 
-		// 根据配置处理URL
-		if config.GetLotusValue() {
-			// 连接到另一个gensokyo
-			shortURL := url.GenerateShortURL(originalURL)
-			return shortURL
-		} else {
-			// 自己是主节点
-			shortURL := url.GenerateShortURL(originalURL)
-			// 使用getBaseURL函数来获取baseUrl并与shortURL组合
-			return url.GetBaseURL() + "/url/" + shortURL
-		}
-	})
+			// 根据配置处理URL
+			if config.GetLotusValue() {
+				// 连接到另一个gensokyo
+				shortURL := url.GenerateShortURL(originalURL)
+				return shortURL
+			} else {
+				// 自己是主节点
+				shortURL := url.GenerateShortURL(originalURL)
+				// 使用getBaseURL函数来获取baseUrl并与shortURL组合
+				return url.GetBaseURL() + "/url/" + shortURL
+			}
+		})
+	}
 	return messageText
 }
 
