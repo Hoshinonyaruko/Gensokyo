@@ -89,7 +89,7 @@ func generateRowID(id string, length int) (int64, error) {
 }
 
 // 检查id和value是否是转换关系
-func checkValue(id string, value int64) bool {
+func CheckValue(id string, value int64) bool {
 	// 计算int64值的长度
 	length := len(strconv.FormatInt(value, 10))
 
