@@ -88,6 +88,22 @@ func generateRowID(id string, length int) (int64, error) {
 	return rowID, nil
 }
 
+// 检查id和value是否是转换关系
+func CheckValue(id string, value int64) bool {
+	// 计算int64值的长度
+	length := len(strconv.FormatInt(value, 10))
+
+	// 使用generateRowID转换id
+	generatedValue, err := generateRowID(id, length)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return false
+	}
+
+	// 比较生成的值与给定的值
+	return generatedValue == value
+}
+
 // 根据a储存b
 func StoreID(id string) (int64, error) {
 	var newRow int64

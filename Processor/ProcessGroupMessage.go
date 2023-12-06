@@ -84,6 +84,8 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 	if config.GetArrayValue() {
 		segmentedMessages = handlers.ConvertToSegmentedMessage(data)
 	}
+	IsBindedUserId := idmap.CheckValue(data.Author.ID, userid64)
+	IsBindedGroupId := idmap.CheckValue(data.GroupID, GroupID64)
 	groupMsg := OnebotGroupMessage{
 		RawMessage:  messageText,
 		Message:     segmentedMessages,
@@ -100,9 +102,12 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 			Area:   "0",
 			Level:  "0",
 		},
-		SubType: "normal",
-		Time:    time.Now().Unix(),
-		Avatar:  "",
+		SubType:         "normal",
+		Time:            time.Now().Unix(),
+		Avatar:          "",
+		RealMessageType: "group",
+		IsBindedUserId:  IsBindedUserId,
+		IsBindedGroupId: IsBindedGroupId,
 	}
 	//根据条件判断是否增加nick和card
 	var CaN = config.GetCardAndNick()

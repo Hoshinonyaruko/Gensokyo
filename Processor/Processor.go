@@ -69,39 +69,44 @@ type OnebotChannelMessage struct {
 
 // 群信息事件
 type OnebotGroupMessage struct {
-	RawMessage  string      `json:"raw_message"`
-	MessageID   int         `json:"message_id"`
-	GroupID     int64       `json:"group_id"` // Can be either string or int depending on p.Settings.CompleteFields
-	MessageType string      `json:"message_type"`
-	PostType    string      `json:"post_type"`
-	SelfID      int64       `json:"self_id"` // Can be either string or int
-	Sender      Sender      `json:"sender"`
-	SubType     string      `json:"sub_type"`
-	Time        int64       `json:"time"`
-	Avatar      string      `json:"avatar,omitempty"`
-	Echo        string      `json:"echo,omitempty"`
-	Message     interface{} `json:"message"` // For array format
-	MessageSeq  int         `json:"message_seq"`
-	Font        int         `json:"font"`
-	UserID      int64       `json:"user_id"`
+	RawMessage      string      `json:"raw_message"`
+	MessageID       int         `json:"message_id"`
+	GroupID         int64       `json:"group_id"` // Can be either string or int depending on p.Settings.CompleteFields
+	MessageType     string      `json:"message_type"`
+	PostType        string      `json:"post_type"`
+	SelfID          int64       `json:"self_id"` // Can be either string or int
+	Sender          Sender      `json:"sender"`
+	SubType         string      `json:"sub_type"`
+	Time            int64       `json:"time"`
+	Avatar          string      `json:"avatar,omitempty"`
+	Echo            string      `json:"echo,omitempty"`
+	Message         interface{} `json:"message"` // For array format
+	MessageSeq      int         `json:"message_seq"`
+	Font            int         `json:"font"`
+	UserID          int64       `json:"user_id"`
+	RealMessageType string      `json:"real_message_type"`  //当前信息的真实类型 group group_private guild guild_private
+	IsBindedGroupId bool        `json:"is_binded_group_id"` //当前群号是否是binded后的
+	IsBindedUserId  bool        `json:"is_binded_user_id"`  //当前用户号号是否是binded后的
 }
 
 // 私聊信息事件
 type OnebotPrivateMessage struct {
-	RawMessage  string        `json:"raw_message"`
-	MessageID   int           `json:"message_id"` // Can be either string or int depending on logic
-	MessageType string        `json:"message_type"`
-	PostType    string        `json:"post_type"`
-	SelfID      int64         `json:"self_id"` // Can be either string or int depending on logic
-	Sender      PrivateSender `json:"sender"`
-	SubType     string        `json:"sub_type"`
-	Time        int64         `json:"time"`
-	Avatar      string        `json:"avatar,omitempty"`
-	Echo        string        `json:"echo,omitempty"`
-	Message     interface{}   `json:"message"`     // For array format
-	MessageSeq  int           `json:"message_seq"` // Optional field
-	Font        int           `json:"font"`        // Optional field
-	UserID      int64         `json:"user_id"`     // Can be either string or int depending on logic
+	RawMessage      string        `json:"raw_message"`
+	MessageID       int           `json:"message_id"` // Can be either string or int depending on logic
+	MessageType     string        `json:"message_type"`
+	PostType        string        `json:"post_type"`
+	SelfID          int64         `json:"self_id"` // Can be either string or int depending on logic
+	Sender          PrivateSender `json:"sender"`
+	SubType         string        `json:"sub_type"`
+	Time            int64         `json:"time"`
+	Avatar          string        `json:"avatar,omitempty"`
+	Echo            string        `json:"echo,omitempty"`
+	Message         interface{}   `json:"message"`           // For array format
+	MessageSeq      int           `json:"message_seq"`       // Optional field
+	Font            int           `json:"font"`              // Optional field
+	UserID          int64         `json:"user_id"`           // Can be either string or int depending on logic
+	RealMessageType string        `json:"real_message_type"` //当前信息的真实类型 group group_private guild guild_private
+	IsBindedUserId  bool          `json:"is_binded_user_id"` //当前用户号号是否是binded后的
 }
 
 type PrivateSender struct {

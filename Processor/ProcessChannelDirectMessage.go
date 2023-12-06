@@ -102,6 +102,7 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 		if config.GetArrayValue() {
 			segmentedMessages = handlers.ConvertToSegmentedMessage(data)
 		}
+		IsBindedUserId := idmap.CheckValue(data.Author.ID, userid64)
 		privateMsg := OnebotPrivateMessage{
 			RawMessage:  messageText,
 			Message:     segmentedMessages,
@@ -114,9 +115,11 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 				Nickname: data.Member.Nick,
 				UserID:   userid64,
 			},
-			SubType: "friend",
-			Time:    time.Now().Unix(),
-			Avatar:  data.Author.Avatar,
+			SubType:         "friend",
+			Time:            time.Now().Unix(),
+			Avatar:          data.Author.Avatar,
+			RealMessageType: "guild_private",
+			IsBindedUserId:  IsBindedUserId,
 		}
 		// 根据条件判断是否添加Echo字段
 		if config.GetTwoWayEcho() {
@@ -307,6 +310,7 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 			if config.GetArrayValue() {
 				segmentedMessages = handlers.ConvertToSegmentedMessage(data)
 			}
+			IsBindedUserId := idmap.CheckValue(data.Author.ID, userid64)
 			groupMsg := OnebotGroupMessage{
 				RawMessage:  messageText,
 				Message:     segmentedMessages,
@@ -326,9 +330,11 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 					Area:     "",
 					Level:    "0",
 				},
-				SubType: "normal",
-				Time:    time.Now().Unix(),
-				Avatar:  data.Author.Avatar,
+				SubType:         "normal",
+				Time:            time.Now().Unix(),
+				Avatar:          data.Author.Avatar,
+				RealMessageType: "guild_private",
+				IsBindedUserId:  IsBindedUserId,
 			}
 			// 根据条件判断是否添加Echo字段
 			if config.GetTwoWayEcho() {
