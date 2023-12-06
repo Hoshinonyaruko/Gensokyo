@@ -185,6 +185,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 	}
 	//最后再处理Url
 	messageText = transformMessageTextUrl(messageText)
+
 	// for key, items := range foundItems {
 	// 	fmt.Printf("Key: %s, Items: %v\n", key, items)
 	// }
