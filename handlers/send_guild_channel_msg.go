@@ -190,6 +190,15 @@ func GenerateReplyMessage(id string, foundItems map[string][]string, messageText
 			MsgSeq:  msgseq,
 			MsgType: 0, // Assuming type 0 for images
 		}
+	} else if imageURLs, ok := foundItems["url_images"]; ok && len(imageURLs) > 0 {
+		// 发送网络图
+		reply = dto.MessageToCreate{
+			//EventID: id,           // Use a placeholder event ID for now
+			Image:   "https://" + imageURLs[0], // Using the same Image field for external URLs, adjust if needed
+			MsgID:   id,
+			MsgSeq:  msgseq,
+			MsgType: 0, // Assuming type 0 for images
+		}
 	} else if voiceURLs, ok := foundItems["base64_record"]; ok && len(voiceURLs) > 0 {
 		//频道 还不支持发语音
 		// Sending a voice message
