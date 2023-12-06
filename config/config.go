@@ -93,6 +93,7 @@ type Settings struct {
 	LaunchReconectTimes    int      `yaml:"launch_reconnect_times"`
 	UnlockPrefix           string   `yaml:"unlock_prefix"`
 	WhiteBypass            []int64  `yaml:"white_bypass"`
+	TransferUrl            bool     `yaml:"transfer_url"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -1117,3 +1118,16 @@ func GetWhiteBypass() []int64 {
 	}
 	return nil // 返回nil，如果instance为nil
 }
+
+// 获取GetTransferUrl的值
+func GetTransferUrl() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetTransferUrl value.")
+		return false
+	}
+	return instance.Settings.TransferUrl
+}
+
