@@ -348,7 +348,11 @@ func handleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		var RChannelID string
 		var Vuserid string
 		message.Params.ChannelID = message.Params.GroupID.(string)
-		Vuserid = message.Params.UserID.(string)
+		Vuserid, err = message.Params.UserID.(string)
+		if err != nil {
+			mylog.Printf("Error illegal UserID: %v", err)
+			return
+		}
 		if Vuserid != "" && config.GetIdmapPro() {
 			RChannelID, _, err = idmap.RetrieveRowByIDv2Pro(message.Params.ChannelID, Vuserid)
 			mylog.Printf("测试,通过Proid获取的RChannelID:%v", RChannelID)
