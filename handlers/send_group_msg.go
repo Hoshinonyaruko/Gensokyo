@@ -352,8 +352,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		Vuserid = message.Params.UserID.(string)
 		if Vuserid != "" && config.GetIdmapPro() {
 			RChannelID, _, err = idmap.RetrieveRowByIDv2Pro(message.Params.ChannelID, Vuserid)
-			mylog.Printf("测试,通过Proid获取的RChannelID:%v", RChannelID)
-
+			//mylog.Printf("测试,通过Proid获取的RChannelID:%v", RChannelID)
 		} else {
 			// 使用RetrieveRowByIDv2还原真实的ChannelID
 			RChannelID, err = idmap.RetrieveRowByIDv2(message.Params.ChannelID)
