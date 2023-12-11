@@ -68,8 +68,8 @@ gensokyo兼容 [OneBot-v11](https://github.com/botuniverse/onebot-11) ，并在�
 
 ### 接口
 
-- [ ] HTTP API 实现中
-- [ ] 反向 HTTP POST 实现中
+- [x] HTTP API
+- [x] 反向 HTTP POST
 - [x] 正向 WebSocket
 - [x] 反向 WebSocket
 
