@@ -18,12 +18,13 @@ import (
 )
 
 func init() {
-	callapi.RegisterHandler("send_guild_channel_msg", handleSendGuildChannelMsg)
+	callapi.RegisterHandler("send_guild_channel_msg", HandleSendGuildChannelMsg)
 }
 
-func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
+func HandleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
 	// 使用 message.Echo 作为key来获取消息类型
 	var msgType string
+	var retmsg string
 	if echoStr, ok := message.Echo.(string); ok {
 		// 当 message.Echo 是字符串类型时执行此块
 		msgType = echo.GetMsgTypeByKey(echoStr)
@@ -42,6 +43,10 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 	}
 	if msgType == "" {
 		msgType = GetMessageTypeByGroupidV2(message.Params.GroupID)
+	}
+	//当不转换频道信息时(不支持频道私聊)
+	if msgType == "" {
+		msgType = "guild"
 	}
 	switch msgType {
 	//原生guild信息
@@ -83,7 +88,7 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 				mylog.Printf("发送文本信息失败: %v", err)
 			}
 			//发送成功回执
-			SendResponse(client, err, &message)
+			retmsg, _ = SendResponse(client, err, &message)
 		}
 
 		// 遍历foundItems并发送每种信息
@@ -111,13 +116,13 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 						mylog.Printf("使用multipart发送 %s 信息失败: %v message_id %v", key, err, messageID)
 					}
 					//发送成功回执
-					SendResponse(client, err, &message)
+					retmsg, _ = SendResponse(client, err, &message)
 				} else {
 					if _, err = api.PostMessage(context.TODO(), channelID, reply); err != nil {
 						mylog.Printf("发送 %s 信息失败: %v", key, err)
 					}
 					//发送成功回执
-					SendResponse(client, err, &message)
+					retmsg, _ = SendResponse(client, err, &message)
 				}
 			}
 		}
@@ -133,10 +138,11 @@ func handleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 		if err != nil {
 			mylog.Printf("error retrieving real UserID: %v", err)
 		}
-		handleSendGuildChannelPrivateMsg(client, api, apiv2, message, &guildID, &RChannelID)
+		retmsg, _ = HandleSendGuildChannelPrivateMsg(client, api, apiv2, message, &guildID, &RChannelID)
 	default:
 		mylog.Printf("2Unknown message type: %s", msgType)
 	}
+	return retmsg, nil
 }
 
 // 组合发频道信息需要的MessageToCreate 支持base64

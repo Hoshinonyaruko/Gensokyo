@@ -137,6 +137,10 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 			if !config.GetHashIDValue() {
 				mylog.Fatalf("避坑日志:你开启了高级id转换,请设置hash_id为true,并且删除idmaps并重启")
 			}
+			//补救措施
+			idmap.SimplifiedStoreID(data.Author.ID)
+			//补救措施
+			idmap.SimplifiedStoreID(data.ChannelID)
 		} else {
 			//将channelid写入ini,可取出guild_id
 			ChannelID64, err = idmap.StoreIDv2(data.ChannelID)

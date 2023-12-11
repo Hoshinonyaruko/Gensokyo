@@ -17,12 +17,13 @@ import (
 )
 
 func init() {
-	callapi.RegisterHandler("send_private_msg", handleSendPrivateMsg)
+	callapi.RegisterHandler("send_private_msg", HandleSendPrivateMsg)
 }
 
-func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
+func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
 	// 使用 message.Echo 作为key来获取消息类型
 	var msgType string
+	var retmsg string
 	if echoStr, ok := message.Echo.(string); ok {
 		// 当 message.Echo 是字符串类型时执行此块
 		msgType = echo.GetMsgTypeByKey(echoStr)
@@ -62,7 +63,7 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			echo.AddMapping(idInt64, 4)
 			// 递归调用handleSendPrivateMsg，使用设置的消息类型
 			echo.AddMsgType(config.GetAppIDStr(), idInt64, "group_private")
-			handleSendPrivateMsg(client, api, apiv2, messageCopy)
+			HandleSendPrivateMsg(client, api, apiv2, messageCopy)
 		}
 	}
 
@@ -76,7 +77,7 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			_, UserID, err = idmap.RetrieveRowByIDv2Pro("690426430", message.Params.UserID.(string))
 			if err != nil {
 				mylog.Printf("Error reading config: %v", err)
-				return
+				return "", nil
 			}
 			mylog.Printf("测试,通过Proid获取的UserID:%v", UserID)
 		} else {
@@ -84,7 +85,7 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			UserID, err = idmap.RetrieveRowByIDv2(message.Params.UserID.(string))
 			if err != nil {
 				mylog.Printf("Error reading config: %v", err)
-				return
+				return "", nil
 			}
 		}
 
@@ -147,13 +148,13 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
 			if !ok {
 				mylog.Printf("Error: Expected RichMediaMessage type for key ")
-				return
+				return "", nil
 			}
 			// 上传图片并获取FileInfo
 			fileInfo, err := uploadMediaPrivate(context.TODO(), UserID, richMediaMessage, apiv2)
 			if err != nil {
 				mylog.Printf("上传图片失败: %v", err)
-				return // 或其他错误处理
+				return "", nil // 或其他错误处理
 			}
 			// 创建包含文本和图像信息的消息
 			msgseq = echo.GetMappingSeq(messageID)
@@ -173,11 +174,11 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			_, err = apiv2.PostC2CMessage(context.TODO(), UserID, groupMessage)
 			if err != nil {
 				mylog.Printf("发送组合消息失败: %v", err)
-				return // 或其他错误处理
+				return "", nil // 或其他错误处理
 			}
 
 			// 发送成功回执
-			SendResponse(client, err, &message)
+			retmsg, _ = SendResponse(client, err, &message)
 
 			delete(foundItems, imageType) // 从foundItems中删除已处理的图片项
 			messageText = ""
@@ -193,7 +194,7 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			groupMessage, ok := groupReply.(*dto.MessageToCreate)
 			if !ok {
 				mylog.Println("Error: Expected MessageToCreate type.")
-				return
+				return "", nil
 			}
 
 			groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
@@ -202,7 +203,7 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 				mylog.Printf("发送文本私聊信息失败: %v", err)
 			}
 			//发送成功回执
-			SendResponse(client, err, &message)
+			retmsg, _ = SendResponse(client, err, &message)
 		}
 
 		// 遍历foundItems并发送每种信息
@@ -231,7 +232,7 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 						groupMessage, ok := groupReply.(*dto.MessageToCreate)
 						if !ok {
 							mylog.Println("Error: Expected MessageToCreate type.")
-							return // 或其他错误处理
+							return "", nil // 或其他错误处理
 						}
 						groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
 						//重新为err赋值
@@ -262,12 +263,12 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 					}
 				}
 				//发送成功回执
-				SendResponse(client, err, &message)
+				retmsg, _ = SendResponse(client, err, &message)
 			}
 		}
 	case "guild_private":
 		//当收到发私信调用 并且来源是频道
-		handleSendGuildChannelPrivateMsg(client, api, apiv2, message, nil, nil)
+		retmsg, _ = HandleSendGuildChannelPrivateMsg(client, api, apiv2, message, nil, nil)
 	default:
 		mylog.Printf("Unknown message type: %s", msgType)
 	}
@@ -284,12 +285,13 @@ func handleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		echo.AddMsgType(config.GetAppIDStr(), idInt64, tryMessageTypes[echo.GetMapping(idInt64)-1])
 		delay := config.GetSendDelay()
 		time.Sleep(time.Duration(delay) * time.Millisecond)
-		handleSendGroupMsg(client, api, apiv2, messageCopy)
+		HandleSendGroupMsg(client, api, apiv2, messageCopy)
 	}
+	return retmsg, nil
 }
 
 // 处理频道私信 最后2个指针参数可空 代表使用userid倒推
-func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage, optionalGuildID *string, optionalChannelID *string) {
+func HandleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage, optionalGuildID *string, optionalChannelID *string) (string, error) {
 	params := message.Params
 	messageText, foundItems := parseMessageContent(params)
 
@@ -297,6 +299,7 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 	var err error
 	var UserID string
 	var GroupID string
+	var retmsg string
 	if message.Params.GroupID != nil {
 		if gid, ok := message.Params.GroupID.(string); ok {
 			GroupID = gid // GroupID 是 string 类型
@@ -334,21 +337,21 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 			guildID, channelID, err = getGuildIDFromMessage(message)
 			if err != nil {
 				mylog.Printf("获取 guild_id 和 channel_id 出错: %v", err)
-				return
+				return "", nil
 			}
 			//频道私信 转 私信
 			if GroupID != "" && config.GetIdmapPro() {
 				_, UserID, err = idmap.RetrieveRowByIDv2Pro(GroupID, RawUserID)
 				if err != nil {
 					mylog.Printf("Error reading config: %v", err)
-					return
+					return "", nil
 				}
 				mylog.Printf("测试,通过Proid获取的UserID:%v", UserID)
 			} else {
 				UserID, err = idmap.RetrieveRowByIDv2(RawUserID)
 				if err != nil {
 					mylog.Printf("Error reading config: %v", err)
-					return
+					return "", nil
 				}
 			}
 			// 如果messageID为空，通过函数获取
@@ -362,14 +365,14 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 				_, UserID, err = idmap.RetrieveRowByIDv2Pro(GroupID, RawUserID)
 				if err != nil {
 					mylog.Printf("Error reading config: %v", err)
-					return
+					return "", nil
 				}
 				mylog.Printf("测试,通过Proid获取的UserID:%v", UserID)
 			} else {
 				UserID, err = idmap.RetrieveRowByIDv2(RawUserID)
 				if err != nil {
 					mylog.Printf("Error reading config: %v", err)
-					return
+					return "", nil
 				}
 			}
 			// 如果messageID为空，通过函数获取
@@ -384,12 +387,12 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 			guildID, err = idmap.ReadConfigv2(GroupID, "guild_id")
 			if err != nil {
 				mylog.Printf("根据GroupID获取guild_id失败: %v", err)
-				return
+				return "", nil
 			}
 			channelID, err = idmap.RetrieveRowByIDv2(GroupID)
 			if err != nil {
 				mylog.Printf("根据GroupID获取channelID失败: %v", err)
-				return
+				return "", nil
 			}
 			//频道私信 转 群聊 获取id
 			var originalGroupID string
@@ -397,14 +400,14 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 				_, originalGroupID, err = idmap.RetrieveRowByIDv2Pro(channelID, GroupID)
 				if err != nil {
 					mylog.Printf("Error retrieving original GroupID: %v", err)
-					return
+					return "", nil
 				}
 				mylog.Printf("测试,通过Proid获取的originalGroupID:%v", originalGroupID)
 			} else {
 				originalGroupID, err = idmap.RetrieveRowByIDv2(message.Params.GroupID.(string))
 				if err != nil {
 					mylog.Printf("Error retrieving original GroupID: %v", err)
-					return
+					return "", nil
 				}
 			}
 			mylog.Println("群组(私信虚拟成的)发信息messageText:", messageText)
@@ -461,7 +464,7 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 			mylog.Printf("发送文本信息失败: %v", err)
 		}
 		//发送成功回执
-		SendResponse(client, err, &message)
+		retmsg, _ = SendResponse(client, err, &message)
 	}
 
 	// 遍历foundItems并发送每种信息
@@ -486,16 +489,17 @@ func handleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 				if _, err = api.PostDirectMessageMultipart(context.TODO(), dm, reply, fileImageData); err != nil {
 					mylog.Printf("使用multipart发送 %s 信息失败: %v message_id %v", key, err, messageID)
 				}
-				SendResponse(client, err, &message)
+				retmsg, _ = SendResponse(client, err, &message)
 			} else {
 				// 处理非 Base64 图片的逻辑
 				if _, err = api.PostDirectMessage(context.TODO(), dm, reply); err != nil {
 					mylog.Printf("发送 %s 信息失败: %v", key, err)
 				}
-				SendResponse(client, err, &message)
+				retmsg, _ = SendResponse(client, err, &message)
 			}
 		}
 	}
+	return retmsg, nil
 }
 
 // 这个函数可以通过int类型的虚拟userid反推真实的guild_id和channel_id

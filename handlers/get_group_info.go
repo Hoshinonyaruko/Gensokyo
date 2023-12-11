@@ -17,7 +17,7 @@ import (
 )
 
 func init() {
-	callapi.RegisterHandler("get_group_info", handleGetGroupInfo)
+	callapi.RegisterHandler("get_group_info", HandleGetGroupInfo)
 }
 
 type OnebotGroupInfo struct {
@@ -79,7 +79,7 @@ func ConvertGuildToGroupInfo(guild *dto.Guild, GroupId string, message callapi.A
 	return onebotGroupInfo
 }
 
-func handleGetGroupInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
+func HandleGetGroupInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
 	params := message.Params
 	// 使用 message.Echo 作为key来获取消息类型
 	var msgType string
@@ -112,7 +112,7 @@ func handleGetGroupInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		value, err := idmap.ReadConfigv2(RChannelID, "guild_id")
 		if err != nil {
 			mylog.Printf("handleGetGroupInfo:Error reading config: %v\n", err)
-			return
+			return "", nil
 		}
 		//最后获取到guildID
 		guildID := value
@@ -120,7 +120,7 @@ func handleGetGroupInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		guild, err := api.Guild(context.TODO(), guildID)
 		if err != nil {
 			mylog.Printf("获取频道信息失败: %v", err)
-			return
+			return "", nil
 		}
 		groupInfo = ConvertGuildToGroupInfo(guild, guildID, message)
 	default:
@@ -159,6 +159,14 @@ func handleGetGroupInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 	if err != nil {
 		mylog.Printf("error sending group info via wsclient: %v", err)
 	}
+	//把结果从struct转换为json
+	result, err := json.Marshal(groupInfo)
+	if err != nil {
+		mylog.Printf("Error marshaling data: %v", err)
+		//todo 符合onebotv11 ws返回的错误码
+		return "", nil
+	}
+	return string(result), nil
 }
 
 // 将结构体转换为 map[string]interface{}

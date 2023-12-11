@@ -5,5 +5,5 @@ import (
 )
 
 func init() {
-	callapi.RegisterHandler("send_msg_async", handleSendMsg)
+	callapi.RegisterHandler("send_msg_async", HandleSendMsg)
 }

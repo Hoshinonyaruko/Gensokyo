@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	callapi.RegisterHandler("get_friend_list", handleGetFriendList)
+	callapi.RegisterHandler("get_friend_list", HandleGetFriendList)
 }
 
 type APIOutput struct {
@@ -26,7 +26,7 @@ type FriendData struct {
 	UserID   string `json:"user_id"`
 }
 
-func handleGetFriendList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
+func HandleGetFriendList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
 	var output APIOutput
 
 	for i := 0; i < 10; i++ { // Assume we want to loop 10 times to create friend data
@@ -56,8 +56,10 @@ func handleGetFriendList(client callapi.Client, api openapi.OpenAPI, apiv2 opena
 	result, err := json.Marshal(output)
 	if err != nil {
 		mylog.Printf("Error marshaling data: %v", err)
-		return
+		//todo 符合onebotv11 ws返回的错误码
+		return "", nil
 	}
 
 	mylog.Printf("get_friend_list: %s", result)
+	return string(result), nil
 }

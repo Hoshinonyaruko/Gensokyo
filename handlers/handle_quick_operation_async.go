@@ -5,5 +5,5 @@ import (
 )
 
 func init() {
-	callapi.RegisterHandler(".handle_quick_operation_async", handle_quick_operation)
+	callapi.RegisterHandler(".handle_quick_operation_async", Handle_quick_operation)
 }

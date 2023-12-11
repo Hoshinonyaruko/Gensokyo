@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"encoding/json"
+
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/tencent-connect/botgo/openapi"
@@ -20,7 +22,7 @@ func init() {
 	callapi.RegisterHandler("mark_msg_as_read", MarkThisMessageAsRead)
 }
 
-func MarkThisMessageAsRead(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
+func MarkThisMessageAsRead(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
 
 	var response MarkThisMessageAsReadAPIResponse
 
@@ -41,5 +43,12 @@ func MarkThisMessageAsRead(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 	} else {
 		mylog.Printf("响应mark_msg_as_read: %+v", outputMap)
 	}
-
+	//把结果从struct转换为json
+	result, err := json.Marshal(response)
+	if err != nil {
+		mylog.Printf("Error marshaling data: %v", err)
+		//todo 符合onebotv11 ws返回的错误码
+		return "", nil
+	}
+	return string(result), nil
 }

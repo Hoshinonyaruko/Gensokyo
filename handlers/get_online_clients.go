@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"encoding/json"
+
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/tencent-connect/botgo/openapi"
@@ -20,10 +22,10 @@ type OnlineClientsData struct {
 }
 
 func init() {
-	callapi.RegisterHandler("get_online_clients", getOnlineClients)
+	callapi.RegisterHandler("get_online_clients", GetOnlineClients)
 }
 
-func getOnlineClients(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
+func GetOnlineClients(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
 
 	var response OnlineClientsResponse
 
@@ -47,4 +49,12 @@ func getOnlineClients(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.
 	} else {
 		mylog.Printf("响应get_online_clients: %+v", outputMap)
 	}
+	//把结果从struct转换为json
+	result, err := json.Marshal(response)
+	if err != nil {
+		mylog.Printf("Error marshaling data: %v", err)
+		//todo 符合onebotv11 ws返回的错误码
+		return "", nil
+	}
+	return string(result), nil
 }

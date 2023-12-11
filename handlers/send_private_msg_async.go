@@ -5,5 +5,5 @@ import (
 )
 
 func init() {
-	callapi.RegisterHandler("send_private_msg_async", handleSendPrivateMsg)
+	callapi.RegisterHandler("send_private_msg_async", HandleSendPrivateMsg)
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/Processor"
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/handlers"
+	"github.com/hoshinonyaruko/gensokyo/httpapi"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/hoshinonyaruko/gensokyo/server"
@@ -283,11 +284,15 @@ func main() {
 		serverPort = conf.Settings.BackupPort
 	}
 	var r *gin.Engine
+	var hr *gin.Engine
 	if config.GetDeveloperLog() { // 是否启动调试状态
 		r = gin.Default()
+		hr = gin.Default()
 	} else {
 		r = gin.New()
 		r.Use(gin.Recovery()) // 添加恢复中间件，但不添加日志中间件
+		hr = gin.New()
+		hr.Use(gin.Recovery())
 	}
 	r.GET("/getid", server.GetIDHandler)
 	r.GET("/updateport", server.HandleIpupdate)
@@ -305,16 +310,29 @@ func main() {
 			webuiGroup.PATCH("/*filepath", webui.CombinedMiddleware(api, apiV2))
 		}
 	}
+	//正向http api
+	http_api_address := config.GetHttpAddress()
+	if http_api_address != "" {
+		mylog.Println("正向http api启动成功,监听" + http_api_address + "若有需要,请对外放通端口...")
+		HttpApiGroup := hr.Group("/")
+		{
+			HttpApiGroup.GET("/*filepath", httpapi.CombinedMiddleware(api, apiV2))
+			HttpApiGroup.POST("/*filepath", httpapi.CombinedMiddleware(api, apiV2))
+			HttpApiGroup.PUT("/*filepath", httpapi.CombinedMiddleware(api, apiV2))
+			HttpApiGroup.DELETE("/*filepath", httpapi.CombinedMiddleware(api, apiV2))
+			HttpApiGroup.PATCH("/*filepath", httpapi.CombinedMiddleware(api, apiV2))
+		}
+	}
 	//正向ws
 	if conf.Settings.AppID != 12345 {
 		if conf.Settings.EnableWsServer {
 			wspath := config.GetWsServerPath()
 			if wspath == "nil" {
 				r.GET("", server.WsHandlerWithDependencies(api, apiV2, p))
-				log.Println("正向ws启动成功,监听0.0.0.0:" + serverPort + "请注意设置ws_server_token(可空),并对外放通端口...")
+				mylog.Println("正向ws启动成功,监听0.0.0.0:" + serverPort + "请注意设置ws_server_token(可空),并对外放通端口...")
 			} else {
 				r.GET("/"+wspath, server.WsHandlerWithDependencies(api, apiV2, p))
-				log.Println("正向ws启动成功,监听0.0.0.0:" + serverPort + "/" + wspath + "请注意设置ws_server_token(可空),并对外放通端口...")
+				mylog.Println("正向ws启动成功,监听0.0.0.0:" + serverPort + "/" + wspath + "请注意设置ws_server_token(可空),并对外放通端口...")
 			}
 		}
 	}
@@ -368,6 +386,20 @@ func main() {
 			// 启动444端口的HTTP服务器
 			if err := httpServer444.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				log.Fatalf("listen (HTTP 444): %s\n", err)
+			}
+		}()
+	}
+	// 创建 httpapi 的http server
+	if http_api_address != "" {
+		go func() {
+			// 创建一个http.Server实例（Http Api服务器）
+			httpServerHttpApi := &http.Server{
+				Addr:    http_api_address,
+				Handler: hr,
+			}
+			// 使用HTTP
+			if err := httpServerHttpApi.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				log.Fatalf("http apilisten: %s\n", err)
 			}
 		}()
 	}

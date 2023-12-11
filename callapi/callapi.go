@@ -160,7 +160,7 @@ type WebSocketServerClienter interface {
 }
 
 // 根据action订阅handler处理api
-type HandlerFunc func(client Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, messgae ActionMessage)
+type HandlerFunc func(client Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, messgae ActionMessage) (string, error)
 
 var handlers = make(map[string]HandlerFunc)
 
@@ -170,11 +170,19 @@ func RegisterHandler(action string, handler HandlerFunc) {
 }
 
 // CallAPIFromDict 处理信息 by calling the 对应的 handler.
-func CallAPIFromDict(client Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message ActionMessage) {
+func CallAPIFromDict(client Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message ActionMessage) string {
 	handler, ok := handlers[message.Action]
 	if !ok {
 		mylog.Println("Unsupported action:", message.Action)
-		return
+		return ""
 	}
-	handler(client, api, apiv2, message)
+
+	jsonString, err := handler(client, api, apiv2, message)
+	if err != nil {
+		// 处理错误
+		mylog.Println("Error handling action:", message.Action, "Error:", err)
+		return ""
+	}
+
+	return jsonString
 }

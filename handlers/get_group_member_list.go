@@ -40,15 +40,15 @@ type MemberList struct {
 }
 
 func init() {
-	callapi.RegisterHandler("get_group_member_list", getGroupMemberList)
+	callapi.RegisterHandler("get_group_member_list", GetGroupMemberList)
 }
 
-func getGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
+func GetGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
 
 	msgType, err := idmap.ReadConfigv2(message.Params.GroupID.(string), "type")
 	if err != nil {
 		mylog.Printf("Error reading config: %v", err)
-		return
+		return "", nil
 	}
 
 	switch msgType {
@@ -61,7 +61,7 @@ func getGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		userIDs, err := idmap.FindSubKeysById(message.Params.GroupID.(string))
 		if err != nil {
 			mylog.Printf("Error retrieving user IDs: %v", err)
-			return // 或者处理错误
+			return "", nil // 或者处理错误
 		}
 
 		// 获取当前时间的前一天，并转换为10位时间戳
@@ -106,10 +106,16 @@ func getGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		if err != nil {
 			mylog.Printf("Error sending message via client: %v", err)
 		}
-		return
+		result, err := ConvertMapToJSONString(responseJSON)
+		if err != nil {
+			mylog.Printf("Error marshaling data: %v", err)
+			//todo 符合onebotv11 ws返回的错误码
+			return "", nil
+		}
+		return string(result), nil
 	case "private":
 		mylog.Printf("getGroupMemberList(private): 目前暂未适配私聊虚拟群场景获取虚拟群列表能力")
-		return
+		return "", nil
 	case "guild":
 		//要把group_id还原成guild_id
 		//用group_id还原出channelid 这是虚拟成群的私聊信息
@@ -123,7 +129,7 @@ func getGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		value, err := idmap.ReadConfigv2(RChannelID, "guild_id")
 		if err != nil {
 			mylog.Printf("Error reading config: %v", err)
-			return
+			return "", nil
 		}
 		pager := &dto.GuildMembersPager{
 			Limit: "400",
@@ -131,7 +137,7 @@ func getGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		membersFromAPI, err := api.GuildMembers(context.TODO(), value, pager)
 		if err != nil {
 			mylog.Printf("Failed to fetch group members for guild %s: %v", value, err)
-			return
+			return "", nil
 		}
 
 		// mylog.Println("Number of members in membersFromAPI:", len(membersFromAPI))
@@ -201,9 +207,17 @@ func getGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		if err != nil {
 			mylog.Printf("Error sending message via client: %v", err)
 		}
+		result, err := ConvertMapToJSONString(responseJSON)
+		if err != nil {
+			mylog.Printf("Error marshaling data: %v", err)
+			//todo 符合onebotv11 ws返回的错误码
+			return "", nil
+		}
+		return string(result), nil
 	default:
 		mylog.Printf("Unknown msgType: %s", msgType)
 	}
+	return "", nil
 }
 
 func buildResponse(members []MemberList, echoValue interface{}) map[string]interface{} {

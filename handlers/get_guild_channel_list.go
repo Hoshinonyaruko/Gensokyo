@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
@@ -17,10 +18,10 @@ type GuildChannelListResponse struct {
 }
 
 func init() {
-	callapi.RegisterHandler("get_guild_channel_list", getGuildChannelList)
+	callapi.RegisterHandler("get_guild_channel_list", GetGuildChannelList)
 }
 
-func getGuildChannelList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
+func GetGuildChannelList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
 	var response GuildChannelListResponse
 
 	// 解析请求参数
@@ -32,7 +33,7 @@ func getGuildChannelList(client callapi.Client, api openapi.OpenAPI, apiv2 opena
 		// 如果发生错误，记录日志并返回null
 		mylog.Printf("Error fetching channels: %v", err)
 		client.SendMessage(map[string]interface{}{"data": nil})
-		return
+		return "", nil
 	}
 
 	// 构建响应数据
@@ -69,4 +70,12 @@ func getGuildChannelList(client callapi.Client, api openapi.OpenAPI, apiv2 opena
 	if err != nil {
 		mylog.Printf("Error sending message via client: %v", err)
 	}
+	//把结果从struct转换为json
+	result, err := json.Marshal(response)
+	if err != nil {
+		mylog.Printf("Error marshaling data: %v", err)
+		//todo 符合onebotv11 ws返回的错误码
+		return "", nil
+	}
+	return string(result), nil
 }

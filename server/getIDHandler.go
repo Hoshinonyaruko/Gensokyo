@@ -155,8 +155,17 @@ func GetIDHandler(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "id and subid parameters are required for type 11"})
 			return
 		}
-		virtualValue, err := strconv.ParseInt(idOrRow, 10, 64)
-		virtualValueSub, err := strconv.ParseInt(subid, 10, 64)
+		var virtualValue, virtualValueSub int64
+		virtualValue, err = strconv.ParseInt(idOrRow, 10, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input values idOrRow"})
+			return
+		}
+		virtualValueSub, err = strconv.ParseInt(subid, 10, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input values subid"})
+			return
+		}
 		firstRealValue, secondRealValue, err := idmap.RetrieveRealValuesv2Pro(virtualValue, virtualValueSub)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -169,17 +178,28 @@ func GetIDHandler(c *gin.Context) {
 		newVirtualValue1Str := c.Query("newVirtualValue1")
 		oldVirtualValue2Str := c.Query("oldVirtualValue2")
 		newVirtualValue2Str := c.Query("newVirtualValue2")
-
+		var oldVirtualValue1, newVirtualValue1, oldVirtualValue2, newVirtualValue2 int64
 		// 将字符串转换为int64
-		oldVirtualValue1, err := strconv.ParseInt(oldVirtualValue1Str, 10, 64)
-		newVirtualValue1, err := strconv.ParseInt(newVirtualValue1Str, 10, 64)
-		oldVirtualValue2, err := strconv.ParseInt(oldVirtualValue2Str, 10, 64)
-		newVirtualValue2, err := strconv.ParseInt(newVirtualValue2Str, 10, 64)
+		oldVirtualValue1, err = strconv.ParseInt(oldVirtualValue1Str, 10, 64)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input values"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input values oldVirtualValue1"})
 			return
 		}
-
+		newVirtualValue1, err = strconv.ParseInt(newVirtualValue1Str, 10, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input values newVirtualValue1"})
+			return
+		}
+		oldVirtualValue2, err = strconv.ParseInt(oldVirtualValue2Str, 10, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input values oldVirtualValue2"})
+			return
+		}
+		newVirtualValue2, err = strconv.ParseInt(newVirtualValue2Str, 10, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input values newVirtualValue2"})
+			return
+		}
 		err = idmap.UpdateVirtualValuev2Pro(oldVirtualValue1, newVirtualValue1, oldVirtualValue2, newVirtualValue2)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -187,7 +207,13 @@ func GetIDHandler(c *gin.Context) {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"message": "Virtual values updated successfully"})
-
+	case 13:
+		newRow, err := idmap.SimplifiedStoreIDv2(idOrRow)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"row": newRow})
 	}
 
 }

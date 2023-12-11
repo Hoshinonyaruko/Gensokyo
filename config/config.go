@@ -94,6 +94,13 @@ type Settings struct {
 	UnlockPrefix           string   `yaml:"unlock_prefix"`
 	WhiteBypass            []int64  `yaml:"white_bypass"`
 	TransferUrl            bool     `yaml:"transfer_url"`
+	HttpAddress            string   `yaml:"http_address"`
+	HttpVersion            int      `yaml:"http_version"`
+	HttpTimeOut            int      `yaml:"http_timeout"`
+	PostUrl                []string `yaml:"post_url"`
+	PostSecret             []string `yaml:"post_secret"`
+	PostMaxRetries         []int    `yaml:"post_max_retries"`
+	PostRetriesInterval    []int    `yaml:"post_retries_interval"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -1129,4 +1136,88 @@ func GetTransferUrl() bool {
 		return false
 	}
 	return instance.Settings.TransferUrl
+}
+
+// 获取 HTTP 地址
+func GetHttpAddress() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get HTTP address.")
+		return ""
+	}
+	return instance.Settings.HttpAddress
+}
+
+// 获取 HTTP 版本
+func GetHttpVersion() int {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get HTTP version.")
+		return 11
+	}
+	return instance.Settings.HttpVersion
+}
+
+// 获取 HTTP 超时时间
+func GetHttpTimeOut() int {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get HTTP timeout.")
+		return 5
+	}
+	return instance.Settings.HttpTimeOut
+}
+
+// 获取 POST URL 数组
+func GetPostUrl() []string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get POST URL.")
+		return nil
+	}
+	return instance.Settings.PostUrl
+}
+
+// 获取 POST 密钥数组
+func GetPostSecret() []string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get POST secret.")
+		return nil
+	}
+	return instance.Settings.PostSecret
+}
+
+// 获取 POST 最大重试次数数组
+func GetPostMaxRetries() []int {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get POST max retries.")
+		return nil
+	}
+	return instance.Settings.PostMaxRetries
+}
+
+// 获取 POST 重试间隔数组
+func GetPostRetriesInterval() []int {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get POST retries interval.")
+		return nil
+	}
+	return instance.Settings.PostRetriesInterval
 }
