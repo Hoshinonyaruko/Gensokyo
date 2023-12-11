@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"encoding/json"
+
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/tencent-connect/botgo/openapi"
@@ -20,10 +22,10 @@ type GuildServiceProfileData struct {
 }
 
 func init() {
-	callapi.RegisterHandler("get_guild_service_profile", getGuildServiceProfile)
+	callapi.RegisterHandler("get_guild_service_profile", GetGuildServiceProfile)
 }
 
-func getGuildServiceProfile(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
+func GetGuildServiceProfile(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
 
 	var response GuildServiceProfileResponse
 
@@ -47,4 +49,12 @@ func getGuildServiceProfile(client callapi.Client, api openapi.OpenAPI, apiv2 op
 	} else {
 		mylog.Printf("响应get_guild_service_profile: %+v", outputMap)
 	}
+	//把结果从struct转换为json
+	result, err := json.Marshal(response)
+	if err != nil {
+		mylog.Printf("Error marshaling data: %v", err)
+		//todo 符合onebotv11 ws返回的错误码
+		return "", nil
+	}
+	return string(result), nil
 }

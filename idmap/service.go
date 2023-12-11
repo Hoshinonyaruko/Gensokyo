@@ -55,7 +55,7 @@ func InitializeDB() {
 func CloseDB() {
 	db.Close()
 }
-func generateRowID(id string, length int) (int64, error) {
+func GenerateRowID(id string, length int) (int64, error) {
 	// 计算MD5哈希值
 	hasher := md5.New()
 	hasher.Write([]byte(id))
@@ -94,7 +94,7 @@ func CheckValue(id string, value int64) bool {
 	length := len(strconv.FormatInt(value, 10))
 
 	// 使用generateRowID转换id
-	generatedValue, err := generateRowID(id, length)
+	generatedValue, err := GenerateRowID(id, length)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return false
@@ -130,7 +130,7 @@ func StoreID(id string) (int64, error) {
 		} else {
 			// 生成新的行号
 			var err error
-			newRow, err = generateRowID(id, 9)
+			newRow, err = GenerateRowID(id, 9)
 			if err != nil {
 				return err
 			}
@@ -138,7 +138,7 @@ func StoreID(id string) (int64, error) {
 			rowKey := fmt.Sprintf("row-%d", newRow)
 			if b.Get([]byte(rowKey)) != nil {
 				// 如果行号重复，使用10位数字生成行号
-				newRow, err = generateRowID(id, 10)
+				newRow, err = GenerateRowID(id, 10)
 				if err != nil {
 					return err
 				}
@@ -168,6 +168,85 @@ func StoreID(id string) (int64, error) {
 	return newRow, err
 }
 
+func SimplifiedStoreID(id string) (int64, error) {
+	var newRow int64
+
+	err := db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(BucketName))
+
+		// 生成新的行号
+		var err error
+		newRow, err = GenerateRowID(id, 9)
+		if err != nil {
+			return err
+		}
+
+		// 检查新生成的行号是否重复
+		rowKey := fmt.Sprintf("row-%d", newRow)
+		if b.Get([]byte(rowKey)) != nil {
+			// 如果行号重复，使用10位数字生成行号
+			newRow, err = GenerateRowID(id, 10)
+			if err != nil {
+				return err
+			}
+			rowKey = fmt.Sprintf("row-%d", newRow)
+			// 再次检查重复性，如果还是重复，则返回错误
+			if b.Get([]byte(rowKey)) != nil {
+				return fmt.Errorf("unable to find a unique row ID 195")
+			}
+		}
+
+		// 只写入反向键
+		b.Put([]byte(rowKey), []byte(id))
+
+		return nil
+	})
+
+	return newRow, err
+}
+
+// SimplifiedStoreID 根据a储存b 储存一半
+func SimplifiedStoreIDv2(id string) (int64, error) {
+	if config.GetLotusValue() {
+		// 使用网络请求方式
+		serverDir := config.GetServer_dir()
+		portValue := config.GetPortValue()
+
+		// 根据portValue确定协议
+		protocol := "http"
+		if portValue == "443" {
+			protocol = "https"
+		}
+
+		// 构建请求URL
+		url := fmt.Sprintf("%s://%s:%s/getid?type=13&id=%s", protocol, serverDir, portValue, id)
+		resp, err := http.Get(url)
+		if err != nil {
+			return 0, fmt.Errorf("failed to send request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		// 解析响应
+		var response map[string]interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+			return 0, fmt.Errorf("failed to decode response: %v", err)
+		}
+		if resp.StatusCode != http.StatusOK {
+			return 0, fmt.Errorf("error response from server: %s", response["error"])
+		}
+
+		rowValue, ok := response["row"].(float64)
+		if !ok {
+			return 0, fmt.Errorf("invalid response format")
+		}
+
+		return int64(rowValue), nil
+	}
+
+	// 如果lotus为假,就保持原来的store的方法
+	return SimplifiedStoreID(id)
+}
+
 // 群号 然后 用户号
 func StoreIDPro(id string, subid string) (int64, int64, error) {
 	var newRowID, newSubRowID int64
@@ -188,12 +267,12 @@ func StoreIDPro(id string, subid string) (int64, int64, error) {
 		}
 
 		// 生成新的ID和SubID
-		newRowID, err = generateRowID(id, 9) // 使用generateRowID来生成
+		newRowID, err = GenerateRowID(id, 9) // 使用GenerateRowID来生成
 		if err != nil {
 			return err
 		}
 
-		newSubRowID, err = generateRowID(subid, 9) // 同样的方法生成SubID
+		newSubRowID, err = GenerateRowID(subid, 9) // 同样的方法生成SubID
 		if err != nil {
 			return err
 		}

@@ -14,12 +14,13 @@ import (
 )
 
 func init() {
-	callapi.RegisterHandler("send_msg", handleSendMsg)
+	callapi.RegisterHandler("send_msg", HandleSendMsg)
 }
 
-func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
+func HandleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
 	// 使用 message.Echo 作为key来获取消息类型
 	var msgType string
+	var retmsg string
 	if echoStr, ok := message.Echo.(string); ok {
 		// 当 message.Echo 是字符串类型时执行此块
 		msgType = echo.GetMsgTypeByKey(echoStr)
@@ -58,14 +59,14 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 			echo.AddMapping(idInt64, 4)
 			// 递归调用handleSendMsg，使用设置的消息类型
 			echo.AddMsgType(config.GetAppIDStr(), idInt64, "group_private")
-			handleSendMsg(client, api, apiv2, messageCopy)
+			retmsg, _ = HandleSendMsg(client, api, apiv2, messageCopy)
 		}
 	}
 
 	switch msgType {
 	case "group":
 		//复用处理逻辑
-		handleSendGroupMsg(client, api, apiv2, message)
+		retmsg, _ = HandleSendGroupMsg(client, api, apiv2, message)
 	case "guild":
 		//用GroupID给ChannelID赋值,因为我们是把频道虚拟成了群
 		message.Params.ChannelID = message.Params.GroupID.(string)
@@ -84,16 +85,16 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 			}
 		}
 		message.Params.ChannelID = RChannelID
-		handleSendGuildChannelMsg(client, api, apiv2, message)
+		retmsg, _ = HandleSendGuildChannelMsg(client, api, apiv2, message)
 	case "guild_private":
 		//send_msg比具体的send_xxx少一层,其包含的字段类型在虚拟化场景已经失去作用
 		//根据userid绑定得到的具体真实事件类型,这里也有多种可能性
 		//1,私聊(但虚拟成了群),这里用群号取得需要的id
 		//2,频道私聊(但虚拟成了私聊)这里传递2个nil,用user_id去推测channel_id和guild_id
-		handleSendGuildChannelPrivateMsg(client, api, apiv2, message, nil, nil)
+		retmsg, _ = HandleSendGuildChannelPrivateMsg(client, api, apiv2, message, nil, nil)
 	case "group_private":
 		//私聊信息
-		handleSendPrivateMsg(client, api, apiv2, message)
+		retmsg, _ = HandleSendPrivateMsg(client, api, apiv2, message)
 	default:
 		mylog.Printf("1Unknown message type: %s", msgType)
 	}
@@ -110,8 +111,9 @@ func handleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 		echo.AddMsgType(config.GetAppIDStr(), idInt64, tryMessageTypes[echo.GetMapping(idInt64)-1])
 		delay := config.GetSendDelay()
 		time.Sleep(time.Duration(delay) * time.Millisecond)
-		handleSendMsg(client, api, apiv2, messageCopy)
+		retmsg, _ = HandleSendMsg(client, api, apiv2, messageCopy)
 	}
+	return retmsg, nil
 }
 
 // 通过user_id获取messageID
@@ -134,12 +136,40 @@ func GetMessageIDByUseridOrGroupid(appID string, userID interface{}) string {
 	//将真实id转为int
 	userid64, err := idmap.StoreIDv2(userIDStr)
 	if err != nil {
-		mylog.Fatalf("Error storing ID 241: %v", err)
+		mylog.Printf("Error storing ID 241: %v", err)
 		return ""
 	}
 	key := appID + "_" + fmt.Sprint(userid64)
-	return echo.GetMsgIDByKey(key)
+	messageid := echo.GetMsgIDByKey(key)
+	// if messageid == "" {
+	// 	// 尝试使用9位数key
+	// 	messageid, err = generateKeyAndFetchMessageID(appID, userIDStr, 9)
+	// 	if err != nil {
+	// 		mylog.Printf("Error generating 9 digits key: %v", err)
+	// 		return ""
+	// 	}
+
+	// 	// 如果9位数key失败，则尝试10位数key
+	// 	if messageid == "" {
+	// 		messageid, err = generateKeyAndFetchMessageID(appID, userIDStr, 10)
+	// 		if err != nil {
+	// 			mylog.Printf("Error generating 10 digits key: %v", err)
+	// 			return ""
+	// 		}
+	// 	}
+	// }
+	return messageid
 }
+
+// generateKeyAndFetchMessageID 尝试生成特定长度的key，并获取messageID
+// func generateKeyAndFetchMessageID(appID string, userIDStr string, keyLength int) (string, error) {
+// 	userid64, err := idmap.GenerateRowID(userIDStr, keyLength)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	key := appID + "_" + fmt.Sprint(userid64)
+// 	return echo.GetMsgIDByKey(key), nil
+// }
 
 // 通过user_id获取messageID
 func GetMessageIDByUseridAndGroupid(appID string, userID interface{}, groupID interface{}) string {
@@ -173,17 +203,27 @@ func GetMessageIDByUseridAndGroupid(appID string, userID interface{}, groupID in
 		// 可能需要处理其他类型或报错
 		return ""
 	}
-	//将真实id转为int
-	userid64, err := idmap.StoreIDv2(userIDStr)
-	if err != nil {
-		mylog.Fatalf("Error storing ID 241: %v", err)
-		return ""
-	}
-	//将真实id转为int
-	groupid64, err := idmap.StoreIDv2(GroupIDStr)
-	if err != nil {
-		mylog.Fatalf("Error storing ID 256: %v", err)
-		return ""
+	var userid64, groupid64 int64
+	var err error
+	if config.GetIdmapPro() {
+		//将真实id转为int userid64
+		groupid64, userid64, err = idmap.StoreIDv2Pro(GroupIDStr, userIDStr)
+		if err != nil {
+			mylog.Fatalf("Error storing ID 210: %v", err)
+		}
+	} else {
+		//将真实id转为int
+		userid64, err = idmap.StoreIDv2(userIDStr)
+		if err != nil {
+			mylog.Fatalf("Error storing ID 241: %v", err)
+			return ""
+		}
+		//将真实id转为int
+		groupid64, err = idmap.StoreIDv2(GroupIDStr)
+		if err != nil {
+			mylog.Fatalf("Error storing ID 256: %v", err)
+			return ""
+		}
 	}
 	key := appID + "_" + fmt.Sprint(userid64) + "_" + fmt.Sprint(groupid64)
 	return echo.GetMsgIDByKey(key)

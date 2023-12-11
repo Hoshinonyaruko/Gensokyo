@@ -5,5 +5,5 @@ import (
 )
 
 func init() {
-	callapi.RegisterHandler("send_group_msg_async", handleSendGroupMsg)
+	callapi.RegisterHandler("send_group_msg_async", HandleSendGroupMsg)
 }

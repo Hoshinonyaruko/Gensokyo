@@ -48,6 +48,8 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 			if !config.GetHashIDValue() {
 				mylog.Fatalf("避坑日志:你开启了高级id转换,请设置hash_id为true,并且删除idmaps并重启")
 			}
+			//补救措施
+			idmap.SimplifiedStoreID(data.Author.ID)
 		} else {
 			//将真实id转为int userid64
 			userid64, err = idmap.StoreIDv2(data.Author.ID)
@@ -149,6 +151,8 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 			}
 			//当参数不全,降级时
 			_, _ = idmap.StoreIDv2(data.Author.ID)
+			//补救措施
+			idmap.SimplifiedStoreID(data.Author.ID)
 		} else {
 			//将真实id转为int userid64
 			userid64, err = idmap.StoreIDv2(data.Author.ID)

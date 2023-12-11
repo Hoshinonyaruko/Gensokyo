@@ -8,7 +8,7 @@ import (
 
 // 初始化handler，在程序启动时会被调用
 func init() {
-	callapi.RegisterHandler("get_group_member_info", getGroupMemberInfo)
+	callapi.RegisterHandler("get_group_member_info", GetGroupMemberInfo)
 }
 
 // 成员信息的结构定义
@@ -65,7 +65,7 @@ func buildResponseForSingleMember(memberInfo *MemberInfo, echoValue interface{})
 }
 
 // getGroupMemberInfo是处理获取群成员信息的函数
-func getGroupMemberInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
+func GetGroupMemberInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
 	// 使用虚拟数据构造 MemberInfo
 	memberInfo := &MemberInfo{
 		UserID:          123456789, // 虚拟的 QQ 号
@@ -95,4 +95,11 @@ func getGroupMemberInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 	if err != nil {
 		mylog.Printf("发送消息时出错: %v", err)
 	}
+	result, err := ConvertMapToJSONString(responseJSON)
+	if err != nil {
+		mylog.Printf("Error marshaling data: %v", err)
+		//todo 符合onebotv11 ws返回的错误码
+		return "", nil
+	}
+	return string(result), nil
 }

@@ -121,6 +121,20 @@ settings:
 
   #穿透\cos\oss类配置(可选!)
   frp_port : "0"                    #不使用请保持为0,frp的端口,frp有内外端口,请在frp软件设置gensokyo的port,并将frp显示的对外端口填入这里
+
+  #HTTP API配置
+
+  #正向http
+  http_address: ""                  #http监听地址 与websocket独立 示例:0.0.0.0:5700 为空代表不开启
+  http_version : 11                 #暂时只支持11
+  http_timeout: 5                   #反向 HTTP 超时时间, 单位秒，<5 时将被忽略
+
+  #反向http
+  post_url: [""]                    #反向HTTP POST地址列表 为空代表不开启 示例:http://192.168.0.100:5789
+  post_secret: [""]                 #密钥
+  post_max_retries: [3]             #最大重试,0 时禁用
+  post_retries_interval: [1500]     #重试时间,单位毫秒,0 时立即
+
 `
 const Logo = `
 '                                                                                                      

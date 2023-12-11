@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
@@ -24,10 +25,10 @@ type GuildData struct {
 }
 
 func init() {
-	callapi.RegisterHandler("get_guild_list", getGuildList)
+	callapi.RegisterHandler("get_guild_list", GetGuildList)
 }
 
-func getGuildList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
+func GetGuildList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
 	var response GuildListResponse
 
 	// 初始化 response.Data 为一个空数组
@@ -40,7 +41,7 @@ func getGuildList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 	guilds, err := api.MeGuilds(context.Background(), &pager)
 	if err != nil {
 		mylog.Printf("Error fetching guilds: %v", err)
-		return
+		return "", nil
 	}
 
 	// 将获取的群组数据添加到 response 中
@@ -70,4 +71,12 @@ func getGuildList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 	if err != nil {
 		mylog.Printf("Error sending message via client: %v", err)
 	}
+	//把结果从struct转换为json
+	result, err := json.Marshal(response)
+	if err != nil {
+		mylog.Printf("Error marshaling data: %v", err)
+		//todo 符合onebotv11 ws返回的错误码
+		return "", nil
+	}
+	return string(result), nil
 }

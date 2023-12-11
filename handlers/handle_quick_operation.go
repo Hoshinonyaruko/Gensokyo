@@ -8,22 +8,23 @@ import (
 )
 
 func init() {
-	callapi.RegisterHandler(".handle_quick_operation", handle_quick_operation)
+	callapi.RegisterHandler(".handle_quick_operation", Handle_quick_operation)
 }
 
-func handle_quick_operation(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
+func Handle_quick_operation(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
 	// 使用 CreateSendGroupMsgAction 函数来确定如何处理消息
 	newMsg := CreateSendGroupMsgAction(message)
-
+	var retmsg string
 	// 根据返回的 ActionMessage 类型调用相应的处理函数
 	if newMsg != nil {
 		switch newMsg.Action {
 		case "send_group_msg":
-			handleSendGroupMsg(client, api, apiv2, *newMsg)
+			retmsg, _ = HandleSendGroupMsg(client, api, apiv2, *newMsg)
 		case "send_private_msg":
-			handleSendPrivateMsg(client, api, apiv2, *newMsg)
+			retmsg, _ = HandleSendPrivateMsg(client, api, apiv2, *newMsg)
 		}
 	}
+	return retmsg, nil
 }
 
 func CreateSendGroupMsgAction(originalMsg callapi.ActionMessage) *callapi.ActionMessage {

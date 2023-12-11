@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	callapi.RegisterHandler("get_group_list", getGroupList)
+	callapi.RegisterHandler("get_group_list", GetGroupList)
 }
 
 // 全局的Pager实例，用于保存状态
@@ -53,7 +53,7 @@ type GroupList struct {
 	Echo    interface{} `json:"echo"`
 }
 
-func getGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
+func GetGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
 	//群还不支持,这里取得是频道的,如果后期支持了群,那都请求,一起返回
 	var groupList GroupList
 
@@ -68,7 +68,7 @@ func getGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 	guilds, err := api.MeGuilds(context.TODO(), globalPager)
 	if err != nil {
 		mylog.Println("Error fetching guild list:", err)
-		return
+		return "", nil
 	}
 	if len(guilds) > 0 {
 		// 更新Pager的After为最后一个元素的ID
@@ -81,7 +81,7 @@ func getGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 		guilds, err = api.MeGuilds(context.TODO(), Pager)
 		if err != nil {
 			mylog.Println("Error fetching guild list2:", err)
-			return
+			return "", nil
 		}
 	}
 	for _, guild := range guilds {
@@ -162,23 +162,22 @@ func getGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 		groupList.Echo = "0"
 	} else {
 		groupList.Echo = message.Echo
+	}
+	outputMap := structToMap(groupList)
 
-		outputMap := structToMap(groupList)
+	mylog.Printf("getGroupList(频道): %+v\n", outputMap)
 
-		mylog.Printf("getGroupList(频道): %+v\n", outputMap)
-
-		err = client.SendMessage(outputMap)
-		if err != nil {
-			mylog.Printf("error sending group info via wsclient: %v", err)
-		}
-
-		result, err := json.Marshal(groupList)
-		if err != nil {
-			mylog.Printf("Error marshaling data: %v", err)
-			return
-		}
-
-		mylog.Printf("get_group_list: %s", result)
+	err = client.SendMessage(outputMap)
+	if err != nil {
+		mylog.Printf("error sending group info via wsclient: %v", err)
 	}
 
+	result, err := json.Marshal(groupList)
+	if err != nil {
+		mylog.Printf("Error marshaling data: %v", err)
+		return "", nil
+	}
+
+	mylog.Printf("get_group_list: %s", result)
+	return string(result), nil
 }

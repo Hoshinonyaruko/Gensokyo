@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"path/filepath"
 	"regexp"
@@ -38,7 +40,7 @@ type ServerResponse struct {
 }
 
 // 发送成功回执 todo 返回可互转的messageid
-func SendResponse(client callapi.Client, err error, message *callapi.ActionMessage) error {
+func SendResponse(client callapi.Client, err error, message *callapi.ActionMessage) (string, error) {
 	// 设置响应值
 	response := ServerResponse{}
 	response.Data.MessageID = 0 // todo 实现messageid转换
@@ -57,15 +59,21 @@ func SendResponse(client callapi.Client, err error, message *callapi.ActionMessa
 
 	// 转化为map并发送
 	outputMap := structToMap(response)
-
+	// 将map转换为JSON字符串
+	jsonResponse, jsonErr := json.Marshal(outputMap)
+	if jsonErr != nil {
+		log.Printf("Error marshaling response to JSON: %v", jsonErr)
+		return "", jsonErr
+	}
+	//发送给ws 客户端
 	sendErr := client.SendMessage(outputMap)
 	if sendErr != nil {
 		mylog.Printf("Error sending message via client: %v", sendErr)
-		return sendErr
+		return "", sendErr
 	}
 
-	mylog.Printf("发送成功回执: %+v", outputMap)
-	return nil
+	mylog.Printf("发送成功回执: %+v", string(jsonResponse))
+	return string(jsonResponse), nil
 }
 
 // 信息处理函数
@@ -670,4 +678,18 @@ func SendMessage(messageText string, data interface{}, messageType string, api o
 	}
 
 	return nil
+}
+
+// 将map转化为json string
+func ConvertMapToJSONString(m map[string]interface{}) (string, error) {
+	// 使用 json.Marshal 将 map 转换为 JSON 字节切片
+	jsonBytes, err := json.Marshal(m)
+	if err != nil {
+		log.Printf("Error marshalling map to JSON: %v", err)
+		return "", err
+	}
+
+	// 将字节切片转换为字符串
+	jsonString := string(jsonBytes)
+	return jsonString, nil
 }

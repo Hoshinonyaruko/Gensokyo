@@ -11,33 +11,33 @@ import (
 )
 
 func init() {
-	callapi.RegisterHandler("get_group_whole_ban", setGroupWholeBan)
+	callapi.RegisterHandler("get_group_whole_ban", SetGroupWholeBan)
 }
 
-func setGroupWholeBan(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
+func SetGroupWholeBan(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
 	// 从message中获取group_id
 	groupID := message.Params.GroupID.(string)
 	//读取ini 通过ChannelID取回之前储存的guild_id
 	guildID, err := idmap.ReadConfigv2(groupID, "guild_id")
 	if err != nil {
 		mylog.Printf("Error reading config: %v", err)
-		return
+		return "", nil
 	}
 	// 读取消息类型
 	msgType, err := idmap.ReadConfigv2(groupID, "type")
 	if err != nil {
 		mylog.Printf("Error reading config for message type: %v", err)
-		return
+		return "", nil
 	}
 
 	// 根据消息类型进行操作
 	switch msgType {
 	case "group":
 		mylog.Printf("setGroupWholeBan(频道): 目前暂未开放该能力")
-		return
+		return "", nil
 	case "private":
 		mylog.Printf("setGroupWholeBan(频道): 目前暂未适配私聊虚拟群场景的禁言能力")
-		return
+		return "", nil
 	case "guild":
 		var duration string
 		if message.Params.Enable {
@@ -53,6 +53,7 @@ func setGroupWholeBan(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.
 		if err != nil {
 			mylog.Printf("Error setting whole guild mute: %v", err)
 		}
-		return
+		return "", nil
 	}
+	return "", nil
 }

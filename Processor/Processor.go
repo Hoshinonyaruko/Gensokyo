@@ -2,12 +2,14 @@
 package Processor
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -259,7 +261,57 @@ func (p *Processors) BroadcastMessageToAll(message map[string]interface{}) error
 		return fmt.Errorf(strings.Join(errors, "; "))
 	}
 
+	PostMessageToUrls(message)
 	return nil
+}
+
+// 上报信息给反向Http
+func PostMessageToUrls(message map[string]interface{}) {
+	// 获取上报 URL 列表
+	postUrls := config.GetPostUrl()
+
+	// 检查 postUrls 是否为空
+	if len(postUrls) > 0 {
+
+		// 转换 message 为 JSON 字符串
+		jsonString, err := handlers.ConvertMapToJSONString(message)
+		if err != nil {
+			mylog.Printf("Error converting message to JSON: %v", err)
+			return
+		}
+
+		for _, url := range postUrls {
+			// 创建请求体
+			reqBody := bytes.NewBufferString(jsonString)
+
+			// 创建 POST 请求
+			req, err := http.NewRequest("POST", url, reqBody)
+			if err != nil {
+				mylog.Printf("Error creating POST request to %s: %v", url, err)
+				continue
+			}
+
+			// 设置请求头
+			req.Header.Set("Content-Type", "application/json")
+			// 设置 X-Self-ID
+			selfid := config.GetAppIDStr()
+			req.Header.Set("X-Self-ID", selfid)
+
+			// 发送请求
+			client := &http.Client{}
+			resp, err := client.Do(req)
+			if err != nil {
+				mylog.Printf("Error sending POST request to %s: %v", url, err)
+				continue
+			}
+
+			// 处理响应
+			defer resp.Body.Close()
+			// 可以添加更多的响应处理逻辑，如检查状态码等
+
+			mylog.Printf("Posted to %s successfully", url)
+		}
+	}
 }
 
 func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}, Type string) error {

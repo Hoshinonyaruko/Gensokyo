@@ -10,14 +10,14 @@ import (
 )
 
 func init() {
-	callapi.RegisterHandler("send_group_forward_msg", handleSendGroupForwardMsg)
+	callapi.RegisterHandler("send_group_forward_msg", HandleSendGroupForwardMsg)
 }
 
-func handleSendGroupForwardMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) {
+func HandleSendGroupForwardMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
 	nodes, ok := message.Params.Messages.([]interface{})
 	if !ok {
 		mylog.Printf("send_group_forward_msg: Messages 不是 []interface{} 类型")
-		return
+		return "", nil
 	}
 
 	forwardMsgLimit := config.GetForwardMsgLimit() // 获取消息发送条数上限
@@ -62,8 +62,9 @@ func handleSendGroupForwardMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 			},
 		}
 
-		handleSendGroupMsg(client, api, apiv2, newMessage)
+		HandleSendGroupMsg(client, api, apiv2, newMessage)
 		count++
 		time.Sleep(500 * time.Millisecond) // 每条消息之间的延时
 	}
+	return "", nil
 }
