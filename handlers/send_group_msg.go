@@ -352,7 +352,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		Vuserid, ok := message.Params.UserID.(string)
 		if !ok {
 			mylog.Printf("Error illegal UserID")
-			return
+			return "", nil
 		}
 		if Vuserid != "" && config.GetIdmapPro() {
 			RChannelID, _, err = idmap.RetrieveRowByIDv2Pro(message.Params.ChannelID, Vuserid)
