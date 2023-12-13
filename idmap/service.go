@@ -104,6 +104,16 @@ func CheckValue(id string, value int64) bool {
 	return generatedValue != value
 }
 
+func CheckValuev2(value int64) bool {
+	var isbinded bool
+	if value < 100000 {
+		isbinded = false
+	} else {
+		isbinded = true
+	}
+	return isbinded
+}
+
 // 根据a储存b
 func StoreID(id string) (int64, error) {
 	var newRow int64

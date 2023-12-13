@@ -178,8 +178,14 @@ func (p *Processors) ProcessGuildATMessage(data *dto.WSATMessageData) error {
 		if config.GetArrayValue() {
 			segmentedMessages = handlers.ConvertToSegmentedMessage(data)
 		}
-		IsBindedUserId := idmap.CheckValue(data.Author.ID, userid64)
-		IsBindedGroupId := idmap.CheckValue(data.GroupID, ChannelID64)
+		var IsBindedUserId, IsBindedGroupId bool
+		if config.GetHashIDValue() {
+			IsBindedUserId = idmap.CheckValue(data.Author.ID, userid64)
+			IsBindedGroupId = idmap.CheckValue(data.ChannelID, ChannelID64)
+		} else {
+			IsBindedUserId = idmap.CheckValuev2(userid64)
+			IsBindedGroupId = idmap.CheckValuev2(ChannelID64)
+		}
 		groupMsg := OnebotGroupMessage{
 			RawMessage:  messageText,
 			Message:     segmentedMessages,
@@ -204,6 +210,13 @@ func (p *Processors) ProcessGuildATMessage(data *dto.WSATMessageData) error {
 			RealMessageType: "guild",
 			IsBindedUserId:  IsBindedUserId,
 			IsBindedGroupId: IsBindedGroupId,
+		}
+		//增强配置
+		if !config.GetNativeOb11() {
+			groupMsg.RealMessageType = "guild"
+			groupMsg.IsBindedUserId = IsBindedUserId
+			groupMsg.IsBindedGroupId = IsBindedGroupId
+			groupMsg.Avatar = data.Author.Avatar
 		}
 		// 根据条件判断是否添加Echo字段
 		if config.GetTwoWayEcho() {

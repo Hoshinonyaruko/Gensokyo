@@ -85,7 +85,12 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 		if config.GetArrayValue() {
 			segmentedMessages = handlers.ConvertToSegmentedMessage(data)
 		}
-		IsBindedUserId := idmap.CheckValue(data.Author.ID, userid64)
+		var IsBindedUserId bool
+		if config.GetHashIDValue() {
+			IsBindedUserId = idmap.CheckValue(data.Author.ID, userid64)
+		} else {
+			IsBindedUserId = idmap.CheckValuev2(userid64)
+		}
 		privateMsg := OnebotPrivateMessage{
 			RawMessage:  messageText,
 			Message:     segmentedMessages,
@@ -98,11 +103,15 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 				Nickname: "", //这个不支持,但加机器人好友,会收到一个事件,可以对应储存获取,用idmaps可以做到.
 				UserID:   userid64,
 			},
-			SubType:         "friend",
-			Time:            time.Now().Unix(),
-			Avatar:          "", //todo 同上
-			RealMessageType: "group_private",
-			IsBindedUserId:  IsBindedUserId,
+			SubType: "friend",
+			Time:    time.Now().Unix(),
+		}
+		if !config.GetNativeOb11() {
+			privateMsg.RealMessageType = "group_private"
+			privateMsg.IsBindedUserId = IsBindedUserId
+			if IsBindedUserId {
+				privateMsg.Avatar, _ = GenerateAvatarURL(userid64)
+			}
 		}
 		// 根据条件判断是否添加Echo字段
 		if config.GetTwoWayEcho() {

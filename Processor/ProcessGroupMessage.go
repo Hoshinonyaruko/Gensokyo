@@ -88,8 +88,14 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 	if config.GetArrayValue() {
 		segmentedMessages = handlers.ConvertToSegmentedMessage(data)
 	}
-	IsBindedUserId := idmap.CheckValue(data.Author.ID, userid64)
-	IsBindedGroupId := idmap.CheckValue(data.GroupID, GroupID64)
+	var IsBindedUserId, IsBindedGroupId bool
+	if config.GetHashIDValue() {
+		IsBindedUserId = idmap.CheckValue(data.Author.ID, userid64)
+		IsBindedGroupId = idmap.CheckValue(data.GroupID, GroupID64)
+	} else {
+		IsBindedUserId = idmap.CheckValuev2(userid64)
+		IsBindedGroupId = idmap.CheckValuev2(GroupID64)
+	}
 	groupMsg := OnebotGroupMessage{
 		RawMessage:  messageText,
 		Message:     segmentedMessages,
@@ -106,12 +112,17 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 			Area:   "0",
 			Level:  "0",
 		},
-		SubType:         "normal",
-		Time:            time.Now().Unix(),
-		Avatar:          "",
-		RealMessageType: "group",
-		IsBindedUserId:  IsBindedUserId,
-		IsBindedGroupId: IsBindedGroupId,
+		SubType: "normal",
+		Time:    time.Now().Unix(),
+	}
+	//增强配置
+	if !config.GetNativeOb11() {
+		groupMsg.RealMessageType = "group"
+		groupMsg.IsBindedUserId = IsBindedUserId
+		groupMsg.IsBindedGroupId = IsBindedGroupId
+		if IsBindedUserId {
+			groupMsg.Avatar, _ = GenerateAvatarURL(userid64)
+		}
 	}
 	//根据条件判断是否增加nick和card
 	var CaN = config.GetCardAndNick()
