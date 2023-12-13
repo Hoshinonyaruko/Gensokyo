@@ -84,3 +84,4 @@ settings:
   launch_reconnect_times : 1        #启动时尝试反向ws连接次数,建议先打开应用端再开启gensokyo,因为启动时连接会阻塞webui启动,默认只连接一次,可自行增大
   white_bypass : []                 #格式[1,2,3],白名单不生效的群,用于设置自己的灰度沙箱,避免测试时候反复开关白名单的不便.
   transfer_url : true                #默认开启,关闭后自理url发送,配置server_dir为你的域名,配置crt和key后,将域名/url和/image在q.qq.com后台通过校验,自动使用302跳转处理机器人发出的所有域名.
+  native_ob11 : false               #如果你的机器人收到事件报错,请开启此选项增加兼容性

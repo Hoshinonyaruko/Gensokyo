@@ -106,7 +106,13 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 		if config.GetArrayValue() {
 			segmentedMessages = handlers.ConvertToSegmentedMessage(data)
 		}
-		IsBindedUserId := idmap.CheckValue(data.Author.ID, userid64)
+		var IsBindedUserId bool
+		if config.GetHashIDValue() {
+			IsBindedUserId = idmap.CheckValue(data.Author.ID, userid64)
+		} else {
+			IsBindedUserId = idmap.CheckValuev2(userid64)
+		}
+
 		privateMsg := OnebotPrivateMessage{
 			RawMessage:  messageText,
 			Message:     segmentedMessages,
@@ -119,11 +125,14 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 				Nickname: data.Member.Nick,
 				UserID:   userid64,
 			},
-			SubType:         "friend",
-			Time:            time.Now().Unix(),
-			Avatar:          data.Author.Avatar,
-			RealMessageType: "guild_private",
-			IsBindedUserId:  IsBindedUserId,
+			SubType: "friend",
+			Time:    time.Now().Unix(),
+		}
+		//增强字段
+		if !config.GetNativeOb11() {
+			privateMsg.RealMessageType = "guild_private"
+			privateMsg.IsBindedUserId = IsBindedUserId
+			privateMsg.Avatar = data.Author.Avatar
 		}
 		// 根据条件判断是否添加Echo字段
 		if config.GetTwoWayEcho() {
@@ -318,7 +327,12 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 			if config.GetArrayValue() {
 				segmentedMessages = handlers.ConvertToSegmentedMessage(data)
 			}
-			IsBindedUserId := idmap.CheckValue(data.Author.ID, userid64)
+			var IsBindedUserId bool
+			if config.GetHashIDValue() {
+				IsBindedUserId = idmap.CheckValue(data.Author.ID, userid64)
+			} else {
+				IsBindedUserId = idmap.CheckValuev2(userid64)
+			}
 			groupMsg := OnebotGroupMessage{
 				RawMessage:  messageText,
 				Message:     segmentedMessages,
@@ -338,11 +352,14 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 					Area:     "",
 					Level:    "0",
 				},
-				SubType:         "normal",
-				Time:            time.Now().Unix(),
-				Avatar:          data.Author.Avatar,
-				RealMessageType: "guild_private",
-				IsBindedUserId:  IsBindedUserId,
+				SubType: "normal",
+				Time:    time.Now().Unix(),
+			}
+			//增强字段
+			if !config.GetNativeOb11() {
+				groupMsg.RealMessageType = "guild_private"
+				groupMsg.IsBindedUserId = IsBindedUserId
+				groupMsg.Avatar = data.Author.Avatar
 			}
 			// 根据条件判断是否添加Echo字段
 			if config.GetTwoWayEcho() {
