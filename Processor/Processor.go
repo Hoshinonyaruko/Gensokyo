@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"net/http"
 	"reflect"
 	"regexp"
@@ -86,9 +87,9 @@ type OnebotGroupMessage struct {
 	MessageSeq      int         `json:"message_seq"`
 	Font            int         `json:"font"`
 	UserID          int64       `json:"user_id"`
-	RealMessageType string      `json:"real_message_type"`  //当前信息的真实类型 group group_private guild guild_private
-	IsBindedGroupId bool        `json:"is_binded_group_id"` //当前群号是否是binded后的
-	IsBindedUserId  bool        `json:"is_binded_user_id"`  //当前用户号号是否是binded后的
+	RealMessageType string      `json:"real_message_type,omitempty"`  //当前信息的真实类型 group group_private guild guild_private
+	IsBindedGroupId bool        `json:"is_binded_group_id,omitempty"` //当前群号是否是binded后的
+	IsBindedUserId  bool        `json:"is_binded_user_id,omitempty"`  //当前用户号号是否是binded后的
 }
 
 // 私聊信息事件
@@ -103,12 +104,12 @@ type OnebotPrivateMessage struct {
 	Time            int64         `json:"time"`
 	Avatar          string        `json:"avatar,omitempty"`
 	Echo            string        `json:"echo,omitempty"`
-	Message         interface{}   `json:"message"`           // For array format
-	MessageSeq      int           `json:"message_seq"`       // Optional field
-	Font            int           `json:"font"`              // Optional field
-	UserID          int64         `json:"user_id"`           // Can be either string or int depending on logic
-	RealMessageType string        `json:"real_message_type"` //当前信息的真实类型 group group_private guild guild_private
-	IsBindedUserId  bool          `json:"is_binded_user_id"` //当前用户号号是否是binded后的
+	Message         interface{}   `json:"message"`                     // For array format
+	MessageSeq      int           `json:"message_seq"`                 // Optional field
+	Font            int           `json:"font"`                        // Optional field
+	UserID          int64         `json:"user_id"`                     // Can be either string or int depending on logic
+	RealMessageType string        `json:"real_message_type,omitempty"` //当前信息的真实类型 group group_private guild guild_private
+	IsBindedUserId  bool          `json:"is_binded_user_id,omitempty"` //当前用户号号是否是binded后的
 }
 
 type PrivateSender struct {
@@ -261,8 +262,21 @@ func (p *Processors) BroadcastMessageToAll(message map[string]interface{}) error
 		return fmt.Errorf(strings.Join(errors, "; "))
 	}
 
-	PostMessageToUrls(message)
+	//判断是否填写了反向post地址
+	if !allEmpty(config.GetPostUrl()) {
+		PostMessageToUrls(message)
+	}
 	return nil
+}
+
+// allEmpty checks if all the strings in the slice are empty.
+func allEmpty(addresses []string) bool {
+	for _, addr := range addresses {
+		if addr != "" {
+			return false
+		}
+	}
+	return true
 }
 
 // 上报信息给反向Http
@@ -536,7 +550,7 @@ func performBindOperation(cleanedMessage string, data interface{}, Type string, 
 	if err != nil {
 		SendMessage(err.Error(), data, Type, p, p2)
 	} else {
-		SendMessage("绑定成功,目前状态:\n当前真实值 "+now+"\n当前虚拟值 "+new, data, Type, p, p2)
+		SendMessage("绑定成功,目前状态:\n当前真实值 "+new+"\n当前虚拟值 "+now, data, Type, p, p2)
 	}
 
 	return nil
@@ -824,4 +838,17 @@ func updateMappings(userid64, vuinValue, GroupID64, idValue int64) error {
 		return err
 	}
 	return nil
+}
+
+// GenerateAvatarURL 生成根据给定 userID 和随机 q 值组合的 QQ 头像 URL
+func GenerateAvatarURL(userID int64) (string, error) {
+	// 使用 crypto/rand 生成更安全的随机数
+	n, err := rand.Int(rand.Reader, big.NewInt(5))
+	if err != nil {
+		return "", err
+	}
+	qNumber := n.Int64() + 1 // 产生 1 到 5 的随机数
+
+	// 构建并返回 URL
+	return fmt.Sprintf("http://q%d.qlogo.cn/g?b=qq&nk=%d&s=640", qNumber, userID), nil
 }
