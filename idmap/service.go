@@ -806,7 +806,7 @@ func RetrieveRealValuev2(virtualValue int64) (string, string, error) {
 			return "", "", fmt.Errorf("error response from server")
 		}
 
-		realValue, ok := response["realValue"].(string)
+		realValue, ok := response["real"].(string)
 		if !ok {
 			return "", "", fmt.Errorf("invalid response format")
 		}
