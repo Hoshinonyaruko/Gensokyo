@@ -285,7 +285,7 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		echo.AddMsgType(config.GetAppIDStr(), idInt64, tryMessageTypes[echo.GetMapping(idInt64)-1])
 		delay := config.GetSendDelay()
 		time.Sleep(time.Duration(delay) * time.Millisecond)
-		HandleSendGroupMsg(client, api, apiv2, messageCopy)
+		HandleSendPrivateMsg(client, api, apiv2, messageCopy)
 	}
 	return retmsg, nil
 }
