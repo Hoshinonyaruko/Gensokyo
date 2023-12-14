@@ -157,6 +157,8 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 		}
 		//转成int再互转
 		idmap.WriteConfigv2(fmt.Sprint(ChannelID64), "guild_id", data.GuildID)
+		//储存原来的(获取群列表需要)
+		idmap.WriteConfigv2(data.ChannelID, "guild_id", data.GuildID)
 		//转换at
 		messageText := handlers.RevertTransformedText(data, "guild", p.Api, p.Apiv2, ChannelID64)
 		if messageText == "" {

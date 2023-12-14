@@ -336,8 +336,12 @@ func HandleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 			//频道私信 转 私信 通过userid(author_id)来还原频道私信需要的guildid channelID
 			guildID, channelID, err = getGuildIDFromMessage(message)
 			if err != nil {
-				mylog.Printf("获取 guild_id 和 channel_id 出错: %v", err)
-				return "", nil
+				mylog.Printf("获取 guild_id 和 channel_id 出错,进行重试: %v", err)
+				guildID, channelID, err = getGuildIDFromMessagev2(message)
+				if err != nil {
+					mylog.Printf("获取 guild_id 和 channel_id 出错,重试失败: %v", err)
+					return "", nil
+				}
 			}
 			//频道私信 转 私信
 			if GroupID != "" && config.GetIdmapPro() {
@@ -536,6 +540,33 @@ func getGuildIDFromMessage(message callapi.ActionMessage) (string, string, error
 	}
 
 	return guildID, channelID, nil
+}
+
+// 这个函数可以通过int类型的虚拟groupid反推真实的guild_id和channel_id
+func getGuildIDFromMessagev2(message callapi.ActionMessage) (string, string, error) {
+	var GroupID string
+	//groupID此时是转换后的channelid
+
+	// 判断UserID的类型，并将其转换为string
+	switch v := message.Params.GroupID.(type) {
+	case int:
+		GroupID = strconv.Itoa(v)
+	case float64:
+		GroupID = strconv.FormatInt(int64(v), 10) // 将float64先转为int64，然后再转为string
+	case string:
+		GroupID = v
+	default:
+		return "", "", fmt.Errorf("unexpected type for UserID: %T", v) // 使用%T来打印具体的类型
+	}
+
+	var err error
+	//使用channelID作为sectionName从数据库中获取guild_id
+	guildID, err := idmap.ReadConfigv2(GroupID, "guild_id")
+	if err != nil {
+		return "", "", fmt.Errorf("error reading guild_id: %v", err)
+	}
+
+	return guildID, GroupID, nil
 }
 
 // uploadMedia 上传媒体并返回FileInfo
