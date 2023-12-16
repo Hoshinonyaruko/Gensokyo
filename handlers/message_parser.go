@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,6 +21,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/hoshinonyaruko/gensokyo/url"
+	"github.com/skip2/go-qrcode"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/openapi"
 	"mvdan.cc/xurls" //xurls是一个从文本提取url的库 适用于多种场景
@@ -77,7 +79,7 @@ func SendResponse(client callapi.Client, err error, message *callapi.ActionMessa
 }
 
 // 信息处理函数
-func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[string][]string) {
+func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.ActionMessage, client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI) (string, map[string][]string) {
 	messageText := ""
 
 	switch message := paramsMessage.Message.(type) {
@@ -192,7 +194,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent) (string, map[strin
 		messageText = pattern.pattern.ReplaceAllString(messageText, "")
 	}
 	//最后再处理Url
-	messageText = transformMessageTextUrl(messageText)
+	messageText = transformMessageTextUrl(messageText, message, client, api, apiv2)
 
 	// for key, items := range foundItems {
 	// 	fmt.Printf("Key: %s, Items: %v\n", key, items)
@@ -238,18 +240,34 @@ func transformMessageTextAt(messageText string) string {
 }
 
 // 链接处理
-func transformMessageTextUrl(messageText string) string {
-	//是否处理url
+func transformMessageTextUrl(messageText string, message callapi.ActionMessage, client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI) string {
+	// 是否处理url
 	if config.GetTransferUrl() {
 		// 判断服务器地址是否是IP地址
 		serverAddress := config.GetServer_dir()
 		isIP := isIPAddress(serverAddress)
 		VisualIP := config.GetVisibleIP()
+
 		// 使用xurls来查找和替换所有的URL
 		messageText = xurls.Relaxed.ReplaceAllStringFunc(messageText, func(originalURL string) string {
 			// 当服务器地址是IP地址且GetVisibleIP为false时，替换URL为空
 			if isIP && !VisualIP {
 				return ""
+			}
+
+			// 如果启用了URL到QR码的转换
+			if config.GetUrlToQrimage() {
+				// 将URL转换为QR码的字节形式
+				qrCodeGenerator, _ := qrcode.New(originalURL, qrcode.High)
+				qrCodeGenerator.DisableBorder = true
+				pngBytes, _ := qrCodeGenerator.PNG(37)
+				//pngBytes 二维码图片的字节数据
+				base64Image := base64.StdEncoding.EncodeToString(pngBytes)
+				picmsg := processActionMessageWithBase64PicReplace(base64Image, message)
+				ret := callapi.CallAPIFromDict(client, api, apiv2, picmsg)
+				mylog.Printf("发送url转图片结果:%v", ret)
+				// 从文本中去除原始URL
+				return "" // 返回空字符串以去除URL
 			}
 
 			// 根据配置处理URL
@@ -266,6 +284,18 @@ func transformMessageTextUrl(messageText string) string {
 		})
 	}
 	return messageText
+}
+
+// processActionMessageWithBase64PicReplace 将原有的callapi.ActionMessage内容替换为一个base64图片
+func processActionMessageWithBase64PicReplace(base64Image string, message callapi.ActionMessage) callapi.ActionMessage {
+	newMessage := createCQImageMessage(base64Image)
+	message.Params.Message = newMessage
+	return message
+}
+
+// createCQImageMessage 从 base64 编码的图片创建 CQ 码格式的消息
+func createCQImageMessage(base64Image string) string {
+	return "[CQ:image,file=" + base64Image + "]"
 }
 
 // 处理at和其他定形文到onebotv11格式(cq码)
