@@ -104,6 +104,7 @@ type Settings struct {
 	NativeOb11             bool     `yaml:"native_ob11"`
 	RamDomSeq              bool     `yaml:"ramdom_seq"`
 	UrlToQrimage           bool     `yaml:"url_to_qrimage"`
+	QrSize                 int      `yaml:"qr_size"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -1259,4 +1260,16 @@ func GetUrlToQrimage() bool {
 		return false
 	}
 	return instance.Settings.UrlToQrimage
+}
+
+// 获取GetQrSize的值
+func GetQrSize() int {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to QrSize value.")
+		return 200
+	}
+	return instance.Settings.QrSize
 }
