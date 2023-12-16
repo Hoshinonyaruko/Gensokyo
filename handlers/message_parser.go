@@ -295,7 +295,7 @@ func processActionMessageWithBase64PicReplace(base64Image string, message callap
 
 // createCQImageMessage 从 base64 编码的图片创建 CQ 码格式的消息
 func createCQImageMessage(base64Image string) string {
-	return "[CQ:image,file=" + base64Image + "]"
+	return "[CQ:image,file=base64://" + base64Image + "]"
 }
 
 // 处理at和其他定形文到onebotv11格式(cq码)
