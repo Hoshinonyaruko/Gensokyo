@@ -90,7 +90,7 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		}
 
 		// 解析消息内容
-		messageText, foundItems := parseMessageContent(message.Params)
+		messageText, foundItems := parseMessageContent(message.Params, message, client, api, apiv2)
 
 		// 使用 echo 获取消息ID
 		var messageID string
@@ -293,7 +293,7 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 // 处理频道私信 最后2个指针参数可空 代表使用userid倒推
 func HandleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage, optionalGuildID *string, optionalChannelID *string) (string, error) {
 	params := message.Params
-	messageText, foundItems := parseMessageContent(params)
+	messageText, foundItems := parseMessageContent(params, message, client, api, apiv2)
 
 	var guildID, channelID string
 	var err error
