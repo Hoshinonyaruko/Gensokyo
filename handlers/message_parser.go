@@ -260,7 +260,8 @@ func transformMessageTextUrl(messageText string, message callapi.ActionMessage, 
 				// 将URL转换为QR码的字节形式
 				qrCodeGenerator, _ := qrcode.New(originalURL, qrcode.High)
 				qrCodeGenerator.DisableBorder = true
-				pngBytes, _ := qrCodeGenerator.PNG(37)
+				qrSize := config.GetQrSize()
+				pngBytes, _ := qrCodeGenerator.PNG(qrSize)
 				//pngBytes 二维码图片的字节数据
 				base64Image := base64.StdEncoding.EncodeToString(pngBytes)
 				picmsg := processActionMessageWithBase64PicReplace(base64Image, message)
