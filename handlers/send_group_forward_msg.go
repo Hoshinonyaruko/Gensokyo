@@ -19,7 +19,7 @@ func HandleSendGroupForwardMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 		mylog.Printf("send_group_forward_msg: Messages 不是 []interface{} 类型")
 		return "", nil
 	}
-
+	var retmsg string
 	forwardMsgLimit := config.GetForwardMsgLimit() // 获取消息发送条数上限
 	count := 0
 
@@ -66,5 +66,6 @@ func HandleSendGroupForwardMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 		count++
 		time.Sleep(500 * time.Millisecond) // 每条消息之间的延时
 	}
-	return "", nil
+	retmsg, _ = SendResponse(client, nil, &message)
+	return retmsg, nil
 }

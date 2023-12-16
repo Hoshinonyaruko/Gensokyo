@@ -23,6 +23,7 @@ import (
 
 func init() {
 	callapi.RegisterHandler("send_group_msg", HandleSendGroupMsg)
+	callapi.RegisterHandler("send_to_group", HandleSendGroupMsg)
 }
 
 func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
