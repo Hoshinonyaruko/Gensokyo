@@ -44,7 +44,7 @@ func HandleSendGroupForwardMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 		content, ok := nodeData["content"].([]interface{})
 		if ok {
 			// 处理 segment 类型的 content
-			messageText, _ = parseMessageContent(callapi.ParamsContent{Message: content})
+			messageText, _ = parseMessageContent(callapi.ParamsContent{Message: content}, message, client, api, apiv2)
 		} else {
 			// 处理直接包含的文本内容
 			contentString, ok := nodeData["content"].(string)

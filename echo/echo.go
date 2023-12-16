@@ -1,9 +1,12 @@
 package echo
 
 import (
+	"math/rand"
 	"strconv"
 	"sync"
+	"time"
 
+	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/tencent-connect/botgo/dto"
 )
 
@@ -142,11 +145,16 @@ func AddMappingSeq(key string, value int) {
 	globalStringToIntMappingSeq.mapping[key] = value
 }
 
-// GetMapping 根据给定的 string 键获取映射值
+// GetMappingSeq 根据给定的 string 键获取映射值
 func GetMappingSeq(key string) int {
-	globalStringToIntMappingSeq.mu.Lock()
-	defer globalStringToIntMappingSeq.mu.Unlock()
-	return globalStringToIntMappingSeq.mapping[key]
+	if config.GetRamDomSeq() {
+		rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+		return rng.Intn(10000) + 1 // 生成 1 到 10000 的随机数
+	} else {
+		globalStringToIntMappingSeq.mu.Lock()
+		defer globalStringToIntMappingSeq.mu.Unlock()
+		return globalStringToIntMappingSeq.mapping[key]
+	}
 }
 
 // AddMapping 添加一个新的映射

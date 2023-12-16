@@ -102,6 +102,8 @@ type Settings struct {
 	PostMaxRetries         []int    `yaml:"post_max_retries"`
 	PostRetriesInterval    []int    `yaml:"post_retries_interval"`
 	NativeOb11             bool     `yaml:"native_ob11"`
+	RamDomSeq              bool     `yaml:"ramdom_seq"`
+	UrlToQrimage           bool     `yaml:"url_to_qrimage"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -1233,4 +1235,28 @@ func GetNativeOb11() bool {
 		return false
 	}
 	return instance.Settings.NativeOb11
+}
+
+// 获取GetRamDomSeq的值
+func GetRamDomSeq() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetRamDomSeq value.")
+		return false
+	}
+	return instance.Settings.RamDomSeq
+}
+
+// 获取GetUrlToQrimage的值
+func GetUrlToQrimage() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetUrlToQrimage value.")
+		return false
+	}
+	return instance.Settings.UrlToQrimage
 }
