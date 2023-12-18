@@ -162,6 +162,10 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			imageType = "url_image"
 			imageUrl = imageURLs[0]
 			imageCount++
+		} else if imageURLs, ok := foundItems["url_images"]; ok && len(imageURLs) == 1 {
+			imageType = "url_images"
+			imageUrl = imageURLs[0]
+			imageCount++
 		} else if base64Images, ok := foundItems["base64_image"]; ok && len(base64Images) == 1 {
 			imageType = "base64_image"
 			imageUrl = base64Images[0]
@@ -169,7 +173,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		}
 
 		if imageCount == 1 && messageText != "" {
-			mylog.Printf("发图文混合信息")
+			mylog.Printf("发图文混合信息-群")
 			// 创建包含单个图片的 singleItem
 			singleItem[imageType] = []string{imageUrl}
 			msgseq := echo.GetMappingSeq(messageID)
