@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"os"
+	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/config"
@@ -25,6 +26,7 @@ func HandleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 	// 使用 message.Echo 作为key来获取消息类型
 	var msgType string
 	var retmsg string
+	var err error
 	if echoStr, ok := message.Echo.(string); ok {
 		// 当 message.Echo 是字符串类型时执行此块
 		msgType = echo.GetMsgTypeByKey(echoStr)
@@ -78,6 +80,80 @@ func HandleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 		}
 		mylog.Println("频道发信息messageText:", messageText)
 		//mylog.Println("foundItems:", foundItems)
+		var singleItem = make(map[string][]string)
+		var imageType, imageUrl string
+		imageCount := 0
+
+		// 检查不同类型的图片并计算数量
+		if imageURLs, ok := foundItems["local_image"]; ok && len(imageURLs) == 1 {
+			imageType = "local_image"
+			imageUrl = imageURLs[0]
+			imageCount++
+		} else if imageURLs, ok := foundItems["url_image"]; ok && len(imageURLs) == 1 {
+			imageType = "url_image"
+			imageUrl = imageURLs[0]
+			imageCount++
+		} else if imageURLs, ok := foundItems["url_images"]; ok && len(imageURLs) == 1 {
+			imageType = "url_images"
+			imageUrl = imageURLs[0]
+			imageCount++
+		} else if base64Images, ok := foundItems["base64_image"]; ok && len(base64Images) == 1 {
+			imageType = "base64_image"
+			imageUrl = base64Images[0]
+			imageCount++
+		}
+
+		if imageCount == 1 && messageText != "" {
+			//我想优化一下这里,让它优雅一点
+			mylog.Printf("发图文混合信息-频道")
+			// 创建包含单个图片的 singleItem
+			singleItem[imageType] = []string{imageUrl}
+			msgseq := echo.GetMappingSeq(messageID)
+			echo.AddMappingSeq(messageID, msgseq+1)
+			Reply, isbase64 := GenerateReplyMessage(messageID, singleItem, "", msgseq+1)
+			if !isbase64 {
+				// 创建包含文本和base64图像信息的消息
+				msgseq = echo.GetMappingSeq(messageID)
+				echo.AddMappingSeq(messageID, msgseq+1)
+				newMessage := &dto.MessageToCreate{
+					Content: messageText, // 添加文本内容
+					Image:   Reply.Image,
+					MsgID:   messageID,
+					MsgSeq:  msgseq,
+					MsgType: 0,
+				}
+				newMessage.Timestamp = time.Now().Unix() // 设置时间戳
+
+				if _, err = api.PostMessage(context.TODO(), channelID, newMessage); err != nil {
+					mylog.Printf("发送图文混合信息失败: %v", err)
+				}
+			} else {
+				// 将base64内容从reply的Content转换回字节
+				fileImageData, err := base64.StdEncoding.DecodeString(Reply.Content)
+				if err != nil {
+					mylog.Printf("Base64 解码失败: %v", err)
+				}
+				// 创建包含文本和图像信息的消息
+				msgseq = echo.GetMappingSeq(messageID)
+				echo.AddMappingSeq(messageID, msgseq+1)
+				newMessage := &dto.MessageToCreate{
+					Content: messageText,
+					MsgID:   messageID,
+					MsgSeq:  msgseq,
+					MsgType: 0,
+				}
+				newMessage.Timestamp = time.Now().Unix() // 设置时间戳
+				// 使用Multipart方法发送
+				if _, err = api.PostMessageMultipart(context.TODO(), channelID, newMessage, fileImageData); err != nil {
+					mylog.Printf("使用multipart发送图文信息失败: %v message_id %v", err, messageID)
+				}
+			}
+			// 发送成功回执
+			retmsg, _ = SendResponse(client, err, &message)
+			delete(foundItems, imageType) // 从foundItems中删除已处理的图片项
+			messageText = ""
+		}
+
 		// 优先发送文本信息
 		var err error
 		if messageText != "" {
@@ -94,7 +170,6 @@ func HandleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 		// 遍历foundItems并发送每种信息
 		for key, urls := range foundItems {
 			for _, url := range urls {
-				var singleItem = make(map[string][]string)
 				singleItem[key] = []string{url} // 创建一个只有一个 URL 的 singleItem
 				msgseq := echo.GetMappingSeq(messageID)
 				echo.AddMappingSeq(messageID, msgseq+1)
