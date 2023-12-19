@@ -25,86 +25,90 @@ type Config struct {
 	Version  int      `yaml:"version"`
 	Settings Settings `yaml:"settings"`
 }
-
+type VisualPrefixConfig struct {
+	Prefix          string   `yaml:"prefix"`
+	WhiteList       []string `yaml:"whiteList"`
+	NoWhiteResponse string   `yaml:"No_White_Response"`
+}
 type Settings struct {
-	WsAddress              []string `yaml:"ws_address"`
-	AppID                  uint64   `yaml:"app_id"`
-	Token                  string   `yaml:"token"`
-	ClientSecret           string   `yaml:"client_secret"`
-	TextIntent             []string `yaml:"text_intent"`
-	GlobalChannelToGroup   bool     `yaml:"global_channel_to_group"`
-	GlobalPrivateToChannel bool     `yaml:"global_private_to_channel"`
-	Array                  bool     `yaml:"array"`
-	Server_dir             string   `yaml:"server_dir"`
-	Lotus                  bool     `yaml:"lotus"`
-	Port                   string   `yaml:"port"`
-	WsToken                []string `yaml:"ws_token,omitempty"`         // 连接wss时使用,不是wss可留空 一一对应
-	MasterID               []string `yaml:"master_id,omitempty"`        // 如果需要在群权限判断是管理员是,将user_id填入这里,master_id是一个文本数组
-	EnableWsServer         bool     `yaml:"enable_ws_server,omitempty"` //正向ws开关
-	WsServerToken          string   `yaml:"ws_server_token,omitempty"`  //正向ws token
-	IdentifyFile           bool     `yaml:"identify_file"`              // 域名校验文件
-	Crt                    string   `yaml:"crt"`
-	Key                    string   `yaml:"key"`
-	DeveloperLog           bool     `yaml:"developer_log"`
-	Username               string   `yaml:"server_user_name"`
-	Password               string   `yaml:"server_user_password"`
-	ImageLimit             int      `yaml:"image_sizelimit"`
-	RemovePrefix           bool     `yaml:"remove_prefix"`
-	BackupPort             string   `yaml:"backup_port"`
-	DevlopAcDir            string   `yaml:"develop_access_token_dir"`
-	RemoveAt               bool     `yaml:"remove_at"`
-	DevBotid               string   `yaml:"develop_bot_id"`
-	SandBoxMode            bool     `yaml:"sandbox_mode"`
-	Title                  string   `yaml:"title"`
-	HashID                 bool     `yaml:"hash_id"`
-	TwoWayEcho             bool     `yaml:"twoway_echo"`
-	LazyMessageId          bool     `yaml:"lazy_message_id"`
-	WhitePrefixMode        bool     `yaml:"white_prefix_mode"`
-	WhitePrefixs           []string `yaml:"white_prefixs"`
-	BlackPrefixMode        bool     `yaml:"black_prefix_mode"`
-	BlackPrefixs           []string `yaml:"black_prefixs"`
-	VisualPrefixs          []string `yaml:"visual_prefixs"`
-	VisibleIp              bool     `yaml:"visible_ip"`
-	ForwardMsgLimit        int      `yaml:"forward_msg_limit"`
-	DevMessgeID            bool     `yaml:"dev_message_id"`
-	LogLevel               int      `yaml:"log_level"`
-	SaveLogs               bool     `yaml:"save_logs"`
-	BindPrefix             string   `yaml:"bind_prefix"`
-	MePrefix               string   `yaml:"me_prefix"`
-	FrpPort                string   `yaml:"frp_port"`
-	RemoveBotAtGroup       bool     `yaml:"remove_bot_at_group"`
-	ImageLimitB            int      `yaml:"image_limit"`
-	RecordSampleRate       int      `yaml:"record_sampleRate"`
-	RecordBitRate          int      `yaml:"record_bitRate"`
-	NoWhiteResponse        string   `yaml:"No_White_Response"`
-	SendError              bool     `yaml:"send_error"`
-	AddAtGroup             bool     `yaml:"add_at_group"`
-	UrlPicTransfer         bool     `yaml:"url_pic_transfer"`
-	LotusPassword          string   `yaml:"lotus_password"`
-	WsServerPath           string   `yaml:"ws_server_path"`
-	IdmapPro               bool     `yaml:"idmap_pro"`
-	CardAndNick            string   `yaml:"card_nick"`
-	AutoBind               bool     `yaml:"auto_bind"`
-	CustomBotName          string   `yaml:"custom_bot_name"`
-	SendDelay              int      `yaml:"send_delay"`
-	AtoPCount              int      `yaml:"AMsgRetryAsPMsg_Count"`
-	ReconnecTimes          int      `yaml:"reconnect_times"`
-	HeartBeatInterval      int      `yaml:"heart_beat_interval"`
-	LaunchReconectTimes    int      `yaml:"launch_reconnect_times"`
-	UnlockPrefix           string   `yaml:"unlock_prefix"`
-	WhiteBypass            []int64  `yaml:"white_bypass"`
-	TransferUrl            bool     `yaml:"transfer_url"`
-	HttpAddress            string   `yaml:"http_address"`
-	HttpVersion            int      `yaml:"http_version"`
-	HttpTimeOut            int      `yaml:"http_timeout"`
-	PostUrl                []string `yaml:"post_url"`
-	PostSecret             []string `yaml:"post_secret"`
-	PostMaxRetries         []int    `yaml:"post_max_retries"`
-	PostRetriesInterval    []int    `yaml:"post_retries_interval"`
-	NativeOb11             bool     `yaml:"native_ob11"`
-	RamDomSeq              bool     `yaml:"ramdom_seq"`
-	UrlToQrimage           bool     `yaml:"url_to_qrimage"`
-	QrSize                 int      `yaml:"qr_size"`
+	WsAddress              []string             `yaml:"ws_address"`
+	AppID                  uint64               `yaml:"app_id"`
+	Token                  string               `yaml:"token"`
+	ClientSecret           string               `yaml:"client_secret"`
+	TextIntent             []string             `yaml:"text_intent"`
+	GlobalChannelToGroup   bool                 `yaml:"global_channel_to_group"`
+	GlobalPrivateToChannel bool                 `yaml:"global_private_to_channel"`
+	Array                  bool                 `yaml:"array"`
+	Server_dir             string               `yaml:"server_dir"`
+	Lotus                  bool                 `yaml:"lotus"`
+	Port                   string               `yaml:"port"`
+	WsToken                []string             `yaml:"ws_token,omitempty"`         // 连接wss时使用,不是wss可留空 一一对应
+	MasterID               []string             `yaml:"master_id,omitempty"`        // 如果需要在群权限判断是管理员是,将user_id填入这里,master_id是一个文本数组
+	EnableWsServer         bool                 `yaml:"enable_ws_server,omitempty"` //正向ws开关
+	WsServerToken          string               `yaml:"ws_server_token,omitempty"`  //正向ws token
+	IdentifyFile           bool                 `yaml:"identify_file"`              // 域名校验文件
+	Crt                    string               `yaml:"crt"`
+	Key                    string               `yaml:"key"`
+	DeveloperLog           bool                 `yaml:"developer_log"`
+	Username               string               `yaml:"server_user_name"`
+	Password               string               `yaml:"server_user_password"`
+	ImageLimit             int                  `yaml:"image_sizelimit"`
+	RemovePrefix           bool                 `yaml:"remove_prefix"`
+	BackupPort             string               `yaml:"backup_port"`
+	DevlopAcDir            string               `yaml:"develop_access_token_dir"`
+	RemoveAt               bool                 `yaml:"remove_at"`
+	DevBotid               string               `yaml:"develop_bot_id"`
+	SandBoxMode            bool                 `yaml:"sandbox_mode"`
+	Title                  string               `yaml:"title"`
+	HashID                 bool                 `yaml:"hash_id"`
+	TwoWayEcho             bool                 `yaml:"twoway_echo"`
+	LazyMessageId          bool                 `yaml:"lazy_message_id"`
+	WhitePrefixMode        bool                 `yaml:"white_prefix_mode"`
+	WhitePrefixs           []string             `yaml:"white_prefixs"`
+	BlackPrefixMode        bool                 `yaml:"black_prefix_mode"`
+	BlackPrefixs           []string             `yaml:"black_prefixs"`
+	VisualPrefixs          []VisualPrefixConfig `yaml:"visual_prefixs"`
+	VisibleIp              bool                 `yaml:"visible_ip"`
+	ForwardMsgLimit        int                  `yaml:"forward_msg_limit"`
+	DevMessgeID            bool                 `yaml:"dev_message_id"`
+	LogLevel               int                  `yaml:"log_level"`
+	SaveLogs               bool                 `yaml:"save_logs"`
+	BindPrefix             string               `yaml:"bind_prefix"`
+	MePrefix               string               `yaml:"me_prefix"`
+	FrpPort                string               `yaml:"frp_port"`
+	RemoveBotAtGroup       bool                 `yaml:"remove_bot_at_group"`
+	ImageLimitB            int                  `yaml:"image_limit"`
+	RecordSampleRate       int                  `yaml:"record_sampleRate"`
+	RecordBitRate          int                  `yaml:"record_bitRate"`
+	NoWhiteResponse        string               `yaml:"No_White_Response"`
+	SendError              bool                 `yaml:"send_error"`
+	AddAtGroup             bool                 `yaml:"add_at_group"`
+	UrlPicTransfer         bool                 `yaml:"url_pic_transfer"`
+	LotusPassword          string               `yaml:"lotus_password"`
+	WsServerPath           string               `yaml:"ws_server_path"`
+	IdmapPro               bool                 `yaml:"idmap_pro"`
+	CardAndNick            string               `yaml:"card_nick"`
+	AutoBind               bool                 `yaml:"auto_bind"`
+	CustomBotName          string               `yaml:"custom_bot_name"`
+	SendDelay              int                  `yaml:"send_delay"`
+	AtoPCount              int                  `yaml:"AMsgRetryAsPMsg_Count"`
+	ReconnecTimes          int                  `yaml:"reconnect_times"`
+	HeartBeatInterval      int                  `yaml:"heart_beat_interval"`
+	LaunchReconectTimes    int                  `yaml:"launch_reconnect_times"`
+	UnlockPrefix           string               `yaml:"unlock_prefix"`
+	WhiteBypass            []int64              `yaml:"white_bypass"`
+	TransferUrl            bool                 `yaml:"transfer_url"`
+	HttpAddress            string               `yaml:"http_address"`
+	HttpVersion            int                  `yaml:"http_version"`
+	HttpTimeOut            int                  `yaml:"http_timeout"`
+	PostUrl                []string             `yaml:"post_url"`
+	PostSecret             []string             `yaml:"post_secret"`
+	PostMaxRetries         []int                `yaml:"post_max_retries"`
+	PostRetriesInterval    []int                `yaml:"post_retries_interval"`
+	NativeOb11             bool                 `yaml:"native_ob11"`
+	RamDomSeq              bool                 `yaml:"ramdom_seq"`
+	UrlToQrimage           bool                 `yaml:"url_to_qrimage"`
+	QrSize                 int                  `yaml:"qr_size"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -121,7 +125,17 @@ func LoadConfig(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	//todo remove it 破坏性变更的擦屁股代码
+	var ischange bool
+	configData, ischange = replaceVisualPrefixsLine(configData)
+	if ischange {
+		err = os.WriteFile(path, configData, 0644)
+		if err != nil {
+			// 处理写入错误
+			return nil, err
+		}
+	}
+	//mylog.Printf("dev_ischange:%v", ischange)
 	conf := &Config{}
 	err = yaml.Unmarshal(configData, conf)
 	if err != nil {
@@ -518,12 +532,20 @@ func GetVisibleIP() bool {
 	return instance.Settings.VisibleIp
 }
 
-// 获取虚拟指令前缀数组
-func GetVisualkPrefixs() []string {
+// 修改 GetVisualkPrefixs 函数以返回新类型
+func GetVisualkPrefixs() []VisualPrefixConfig {
 	mu.Lock()
 	defer mu.Unlock()
 	if instance != nil {
-		return instance.Settings.VisualPrefixs
+		var varvisualPrefixes []VisualPrefixConfig
+		for _, vp := range instance.Settings.VisualPrefixs {
+			varvisualPrefixes = append(varvisualPrefixes, VisualPrefixConfig{
+				Prefix:          vp.Prefix,
+				WhiteList:       vp.WhiteList,
+				NoWhiteResponse: vp.NoWhiteResponse,
+			})
+		}
+		return varvisualPrefixes
 	}
 	return nil // 返回nil，如果instance为nil
 }
@@ -1272,4 +1294,45 @@ func GetQrSize() int {
 		return 200
 	}
 	return instance.Settings.QrSize
+}
+
+func replaceVisualPrefixsLine(configData []byte) ([]byte, bool) {
+	// 定义新的 visual_prefixs 部分
+	newVisualPrefixs := `  visual_prefixs :                  #虚拟前缀 与white_prefixs配合使用 处理流程自动忽略该前缀 remove_prefix remove_at 需为true时生效
+  - prefix: ""                      #虚拟前缀开头 例 你有3个指令 帮助 测试 查询 将 prefix 设置为 工具类 后 则可通过 工具类 帮助 触发机器人
+    whiteList: [""]                 #开关状态取决于 white_prefix_mode 为每一个二级指令头设计独立的白名单
+    No_White_Response : "" 
+  - prefix: ""
+    whiteList: [""]
+    No_White_Response : "" 
+  - prefix: ""
+    whiteList: [""]
+    No_White_Response : "" `
+
+	// 将 byte 数组转换为字符串
+	configStr := string(configData)
+
+	// 按行分割 configStr
+	lines := strings.Split(configStr, "\n")
+
+	// 创建一个新的字符串构建器
+	var newConfigData strings.Builder
+
+	// 标记是否进行了替换
+	replaced := false
+
+	// 遍历所有行
+	for _, line := range lines {
+		// 检查是否是 visual_prefixs 开头的行
+		if strings.HasPrefix(strings.TrimSpace(line), "visual_prefixs : [") {
+			// 替换为新的 visual_prefixs 部分
+			newConfigData.WriteString(newVisualPrefixs + "\n")
+			replaced = true
+			continue // 跳过原有行
+		}
+		newConfigData.WriteString(line + "\n")
+	}
+
+	// 返回新配置和是否发生了替换的标记
+	return []byte(newConfigData.String()), replaced
 }

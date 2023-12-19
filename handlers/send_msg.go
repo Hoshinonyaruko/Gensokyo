@@ -140,36 +140,15 @@ func GetMessageIDByUseridOrGroupid(appID string, userID interface{}) string {
 		return ""
 	}
 	key := appID + "_" + fmt.Sprint(userid64)
+	mylog.Printf("GetMessageIDByUseridOrGroupid_key:%v", key)
 	messageid := echo.GetMsgIDByKey(key)
-	// if messageid == "" {
-	// 	// 尝试使用9位数key
-	// 	messageid, err = generateKeyAndFetchMessageID(appID, userIDStr, 9)
-	// 	if err != nil {
-	// 		mylog.Printf("Error generating 9 digits key: %v", err)
-	// 		return ""
-	// 	}
-
-	// 	// 如果9位数key失败，则尝试10位数key
-	// 	if messageid == "" {
-	// 		messageid, err = generateKeyAndFetchMessageID(appID, userIDStr, 10)
-	// 		if err != nil {
-	// 			mylog.Printf("Error generating 10 digits key: %v", err)
-	// 			return ""
-	// 		}
-	// 	}
-	// }
+	if messageid == "" {
+		key := appID + "_" + userIDStr
+		mylog.Printf("GetMessageIDByUseridOrGroupid_key_2:%v", key)
+		messageid = echo.GetMsgIDByKey(key)
+	}
 	return messageid
 }
-
-// generateKeyAndFetchMessageID 尝试生成特定长度的key，并获取messageID
-// func generateKeyAndFetchMessageID(appID string, userIDStr string, keyLength int) (string, error) {
-// 	userid64, err := idmap.GenerateRowID(userIDStr, keyLength)
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	key := appID + "_" + fmt.Sprint(userid64)
-// 	return echo.GetMsgIDByKey(key), nil
-// }
 
 // 通过user_id获取messageID
 func GetMessageIDByUseridAndGroupid(appID string, userID interface{}, groupID interface{}) string {
@@ -225,6 +204,7 @@ func GetMessageIDByUseridAndGroupid(appID string, userID interface{}, groupID in
 			return ""
 		}
 	}
-	key := appID + "_" + fmt.Sprint(userid64) + "_" + fmt.Sprint(groupid64)
+	key := appID + "_" + fmt.Sprint(groupid64) + "_" + fmt.Sprint(userid64)
+	mylog.Printf("GetMessageIDByUseridAndGroupid_key:%v", key)
 	return echo.GetMsgIDByKey(key)
 }
