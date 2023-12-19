@@ -17,6 +17,7 @@ import (
 
 // ProcessGuildNormalMessage 处理频道常规消息
 func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
+	var AppIDString string
 	if !p.Settings.GlobalChannelToGroup {
 		// 将时间字符串转换为时间戳
 		t, err := time.Parse(time.RFC3339, string(data.Timestamp))
@@ -34,7 +35,7 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 		//框架内指令
 		p.HandleFrameworkCommand(messageText, data, "guild")
 		//转换appid
-		AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
+		AppIDString = strconv.FormatUint(p.Settings.AppID, 10)
 		//构造echo
 		echostr := AppIDString + "_" + strconv.FormatInt(s, 10)
 		//映射str的userid到int
@@ -141,6 +142,8 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 			idmap.SimplifiedStoreID(data.Author.ID)
 			//补救措施
 			idmap.SimplifiedStoreID(data.ChannelID)
+			//补救措施
+			echo.AddMsgIDv3(AppIDString, data.ChannelID, data.ID)
 		} else {
 			//将channelid写入ini,可取出guild_id
 			ChannelID64, err = idmap.StoreIDv2(data.ChannelID)

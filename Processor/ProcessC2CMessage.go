@@ -50,6 +50,8 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 			}
 			//补救措施
 			idmap.SimplifiedStoreID(data.Author.ID)
+			//补救措施
+			echo.AddMsgIDv3(AppIDString, data.Author.ID, data.ID)
 		} else {
 			//将真实id转为int userid64
 			userid64, err = idmap.StoreIDv2(data.Author.ID)

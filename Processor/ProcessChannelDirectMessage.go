@@ -63,6 +63,10 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 			idmap.SimplifiedStoreID(data.Author.ID)
 			//补救措施
 			idmap.SimplifiedStoreID(data.ChannelID)
+			//补救措施
+			echo.AddMsgIDv3(AppIDString, data.ChannelID, data.ID)
+			//补救措施
+			echo.AddMsgIDv3(AppIDString, data.Author.ID, data.ID)
 		} else {
 			//将真实id转为int userid64
 			userid64, err = idmap.StoreIDv2(data.Author.ID)
