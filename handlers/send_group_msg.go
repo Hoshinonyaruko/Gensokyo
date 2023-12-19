@@ -120,9 +120,21 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			if err != nil {
 				mylog.Printf("Error retrieving original GroupID: %v", err)
 			}
-			originalUserID, err = idmap.RetrieveRowByIDv2(message.Params.UserID.(string))
-			if err != nil {
-				mylog.Printf("Error retrieving original UserID: %v", err)
+			// 检查 message.Params.UserID 是否为 nil
+			if message.Params.UserID == nil {
+				//mylog.Println("UserID is nil")
+			} else {
+				// 进行类型断言，确认 UserID 不是 nil
+				userID, ok := message.Params.UserID.(string)
+				if !ok {
+					mylog.Println("UserID is not a string")
+					// 处理类型断言失败的情况
+				} else {
+					originalUserID, err = idmap.RetrieveRowByIDv2(userID)
+					if err != nil {
+						mylog.Printf("Error retrieving original UserID: %v", err)
+					}
+				}
 			}
 		}
 		message.Params.GroupID = originalGroupID
