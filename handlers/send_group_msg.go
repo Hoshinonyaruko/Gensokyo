@@ -124,11 +124,6 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			if err != nil {
 				mylog.Printf("Error retrieving original UserID: %v", err)
 			}
-			originalUserID, err = idmap.RetrieveRowByIDv2(message.Params.UserID.(string))
-			if err != nil {
-				mylog.Printf("Error retrieving original UserID: %v", err)
-				return "", nil
-			}
 		}
 		message.Params.GroupID = originalGroupID
 		message.Params.UserID = originalUserID
