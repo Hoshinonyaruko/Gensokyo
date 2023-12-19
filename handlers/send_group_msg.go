@@ -97,11 +97,11 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				mylog.Println("echo取群组发信息对应的message_id:", messageID)
 			}
 		}
-		var originalGroupID string
+		var originalGroupID, originalUserID string
 		// 检查UserID是否为nil
 		if message.Params.UserID != nil && config.GetIdmapPro() {
 			// 如果UserID不是nil且配置为使用Pro版本，则调用RetrieveRowByIDv2Pro
-			originalGroupID, _, err = idmap.RetrieveRowByIDv2Pro(message.Params.GroupID.(string), message.Params.UserID.(string))
+			originalGroupID, originalUserID, err = idmap.RetrieveRowByIDv2Pro(message.Params.GroupID.(string), message.Params.UserID.(string))
 			if err != nil {
 				mylog.Printf("Error1 retrieving original GroupID: %v", err)
 			}
@@ -121,8 +121,14 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				mylog.Printf("Error retrieving original GroupID: %v", err)
 				return "", nil
 			}
+			originalUserID, err = idmap.RetrieveRowByIDv2(message.Params.UserID.(string))
+			if err != nil {
+				mylog.Printf("Error retrieving original UserID: %v", err)
+				return "", nil
+			}
 		}
 		message.Params.GroupID = originalGroupID
+		message.Params.UserID = originalUserID
 		if SSM {
 			//mylog.Printf("正在使用Msgid:%v 补发之前失败的主动信息,请注意AtoP不要设置超过3,否则可能会影响正常信息发送", messageID)
 			//mylog.Printf("originalGroupID:%v ", originalGroupID)

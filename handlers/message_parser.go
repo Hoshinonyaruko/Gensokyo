@@ -439,18 +439,66 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 			}
 		}
 	}
-	//移除以GetVisualkPrefixs数组开头的文本
+	// 移除以 GetVisualkPrefixs 数组开头的文本
 	visualkPrefixs := config.GetVisualkPrefixs()
-	for _, prefix := range visualkPrefixs {
-		if strings.HasPrefix(messageText, prefix) {
-			// 检查 messageText 是否比 prefix 长，这意味着后面还有其他内容
-			if len(messageText) > len(prefix) {
+	var matchedPrefix *config.VisualPrefixConfig
+
+	for _, vp := range visualkPrefixs {
+		if strings.HasPrefix(messageText, vp.Prefix) {
+			// 检查 messageText 的长度是否大于 prefix 的长度
+			if len(messageText) > len(vp.Prefix) {
 				// 移除找到的前缀
-				messageText = strings.TrimPrefix(messageText, prefix)
+				messageText = strings.TrimPrefix(messageText, vp.Prefix)
+				messageText = strings.TrimSpace(messageText)
+				matchedPrefix = &vp
+				break // 只移除第一个匹配的前缀
 			}
-			break // 只移除第一个匹配的前缀
 		}
 	}
+
+	// 检查是否启用白名单模式
+	if config.GetWhitePrefixMode() && matchedPrefix != nil {
+		whiteBypass := config.GetWhiteBypass()
+		bypass := false
+
+		// 检查 vgid 是否在白名单例外数组中
+		for _, id := range whiteBypass {
+			if id == vgid {
+				bypass = true
+				break
+			}
+		}
+
+		// 如果vgid不在白名单例外数组中，则应用白名单过滤
+		if !bypass {
+			allPrefixes := matchedPrefix.WhiteList
+			idmap.MutexT.Lock()
+			temporaryCommands := make([]string, len(idmap.TemporaryCommands))
+			copy(temporaryCommands, idmap.TemporaryCommands)
+			idmap.MutexT.Unlock()
+
+			// 合并虚拟前缀的白名单和临时指令
+			allPrefixes = append(allPrefixes, temporaryCommands...)
+			matched := false
+
+			// 遍历白名单数组，检查是否有匹配项
+			for _, prefix := range allPrefixes {
+				if strings.HasPrefix(messageText, prefix) {
+					matched = true
+					break
+				}
+			}
+
+			// 如果没有匹配项，则将 messageText 置为对应的兜底回复
+			if !matched {
+				messageText = ""
+				SendMessage(matchedPrefix.NoWhiteResponse, data, msgtype, api, apiv2)
+			}
+		}
+	}
+
+	// 如果未启用白名单模式或没有匹配的虚拟前缀，执行默认逻辑
+
 	// 处理图片附件
 	for _, attachment := range msg.Attachments {
 		if strings.HasPrefix(attachment.ContentType, "image/") {

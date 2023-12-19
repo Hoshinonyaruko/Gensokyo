@@ -45,6 +45,8 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 		idmap.SimplifiedStoreID(data.Author.ID)
 		//补救措施
 		idmap.SimplifiedStoreID(data.GroupID)
+		//补救措施
+		echo.AddMsgIDv3(AppIDString, data.GroupID, data.ID)
 	} else {
 		// 映射str的GroupID到int
 		GroupID64, err = idmap.StoreIDv2(data.GroupID)
