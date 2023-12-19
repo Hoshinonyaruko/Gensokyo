@@ -238,11 +238,24 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 			}
 		}
 
+		// 频道转群时获取频道身份组
+		// 频道身份组文档https://bot.q.qq.com/wiki/develop/api-v2/server-inter/channel/role/member/role_model.html#role
+		channelRoleName := "member"
+		for _, role := range data.Member.Roles {
+			switch role {
+			case "4":
+				channelRoleName = "channelOwner" //群主/创建者为4
+				break // 结束循环
+			case "2":
+				channelRoleName = "channelAdmin" //管理员（超级管理员）为2
+			}
+		}
+
 		// 根据isMaster的值为groupMsg的Sender赋值role字段
 		if isMaster {
 			groupMsg.Sender.Role = "owner"
 		} else {
-			groupMsg.Sender.Role = "member"
+			groupMsg.Sender.Role = channelRoleName
 		}
 		//将当前s和appid和message进行映射
 		echo.AddMsgID(AppIDString, s, data.ID)
