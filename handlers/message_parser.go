@@ -300,7 +300,7 @@ func createCQImageMessage(base64Image string) string {
 }
 
 // 处理at和其他定形文到onebotv11格式(cq码)
-func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI, apiv2 openapi.OpenAPI, vgid int64) string {
+func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI, apiv2 openapi.OpenAPI, vgid int64, vuid int64) string {
 	var msg *dto.Message
 	var menumsg bool
 	var messageText string
@@ -382,15 +382,30 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 
 	// 检查是否启用白名单模式
 	if config.GetWhitePrefixMode() {
+		// 获取白名单反转标志
+		whiteBypassRevers := config.GetWhiteBypassRevers()
+
 		// 获取白名单例外群数组（现在返回 int64 数组）
 		whiteBypass := config.GetWhiteBypass()
 		bypass := false
 
-		// 检查vgid是否在白名单例外数组中
-		for _, id := range whiteBypass {
-			if id == vgid {
-				bypass = true
-				break
+		// 根据 whiteBypassRevers 的值来改变逻辑
+		if whiteBypassRevers {
+			// 如果反转白名单效果，只有在白名单数组中的 vgid 或 vuid 才生效
+			bypass = true // 默认设置为 true，意味着需要白名单检查
+			for _, id := range whiteBypass {
+				if id == vgid || id == vuid {
+					bypass = false // 如果在白名单数组中找到了 vgid 或 vuid，设置为 false
+					break
+				}
+			}
+		} else {
+			// 常规逻辑：检查 vgid 是否在白名单例外数组中
+			for _, id := range whiteBypass {
+				if id == vgid || id == vuid {
+					bypass = true
+					break
+				}
 			}
 		}
 
@@ -458,14 +473,30 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 
 	// 检查是否启用白名单模式
 	if config.GetWhitePrefixMode() && matchedPrefix != nil {
+		// 获取白名单反转标志
+		whiteBypassRevers := config.GetWhiteBypassRevers()
+
+		// 获取白名单例外群数组（现在返回 int64 数组）
 		whiteBypass := config.GetWhiteBypass()
 		bypass := false
 
-		// 检查 vgid 是否在白名单例外数组中
-		for _, id := range whiteBypass {
-			if id == vgid {
-				bypass = true
-				break
+		// 根据 whiteBypassRevers 的值来改变逻辑
+		if whiteBypassRevers {
+			// 如果反转白名单效果，只有在白名单数组中的 vgid 或 vuid 才生效
+			bypass = true // 默认设置为 true，意味着需要白名单检查
+			for _, id := range whiteBypass {
+				if id == vgid || id == vuid {
+					bypass = false // 如果在白名单数组中找到了 vgid 或 vuid，设置为 false
+					break
+				}
+			}
+		} else {
+			// 常规逻辑：检查 vgid 是否在白名单例外数组中
+			for _, id := range whiteBypass {
+				if id == vgid || id == vuid {
+					bypass = true
+					break
+				}
 			}
 		}
 
