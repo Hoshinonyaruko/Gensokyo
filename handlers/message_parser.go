@@ -817,7 +817,7 @@ func parseMDData(mdData []byte) (*dto.Markdown, *keyboard.MessageKeyboard, error
 	// 定义一个用于解析 JSON 的临时结构体
 	var temp struct {
 		Markdown struct {
-			CustomTemplateID *int                  `json:"custom_template_id,omitempty"`
+			CustomTemplateID *string               `json:"custom_template_id,omitempty"`
 			Params           []*dto.MarkdownParams `json:"params,omitempty"`
 			Content          string                `json:"content,omitempty"`
 		} `json:"markdown,omitempty"`
@@ -838,9 +838,9 @@ func parseMDData(mdData []byte) (*dto.Markdown, *keyboard.MessageKeyboard, error
 	if temp.Markdown.CustomTemplateID != nil {
 		// 处理模板 Markdown
 		md = &dto.Markdown{
-			TemplateID: *temp.Markdown.CustomTemplateID,
-			Params:     temp.Markdown.Params,
-			Content:    temp.Markdown.Content,
+			CustomTemplateID: *temp.Markdown.CustomTemplateID,
+			Params:           temp.Markdown.Params,
+			Content:          temp.Markdown.Content,
 		}
 	} else if temp.Markdown.Content != "" {
 		// 处理自定义 Markdown
