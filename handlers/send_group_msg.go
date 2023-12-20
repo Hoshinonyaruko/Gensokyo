@@ -285,6 +285,28 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
 				if !ok {
 					mylog.Printf("Error: Expected RichMediaMessage type for key %s.", key)
+					if key == "markdown" {
+						// 进行类型断言
+						groupMessage, ok := groupReply.(*dto.MessageToCreate)
+						if !ok {
+							mylog.Println("Error: Expected MessageToCreate type.")
+							return "", nil // 或其他错误处理
+						}
+						//重新为err赋值
+						ret, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
+						if err != nil {
+							mylog.Printf("发送md信息失败: %v", err)
+						}
+						if ret != nil && ret.Message.Ret == 22009 {
+							mylog.Printf("信息发送失败,加入到队列中,下次被动信息进行发送")
+							var pair echo.MessageGroupPair
+							pair.Group = message.Params.GroupID.(string)
+							pair.GroupMessage = groupMessage
+							echo.PushGlobalStack(pair)
+						}
+						//发送成功回执
+						retmsg, _ = SendResponse(client, err, &message)
+					}
 					continue // 跳过这个项，继续下一个
 				}
 				message_return, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), richMediaMessage)
@@ -799,42 +821,60 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 			Content:    "",     // 这个字段文档没有了
 			SrvSendMsg: false,
 		}
-	} else if base64_image, ok := foundItems["base64_image"]; ok && len(base64_image) > 0 {
+	} else if base64Image, ok := foundItems["base64_image"]; ok && len(base64Image) > 0 {
 		// todo 适配base64图片
 		//因为QQ群没有 form方式上传,所以在gensokyo内置了图床,需公网,或以lotus方式连接位于公网的gensokyo
 		//要正确的开放对应的端口和设置正确的ip地址在config,这对于一般用户是有一些难度的
-		if base64Image, ok := foundItems["base64_image"]; ok && len(base64Image) > 0 {
-			// 解码base64图片数据
-			fileImageData, err := base64.StdEncoding.DecodeString(base64Image[0])
-			if err != nil {
-				mylog.Printf("failed to decode base64 image: %v", err)
-				return nil
+		// 解码base64图片数据
+		fileImageData, err := base64.StdEncoding.DecodeString(base64Image[0])
+		if err != nil {
+			mylog.Printf("failed to decode base64 image: %v", err)
+			return nil
+		}
+		// 首先压缩图片 默认不压缩
+		compressedData, err := images.CompressSingleImage(fileImageData)
+		if err != nil {
+			mylog.Printf("Error compressing image: %v", err)
+			return &dto.MessageToCreate{
+				Content: "错误: 压缩图片失败",
+				MsgID:   id,
+				MsgSeq:  msgseq,
+				MsgType: 0, // 默认文本类型
 			}
-			// 首先压缩图片 默认不压缩
-			compressedData, err := images.CompressSingleImage(fileImageData)
-			if err != nil {
-				mylog.Printf("Error compressing image: %v", err)
-				return &dto.MessageToCreate{
-					Content: "错误: 压缩图片失败",
-					MsgID:   id,
-					MsgSeq:  msgseq,
-					MsgType: 0, // 默认文本类型
-				}
-			}
-			// 将解码的图片数据转换回base64格式并上传
-			imageURL, err := images.UploadBase64ImageToServer(base64.StdEncoding.EncodeToString(compressedData))
-			if err != nil {
-				mylog.Printf("failed to upload base64 image: %v", err)
-				return nil
-			}
-			// 创建RichMediaMessage并返回
-			return &dto.RichMediaMessage{
-				EventID:    id,
-				FileType:   1, // 1代表图片
-				URL:        imageURL,
-				Content:    "", // 这个字段文档没有了
-				SrvSendMsg: false,
-			}
+		}
+		// 将解码的图片数据转换回base64格式并上传
+		imageURL, err := images.UploadBase64ImageToServer(base64.StdEncoding.EncodeToString(compressedData))
+		if err != nil {
+			mylog.Printf("failed to upload base64 image: %v", err)
+			return nil
+		}
+		// 创建RichMediaMessage并返回
+		return &dto.RichMediaMessage{
+			EventID:    id,
+			FileType:   1, // 1代表图片
+			URL:        imageURL,
+			Content:    "", // 这个字段文档没有了
+			SrvSendMsg: false,
+		}
+	} else if mdContent, ok := foundItems["markdown"]; ok && len(mdContent) > 0 {
+		// 解码base64 markdown数据
+		mdData, err := base64.StdEncoding.DecodeString(mdContent[0])
+		if err != nil {
+			mylog.Printf("failed to decode base64 md: %v", err)
+			return nil
+		}
+		markdown, keyboard, err := parseMDData(mdData)
+		if err != nil {
+			mylog.Printf("failed to parseMDData: %v", err)
+			return nil
+		}
+		return &dto.MessageToCreate{
+			Content:  "markdown",
+			MsgID:    id,
+			MsgSeq:   msgseq,
+			Markdown: markdown,
+			Keyboard: keyboard,
+			MsgType:  2,
 		}
 	} else {
 		// 返回文本信息

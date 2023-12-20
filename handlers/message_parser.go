@@ -23,6 +23,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/url"
 	"github.com/skip2/go-qrcode"
 	"github.com/tencent-connect/botgo/dto"
+	"github.com/tencent-connect/botgo/dto/keyboard"
 	"github.com/tencent-connect/botgo/openapi"
 	"mvdan.cc/xurls" //xurls是一个从文本提取url的库 适用于多种场景
 )
@@ -116,6 +117,9 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 			case "at":
 				qqNumber, _ := segmentMap["data"].(map[string]interface{})["qq"].(string)
 				segmentContent = "[CQ:at,qq=" + qqNumber + "]"
+			case "markdown":
+				mdContent, _ := segmentMap["data"].(map[string]interface{})["data"].(string)
+				segmentContent = "[CQ:markdown,data=" + mdContent + "]"
 			}
 
 			messageText += segmentContent
@@ -139,6 +143,9 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 		case "at":
 			qqNumber, _ := message["data"].(map[string]interface{})["qq"].(string)
 			messageText = "[CQ:at,qq=" + qqNumber + "]"
+		case "markdown":
+			mdContent, _ := message["data"].(map[string]interface{})["data"].(string)
+			messageText = "[CQ:markdown,data=" + mdContent + "]"
 		}
 	default:
 		mylog.Println("Unsupported message format: params.message field is not a string, map or slice")
@@ -167,6 +174,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 	base64RecordPattern := regexp.MustCompile(`\[CQ:record,file=base64://(.+)\]`)
 	httpUrlRecordPattern := regexp.MustCompile(`\[CQ:record,file=http://(.+)\]`)
 	httpsUrlRecordPattern := regexp.MustCompile(`\[CQ:record,file=https://(.+)\]`)
+	mdPattern := regexp.MustCompile(`\[CQ:markdown,data=base64://(.+)\]`)
 
 	patterns := []struct {
 		key     string
@@ -180,6 +188,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 		{"local_record", localRecordPattern},
 		{"url_record", httpUrlRecordPattern},
 		{"url_records", httpsUrlRecordPattern},
+		{"markdown", mdPattern},
 	}
 
 	foundItems := make(map[string][]string)
@@ -300,7 +309,7 @@ func createCQImageMessage(base64Image string) string {
 }
 
 // 处理at和其他定形文到onebotv11格式(cq码)
-func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI, apiv2 openapi.OpenAPI, vgid int64) string {
+func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI, apiv2 openapi.OpenAPI, vgid int64, vuid int64) string {
 	var msg *dto.Message
 	var menumsg bool
 	var messageText string
@@ -382,15 +391,30 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 
 	// 检查是否启用白名单模式
 	if config.GetWhitePrefixMode() {
+		// 获取白名单反转标志
+		whiteBypassRevers := config.GetWhiteBypassRevers()
+
 		// 获取白名单例外群数组（现在返回 int64 数组）
 		whiteBypass := config.GetWhiteBypass()
 		bypass := false
 
-		// 检查vgid是否在白名单例外数组中
-		for _, id := range whiteBypass {
-			if id == vgid {
-				bypass = true
-				break
+		// 根据 whiteBypassRevers 的值来改变逻辑
+		if whiteBypassRevers {
+			// 如果反转白名单效果，只有在白名单数组中的 vgid 或 vuid 才生效
+			bypass = true // 默认设置为 true，意味着需要白名单检查
+			for _, id := range whiteBypass {
+				if id == vgid || id == vuid {
+					bypass = false // 如果在白名单数组中找到了 vgid 或 vuid，设置为 false
+					break
+				}
+			}
+		} else {
+			// 常规逻辑：检查 vgid 是否在白名单例外数组中
+			for _, id := range whiteBypass {
+				if id == vgid || id == vuid {
+					bypass = true
+					break
+				}
 			}
 		}
 
@@ -458,14 +482,30 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 
 	// 检查是否启用白名单模式
 	if config.GetWhitePrefixMode() && matchedPrefix != nil {
+		// 获取白名单反转标志
+		whiteBypassRevers := config.GetWhiteBypassRevers()
+
+		// 获取白名单例外群数组（现在返回 int64 数组）
 		whiteBypass := config.GetWhiteBypass()
 		bypass := false
 
-		// 检查 vgid 是否在白名单例外数组中
-		for _, id := range whiteBypass {
-			if id == vgid {
-				bypass = true
-				break
+		// 根据 whiteBypassRevers 的值来改变逻辑
+		if whiteBypassRevers {
+			// 如果反转白名单效果，只有在白名单数组中的 vgid 或 vuid 才生效
+			bypass = true // 默认设置为 true，意味着需要白名单检查
+			for _, id := range whiteBypass {
+				if id == vgid || id == vuid {
+					bypass = false // 如果在白名单数组中找到了 vgid 或 vuid，设置为 false
+					break
+				}
+			}
+		} else {
+			// 常规逻辑：检查 vgid 是否在白名单例外数组中
+			for _, id := range whiteBypass {
+				if id == vgid || id == vuid {
+					bypass = true
+					break
+				}
 			}
 		}
 
@@ -771,4 +811,58 @@ func ConvertMapToJSONString(m map[string]interface{}) (string, error) {
 	// 将字节切片转换为字符串
 	jsonString := string(jsonBytes)
 	return jsonString, nil
+}
+
+func parseMDData(mdData []byte) (*dto.Markdown, *keyboard.MessageKeyboard, error) {
+	// 定义一个用于解析 JSON 的临时结构体
+	var temp struct {
+		Markdown struct {
+			CustomTemplateID *int                  `json:"custom_template_id,omitempty"`
+			Params           []*dto.MarkdownParams `json:"params,omitempty"`
+			Content          string                `json:"content,omitempty"`
+		} `json:"markdown,omitempty"`
+		Keyboard struct {
+			ID      string                   `json:"id,omitempty"`
+			Content *keyboard.CustomKeyboard `json:"content,omitempty"`
+		} `json:"keyboard,omitempty"`
+		Rows []*keyboard.Row `json:"rows,omitempty"`
+	}
+
+	// 解析 JSON
+	if err := json.Unmarshal(mdData, &temp); err != nil {
+		return nil, nil, err
+	}
+
+	// 处理 Markdown
+	var md *dto.Markdown
+	if temp.Markdown.CustomTemplateID != nil {
+		// 处理模板 Markdown
+		md = &dto.Markdown{
+			TemplateID: *temp.Markdown.CustomTemplateID,
+			Params:     temp.Markdown.Params,
+			Content:    temp.Markdown.Content,
+		}
+	} else if temp.Markdown.Content != "" {
+		// 处理自定义 Markdown
+		md = &dto.Markdown{
+			Content: temp.Markdown.Content,
+		}
+	}
+
+	// 处理 Keyboard
+	var kb *keyboard.MessageKeyboard
+	if temp.Keyboard.Content != nil {
+		// 处理嵌套在 Keyboard 中的 CustomKeyboard
+		kb = &keyboard.MessageKeyboard{
+			ID:      temp.Keyboard.ID,
+			Content: temp.Keyboard.Content,
+		}
+	} else if len(temp.Rows) > 0 {
+		// 处理顶层的 Rows
+		kb = &keyboard.MessageKeyboard{
+			Content: &keyboard.CustomKeyboard{Rows: temp.Rows},
+		}
+	}
+
+	return md, kb, nil
 }

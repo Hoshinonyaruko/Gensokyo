@@ -109,6 +109,7 @@ type Settings struct {
 	RamDomSeq              bool                 `yaml:"ramdom_seq"`
 	UrlToQrimage           bool                 `yaml:"url_to_qrimage"`
 	QrSize                 int                  `yaml:"qr_size"`
+	WhiteBypassRevers      bool                 `yaml:"white_bypass_reverse"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -1335,4 +1336,16 @@ func replaceVisualPrefixsLine(configData []byte) ([]byte, bool) {
 
 	// 返回新配置和是否发生了替换的标记
 	return []byte(newConfigData.String()), replaced
+}
+
+// 获取GetWhiteBypassRevers的值
+func GetWhiteBypassRevers() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetWhiteBypassRevers value.")
+		return false
+	}
+	return instance.Settings.WhiteBypassRevers
 }
