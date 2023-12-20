@@ -91,6 +91,8 @@ gensokyo兼容 [OneBot-v11](https://github.com/botuniverse/onebot-11) ，并在�
 - [x] 主动信息失败自动转被动,提高信息传达可靠性
 - [x] 提前于官方支持群列表 群成员 api
 - [x] 完善的重连,健壮的连接能力.
+- [x] 支持[CQ:markdown,data=] Markdown发送
+- [x] [`markdown文档`](https://www.yuque.com/km57bt/hlhnxg/ddkv4a2lgcswitei)
 - [x] 持续更新~
 
 
