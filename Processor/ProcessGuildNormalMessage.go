@@ -244,10 +244,10 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 		for _, role := range data.Member.Roles {
 			switch role {
 			case "4":
-				channelRoleName = "channelOwner" //群主/创建者为4
-				break // 结束循环
+				channelRoleName = "owner" //群主/创建者为4
+				break
 			case "2":
-				channelRoleName = "channelAdmin" //管理员（超级管理员）为2
+				channelRoleName = "admin" //管理员（超级管理员）为2
 			}
 		}
 
