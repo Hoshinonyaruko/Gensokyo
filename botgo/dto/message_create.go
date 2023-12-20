@@ -86,10 +86,10 @@ func (msg MessageReference) GetSendType() SendType {
 
 // Markdown markdown 消息
 type Markdown struct {
-	//TemplateID int               `json:"template_id"` // 模版 id
-	TemplateID int               `json:"custom_template_id,omitempty"` // 模版 id
-	Params     []*MarkdownParams `json:"params,omitempty"`             // 模版参数
-	Content    string            `json:"content,omitempty"`            // 原生 markdown
+	TemplateID       int               `json:"template_id,omitempty"`        // 模版 id
+	CustomTemplateID string            `json:"custom_template_id,omitempty"` // 模版 id 群
+	Params           []*MarkdownParams `json:"params,omitempty"`             // 模版参数
+	Content          string            `json:"content,omitempty"`            // 原生 markdown
 }
 
 // MarkdownParams markdown 模版参数 键值对
