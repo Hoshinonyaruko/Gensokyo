@@ -131,7 +131,7 @@ func HandleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 					mylog.Printf("发送图文混合信息失败: %v", err)
 				}
 				// 检查是否是 40003 错误
-				if strings.Contains(err.Error(), `"code":40003`) && len(newMessage.Image) > 0 {
+				if err != nil && strings.Contains(err.Error(), `"code":40003`) && len(newMessage.Image) > 0 {
 					// 从 newMessage.Image 中提取图片地址
 					imageURL := newMessage.Image
 
@@ -225,7 +225,7 @@ func HandleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 						mylog.Printf("发送 %s 信息失败: %v", key, err)
 					}
 					// 检查是否是 40003 错误
-					if strings.Contains(err.Error(), `"code":40003`) && len(reply.Image) > 0 {
+					if err != nil && strings.Contains(err.Error(), `"code":40003`) && len(reply.Image) > 0 {
 						// 从 reply.Image 中提取图片地址
 						imageURL := reply.Image
 
