@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
@@ -29,7 +30,6 @@ func HandleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 	var msgType string
 	var retmsg string
 	var err error
-	var ret *dto.Message
 	if echoStr, ok := message.Echo.(string); ok {
 		// 当 message.Echo 是字符串类型时执行此块
 		msgType = echo.GetMsgTypeByKey(echoStr)
@@ -127,11 +127,11 @@ func HandleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 				}
 				newMessage.Timestamp = time.Now().Unix() // 设置时间戳
 
-				if ret, err = api.PostMessage(context.TODO(), channelID, newMessage); err != nil {
+				if _, err = api.PostMessage(context.TODO(), channelID, newMessage); err != nil {
 					mylog.Printf("发送图文混合信息失败: %v", err)
 				}
 				// 检查是否是 40003 错误
-				if ret.Ret == 40003 && len(newMessage.Image) > 0 {
+				if strings.Contains(err.Error(), `"code":40003`) && len(newMessage.Image) > 0 {
 					// 从 newMessage.Image 中提取图片地址
 					imageURL := newMessage.Image
 
@@ -221,11 +221,11 @@ func HandleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 					//发送成功回执
 					retmsg, _ = SendResponse(client, err, &message)
 				} else {
-					if ret, err = api.PostMessage(context.TODO(), channelID, reply); err != nil {
+					if _, err = api.PostMessage(context.TODO(), channelID, reply); err != nil {
 						mylog.Printf("发送 %s 信息失败: %v", key, err)
 					}
 					// 检查是否是 40003 错误
-					if ret.Ret == 40003 && len(reply.Image) > 0 {
+					if strings.Contains(err.Error(), `"code":40003`) && len(reply.Image) > 0 {
 						// 从 reply.Image 中提取图片地址
 						imageURL := reply.Image
 
