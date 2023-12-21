@@ -110,6 +110,7 @@ type Settings struct {
 	UrlToQrimage           bool                 `yaml:"url_to_qrimage"`
 	QrSize                 int                  `yaml:"qr_size"`
 	WhiteBypassRevers      bool                 `yaml:"white_bypass_reverse"`
+	GuildUrlImageToBase64  bool                 `yaml:"guild_url_image_to_base64"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -1348,4 +1349,16 @@ func GetWhiteBypassRevers() bool {
 		return false
 	}
 	return instance.Settings.WhiteBypassRevers
+}
+
+// 获取GetGuildUrlImageToBase64的值
+func GetGuildUrlImageToBase64() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GuildUrlImageToBase64 value.")
+		return false
+	}
+	return instance.Settings.GuildUrlImageToBase64
 }

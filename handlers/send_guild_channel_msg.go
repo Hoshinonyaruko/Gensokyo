@@ -3,6 +3,8 @@ package handlers
 import (
 	"context"
 	"encoding/base64"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"time"
 
@@ -27,6 +29,7 @@ func HandleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 	var msgType string
 	var retmsg string
 	var err error
+	var ret *dto.Message
 	if echoStr, ok := message.Echo.(string); ok {
 		// 当 message.Echo 是字符串类型时执行此块
 		msgType = echo.GetMsgTypeByKey(echoStr)
@@ -124,8 +127,33 @@ func HandleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 				}
 				newMessage.Timestamp = time.Now().Unix() // 设置时间戳
 
-				if _, err = api.PostMessage(context.TODO(), channelID, newMessage); err != nil {
+				if ret, err = api.PostMessage(context.TODO(), channelID, newMessage); err != nil {
 					mylog.Printf("发送图文混合信息失败: %v", err)
+				}
+				// 检查是否是 40003 错误
+				if ret.Ret == 40003 && len(newMessage.Image) > 0 {
+					// 从 newMessage.Image 中提取图片地址
+					imageURL := newMessage.Image
+
+					// 调用下载并转换为 base64 的函数
+					base64Image, err := downloadImageAndConvertToBase64(imageURL)
+					if err != nil {
+						mylog.Printf("下载或转换图片失败: %v", err)
+					} else {
+						// 清除原来的 HTTP 图片地址
+						newMessage.Image = ""
+
+						// 将base64内容从字符串转换回字节
+						fileImageData, err := base64.StdEncoding.DecodeString(base64Image)
+						if err != nil {
+							mylog.Printf("Base64 解码失败: %v", err)
+						} else {
+							// 使用 Multipart 方法发送
+							if _, err = api.PostMessageMultipart(context.TODO(), channelID, newMessage, fileImageData); err != nil {
+								mylog.Printf("40003重试,使用 multipart 发送图文混合信息失败: %v message_id %v", err, messageID)
+							}
+						}
+					}
 				}
 			} else {
 				// 将base64内容从reply的Content转换回字节
@@ -193,8 +221,33 @@ func HandleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 					//发送成功回执
 					retmsg, _ = SendResponse(client, err, &message)
 				} else {
-					if _, err = api.PostMessage(context.TODO(), channelID, reply); err != nil {
+					if ret, err = api.PostMessage(context.TODO(), channelID, reply); err != nil {
 						mylog.Printf("发送 %s 信息失败: %v", key, err)
+					}
+					// 检查是否是 40003 错误
+					if ret.Ret == 40003 && len(reply.Image) > 0 {
+						// 从 reply.Image 中提取图片地址
+						imageURL := reply.Image
+
+						// 调用下载并转换为 base64 的函数
+						base64Image, err := downloadImageAndConvertToBase64(imageURL)
+						if err != nil {
+							mylog.Printf("下载或转换图片失败: %v", err)
+						} else {
+							// 清除原来的 HTTP 图片地址
+							reply.Image = ""
+
+							// 将base64内容从字符串转换回字节
+							fileImageData, err := base64.StdEncoding.DecodeString(base64Image)
+							if err != nil {
+								mylog.Printf("Base64 解码失败: %v", err)
+							} else {
+								// 使用 Multipart 方法发送
+								if _, err = api.PostMessageMultipart(context.TODO(), channelID, reply, fileImageData); err != nil {
+									mylog.Printf("40003重试,使用 multipart 发送 %s 信息失败: %v message_id %v", key, err, messageID)
+								}
+							}
+						}
 					}
 					//发送成功回执
 					retmsg, _ = SendResponse(client, err, &message)
@@ -263,22 +316,48 @@ func GenerateReplyMessage(id string, foundItems map[string][]string, messageText
 		}
 		isBase64 = true
 	} else if imageURLs, ok := foundItems["url_image"]; ok && len(imageURLs) > 0 {
-		// 发送网络图
-		reply = dto.MessageToCreate{
-			//EventID: id,           // Use a placeholder event ID for now
-			Image:   "http://" + imageURLs[0], // Using the same Image field for external URLs, adjust if needed
-			MsgID:   id,
-			MsgSeq:  msgseq,
-			MsgType: 0, // Assuming type 0 for images
+		// 判断是否需要将图片转换为 base64 编码
+		if config.GetGuildUrlImageToBase64() {
+			base64Image, err := downloadImageAndConvertToBase64("http://" + imageURLs[0])
+			if err == nil {
+				reply = dto.MessageToCreate{
+					Content: base64Image, // 使用转换后的 base64 图片作为 Content
+					MsgID:   id,
+					MsgSeq:  msgseq,
+					MsgType: 0, // 默认类型为文本
+				}
+				isBase64 = true
+			} // 错误处理逻辑
+		} else {
+			// 原有逻辑
+			reply = dto.MessageToCreate{
+				Image:   "http://" + imageURLs[0],
+				MsgID:   id,
+				MsgSeq:  msgseq,
+				MsgType: 0,
+			}
 		}
 	} else if imageURLs, ok := foundItems["url_images"]; ok && len(imageURLs) > 0 {
-		// 发送网络图
-		reply = dto.MessageToCreate{
-			//EventID: id,           // Use a placeholder event ID for now
-			Image:   "https://" + imageURLs[0], // Using the same Image field for external URLs, adjust if needed
-			MsgID:   id,
-			MsgSeq:  msgseq,
-			MsgType: 0, // Assuming type 0 for images
+		// 判断是否需要将图片转换为 base64 编码
+		if config.GetGuildUrlImageToBase64() {
+			base64Image, err := downloadImageAndConvertToBase64("https://" + imageURLs[0])
+			if err == nil {
+				reply = dto.MessageToCreate{
+					Content: base64Image, // 使用转换后的 base64 图片作为 Content
+					MsgID:   id,
+					MsgSeq:  msgseq,
+					MsgType: 0, // 默认类型为文本
+				}
+				isBase64 = true
+			} // 错误处理逻辑
+		} else {
+			// 原有逻辑
+			reply = dto.MessageToCreate{
+				Image:   "https://" + imageURLs[0],
+				MsgID:   id,
+				MsgSeq:  msgseq,
+				MsgType: 0,
+			}
 		}
 	} else if voiceURLs, ok := foundItems["base64_record"]; ok && len(voiceURLs) > 0 {
 		//频道 还不支持发语音
@@ -312,4 +391,26 @@ func GenerateReplyMessage(id string, foundItems map[string][]string, messageText
 	}
 
 	return &reply, isBase64
+}
+
+// downloadImageAndConvertToBase64 下载图片并转换为 base64 编码字符串
+func downloadImageAndConvertToBase64(url string) (string, error) {
+	// 发送 HTTP GET 请求以获取图片数据
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", err // 返回错误
+	}
+	defer resp.Body.Close()
+
+	// 读取响应的内容
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err // 返回错误
+	}
+
+	// 将图片数据转换为 base64 编码
+	base64Image := base64.StdEncoding.EncodeToString(data)
+
+	// 返回 base64 编码的字符串和 nil（表示没有错误）
+	return base64Image, nil
 }

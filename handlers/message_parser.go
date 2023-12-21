@@ -466,9 +466,24 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 	// 移除以 GetVisualkPrefixs 数组开头的文本
 	visualkPrefixs := config.GetVisualkPrefixs()
 	var matchedPrefix *config.VisualPrefixConfig
+	var isSpecialType bool    // 用于标记是否为特殊类型
+	var originalPrefix string // 存储原始前缀
 
-	for _, vp := range visualkPrefixs {
+	// 处理特殊类型前缀
+	specialPrefixes := make(map[int]string)
+	for i, vp := range visualkPrefixs {
+		if strings.HasPrefix(vp.Prefix, "*") {
+			specialPrefixes[i] = vp.Prefix                                // 保存原始前缀
+			visualkPrefixs[i].Prefix = strings.TrimPrefix(vp.Prefix, "*") // 移除 '*'
+		}
+	}
+
+	for i, vp := range visualkPrefixs {
 		if strings.HasPrefix(messageText, vp.Prefix) {
+			if _, ok := specialPrefixes[i]; ok {
+				isSpecialType = true
+				originalPrefix = specialPrefixes[i] // 恢复原始前缀
+			}
 			// 检查 messageText 的长度是否大于 prefix 的长度
 			if len(messageText) > len(vp.Prefix) {
 				// 移除找到的前缀
@@ -535,6 +550,11 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 				SendMessage(matchedPrefix.NoWhiteResponse, data, msgtype, api, apiv2)
 			}
 		}
+	}
+
+	// 在返回 messageText 时，根据 isSpecialType 判断是否需要添加原始前缀
+	if isSpecialType && matchedPrefix != nil {
+		messageText = originalPrefix + messageText
 	}
 
 	// 如果未启用白名单模式或没有匹配的虚拟前缀，执行默认逻辑
