@@ -3,6 +3,10 @@ module github.com/hoshinonyaruko/gensokyo
 go 1.21.1
 
 require (
+	github.com/Baidu-AIP/golang-sdk v1.1.1
+	github.com/aliyun/alibaba-cloud-sdk-go v1.62.645
+	github.com/aliyun/aliyun-oss-go-sdk v3.0.1+incompatible
+	github.com/baidubce/bce-sdk-go v0.9.161
 	github.com/boltdb/bolt v1.3.1
 	github.com/fatih/color v1.15.0
 	github.com/gin-gonic/gin v1.9.1
@@ -11,16 +15,25 @@ require (
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/tencent-connect/botgo v0.1.6
+	github.com/tencentyun/cos-go-sdk-v5 v0.7.45
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
+	github.com/clbanning/mxj v1.8.4 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
+	github.com/google/go-querystring v1.0.0 // indirect
+	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mitchellh/mapstructure v1.4.3 // indirect
+	github.com/mozillazg/go-httpheader v0.2.1 // indirect
 	github.com/mvdan/xurls v1.1.0 // indirect
+	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
+	golang.org/x/time v0.5.0 // indirect
+	gopkg.in/ini.v1 v1.66.2 // indirect
 )
 
 replace github.com/tencent-connect/botgo => ./botgo
