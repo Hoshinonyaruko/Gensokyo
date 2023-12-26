@@ -99,3 +99,6 @@ settings:
   qr_size : 200                     #二维码尺寸,单位像素
   white_bypass_reverse : false      #反转white_bypass的效果,可仅在white_bypass应用white_prefix_mode,场景:您的不同用户群,可以开放不同层次功能,便于您的运营和规化(测试/正式环境)
   guild_url_image_to_base64 : false #解决频道发不了某些url图片,报错40003问题
+  t_BucketURL : ""                  #COS_REGION 可以在控制台查看 https://console.cloud.tencent.com/cos5/bucket, 关于地域的详情见 https://cloud.tencent.com/document/product/436/6224
+  t_COS_SECRETID : ""               #用户的 SecretId,建议使用子账号密钥,授权遵循最小权限指引，降低使用风险。子账号密钥获取可参考 https://cloud.tencent.com/document/product/598/37140
+  t_COS_SECRETKEY : ""              #同上

@@ -57,6 +57,7 @@ settings:
   url_to_qrimage : false            #将信息中的url转换为二维码单独作为图片发出,需要同时设置  #SSL配置类 机器人发送URL设置 的 transfer_url 为 true visible_ip也需要为true
   qr_size : 200                     #二维码尺寸,单位像素
   guild_url_image_to_base64 : false #解决频道发不了某些url图片,报错40003问题
+  oss_type : 0                      #请完善后方具体配置 完成#腾讯云配置...,0代表配置server dir port服务器自行上传(省钱),1,腾讯cos存储桶 2,百度oss存储桶 3,阿里oss存储桶
 
   #正向ws设置
   ws_server_path : "ws"             #默认监听0.0.0.0:port/ws_server_path 若有安全需求,可不放通port到公网,或设置ws_server_token 若想监听/ 可改为"",若想监听到不带/地址请写nil
@@ -149,6 +150,26 @@ settings:
   post_secret: [""]                 #密钥
   post_max_retries: [3]             #最大重试,0 时禁用
   post_retries_interval: [1500]     #重试时间,单位毫秒,0 时立即
+
+  #腾讯云配置
+  t_COS_BUCKETNAME : ""             #存储桶名称
+  t_COS_REGION : ""                 #COS_REGION 所属地域()内的复制进来 可以在控制台查看 https://console.cloud.tencent.com/cos5/bucket, 关于地域的详情见 https://cloud.tencent.com/document/product/436/6224
+  t_COS_SECRETID : ""               #用户的 SecretId,建议使用子账号密钥,授权遵循最小权限指引，降低使用风险。子账号密钥获取可参考 https://cloud.tencent.com/document/product/598/37140
+  t_COS_SECRETKEY : ""              #用户的 SECRETKEY 请腾讯云搜索 api密钥管理 生成并填写.妥善保存 避免泄露
+  t_audit : false                   #是否审核内容 请先到控制台开启
+
+  #百度云配置
+  b_BOS_BUCKETNAME : ""             #百度智能云-BOS控制台-Bucket列表-需要选择的存储桶-域名发布信息-完整官方域名-填入 形如 hellow.gz.bcebos.com
+  b_BCE_AK : ""                     #百度 BCE的 AK 获取方法 https://cloud.baidu.com/doc/BOS/s/Tjwvyrw7a 
+  b_BCE_SK : ""                     #百度 BCE的 SK 
+  b_audit : 0                       #0 不审核 仅使用oss, 1 使用oss+审核, 2 不使用oss 仅审核
+
+  #阿里云配置
+  a_OSS_EndPoint : ""               #形如 https://oss-cn-hangzhou.aliyuncs.com 这里获取 https://oss.console.aliyun.com/bucket/oss-cn-shenzhen/sanaee/overview
+  a_OSS_BucketName : ""             #要使用的桶名称,上方EndPoint不包含这个名称,如果有,请填在这里
+  a_OSS_AccessKeyId : ""            #阿里云控制台-最右上角点击自己头像-AccessKey管理-然后管理和生成
+  a_OSS_AccessKeySecret : ""
+  a_audit : false                   #是否审核图片 请先开通阿里云内容安全需企业认证。具体操作 请参见https://help.aliyun.com/document_detail/69806.html
 
 `
 const Logo = `

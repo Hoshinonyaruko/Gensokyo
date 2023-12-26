@@ -11,11 +11,31 @@ import (
 	"strings"
 
 	"github.com/hoshinonyaruko/gensokyo/config"
+	"github.com/hoshinonyaruko/gensokyo/oss"
 )
 
 // 将base64图片通过lotus转换成url
 func UploadBase64ImageToServer(base64Image string) (string, error) {
-	// 根据serverPort确定协议
+	extraPicAuditingType := config.GetOssType()
+
+	// 根据不同的extraPicAuditingType值来调整函数行为
+	switch extraPicAuditingType {
+	case 0:
+		// 原有的函数行为
+		return originalUploadBehavior(base64Image)
+	case 1:
+		return oss.UploadAndAuditImage(base64Image) //腾讯
+	case 2:
+		return oss.UploadAndAuditImageB(base64Image) //百度
+	case 3:
+		return oss.UploadAndAuditImageA(base64Image) //阿里
+	default:
+		return "", errors.New("invalid extraPicAuditingType")
+	}
+}
+
+func originalUploadBehavior(base64Image string) (string, error) {
+	// 原有的UploadBase64ImageToServer函数的实现
 	protocol := "http"
 	serverPort := config.GetPortValue()
 	if serverPort == "443" {
@@ -34,7 +54,6 @@ func UploadBase64ImageToServer(base64Image string) (string, error) {
 	}
 
 	serverDir := config.GetServer_dir()
-	// 当端口是443时，使用HTTP和444端口
 	if serverPort == "443" {
 		protocol = "http"
 		serverPort = "444"
