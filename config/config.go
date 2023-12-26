@@ -111,6 +111,21 @@ type Settings struct {
 	QrSize                 int                  `yaml:"qr_size"`
 	WhiteBypassRevers      bool                 `yaml:"white_bypass_reverse"`
 	GuildUrlImageToBase64  bool                 `yaml:"guild_url_image_to_base64"`
+	TencentBucketName      string               `yaml:"t_COS_BUCKETNAME"`
+	TencentBucketRegion    string               `yaml:"t_COS_REGION"`
+	TencentCosSecretid     string               `yaml:"t_COS_SECRETID"`
+	TencentSecretKey       string               `yaml:"t_COS_SECRETKEY"`
+	TencentAudit           bool                 `yaml:"t_audit"`
+	OssType                int                  `yaml:"oss_type"`
+	BaiduBOSBucketName     string               `yaml:"b_BOS_BUCKETNAME"`
+	BaiduBCEAK             string               `yaml:"b_BCE_AK"`
+	BaiduBCESK             string               `yaml:"b_BCE_SK"`
+	BaiduAudit             int                  `yaml:"b_audit"`
+	AliyunEndpoint         string               `yaml:"a_OSS_EndPoint"`
+	AliyunAccessKeyId      string               `yaml:"a_OSS_AccessKeyId"`
+	AliyunAccessKeySecret  string               `yaml:"a_OSS_AccessKeySecret"`
+	AliyunBucketName       string               `yaml:"a_OSS_BucketName"`
+	AliyunAudit            bool                 `yaml:"a_audit"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -1361,4 +1376,208 @@ func GetGuildUrlImageToBase64() bool {
 		return false
 	}
 	return instance.Settings.GuildUrlImageToBase64
+}
+
+// GetTencentBucketURL 获取 TencentBucketURL
+func GetTencentBucketURL() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get TencentBucketURL.")
+		return ""
+	}
+
+	bucketName := instance.Settings.TencentBucketName
+	bucketRegion := instance.Settings.TencentBucketRegion
+
+	// 构建并返回URL
+	if bucketName == "" || bucketRegion == "" {
+		mylog.Println("Warning: Tencent bucket name or region is not configured.")
+		return ""
+	}
+
+	return fmt.Sprintf("https://%s.cos.%s.myqcloud.com", bucketName, bucketRegion)
+}
+
+// GetTencentCosSecretid 获取 TencentCosSecretid
+func GetTencentCosSecretid() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get TencentCosSecretid.")
+		return ""
+	}
+	return instance.Settings.TencentCosSecretid
+}
+
+// GetTencentSecretKey 获取 TencentSecretKey
+func GetTencentSecretKey() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get TencentSecretKey.")
+		return ""
+	}
+	return instance.Settings.TencentSecretKey
+}
+
+// 获取GetTencentAudit的值
+func GetTencentAudit() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to TencentAudit value.")
+		return false
+	}
+	return instance.Settings.TencentAudit
+}
+
+// 获取 Oss 模式
+func GetOssType() int {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get ExtraPicAuditingType version.")
+		return 0
+	}
+	return instance.Settings.OssType
+}
+
+// 获取BaiduBOSBucketName
+func GetBaiduBOSBucketName() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get BaiduBOSBucketName.")
+		return ""
+	}
+	return instance.Settings.BaiduBOSBucketName
+}
+
+// 获取BaiduBCEAK
+func GetBaiduBCEAK() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get BaiduBCEAK.")
+		return ""
+	}
+	return instance.Settings.BaiduBCEAK
+}
+
+// 获取BaiduBCESK
+func GetBaiduBCESK() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get BaiduBCESK.")
+		return ""
+	}
+	return instance.Settings.BaiduBCESK
+}
+
+// 获取BaiduAudit
+func GetBaiduAudit() int {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get BaiduAudit.")
+		return 0
+	}
+	return instance.Settings.BaiduAudit
+}
+
+// 获取阿里云的oss地址 外网的
+func GetAliyunEndpoint() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get AliyunEndpoint.")
+		return ""
+	}
+	return instance.Settings.AliyunEndpoint
+}
+
+// GetRegionID 从 AliyunEndpoint 获取 regionId
+func GetRegionID() string {
+	endpoint := GetAliyunEndpoint()
+	if endpoint == "" {
+		return ""
+	}
+
+	// 去除协议头（如 "https://"）
+	endpoint = strings.TrimPrefix(endpoint, "http://")
+	endpoint = strings.TrimPrefix(endpoint, "https://")
+
+	// 将 endpoint 按照 "." 分割
+	parts := strings.Split(endpoint, ".")
+	if len(parts) >= 2 {
+		// 第一部分应该是包含 regionId 的信息（例如 "oss-cn-hangzhou"）
+		regionInfo := parts[0]
+		// 进一步提取 regionId
+		regionParts := strings.SplitN(regionInfo, "-", 3)
+		if len(regionParts) >= 3 {
+			// 返回 "cn-hangzhou" 部分
+			return regionParts[1] + "-" + regionParts[2]
+		}
+	}
+	return ""
+}
+
+// GetAliyunAccessKeyId 获取阿里云OSS的AccessKeyId
+func GetAliyunAccessKeyId() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get AliyunAccessKeyId.")
+		return ""
+	}
+	return instance.Settings.AliyunAccessKeyId
+}
+
+// GetAliyunAccessKeySecret 获取阿里云OSS的AccessKeySecret
+func GetAliyunAccessKeySecret() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get AliyunAccessKeySecret.")
+		return ""
+	}
+	return instance.Settings.AliyunAccessKeySecret
+}
+
+// GetAliyunBucketName 获取阿里云OSS的AliyunBucketName
+func GetAliyunBucketName() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get AliyunBucketName.")
+		return ""
+	}
+	return instance.Settings.AliyunBucketName
+}
+
+// 获取GetAliyunAudit的值
+func GetAliyunAudit() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to AliyunAudit value.")
+		return false
+	}
+	return instance.Settings.AliyunAudit
 }

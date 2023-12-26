@@ -554,6 +554,8 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 
 	// 在返回 messageText 时，根据 isSpecialType 判断是否需要添加原始前缀
 	if isSpecialType && matchedPrefix != nil {
+		//移除开头的*
+		originalPrefix = strings.TrimPrefix(originalPrefix, "*")
 		messageText = originalPrefix + messageText
 	}
 
