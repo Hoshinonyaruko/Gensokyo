@@ -57,8 +57,6 @@ func handleSendGroupMessage(c *gin.Context, api openapi.OpenAPI, apiV2 openapi.O
 	}
 
 	// 使用解析后的参数处理请求
-	// TODO: 添加请求处理逻辑
-	// 例如：api.SendGroupMessage(req.GroupID, req.Message, req.AutoEscape)
 	client := &HttpAPIClient{}
 	// 创建 ActionMessage 实例
 	message := callapi.ActionMessage{

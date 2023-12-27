@@ -126,6 +126,8 @@ type Settings struct {
 	AliyunAccessKeySecret  string               `yaml:"a_OSS_AccessKeySecret"`
 	AliyunBucketName       string               `yaml:"a_OSS_BucketName"`
 	AliyunAudit            bool                 `yaml:"a_audit"`
+	Alias                  []string             `yaml:"alias"`
+	SelfIntroduce          []string             `yaml:"self_introduce"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -1580,4 +1582,24 @@ func GetAliyunAudit() bool {
 		return false
 	}
 	return instance.Settings.AliyunAudit
+}
+
+// 获取Alias的值
+func GetAlias() []string {
+	mu.Lock()
+	defer mu.Unlock()
+	if instance != nil {
+		return instance.Settings.Alias
+	}
+	return nil // 返回nil，如果instance为nil
+}
+
+// 获取SelfIntroduce的值
+func GetSelfIntroduce() []string {
+	mu.Lock()
+	defer mu.Unlock()
+	if instance != nil {
+		return instance.Settings.SelfIntroduce
+	}
+	return nil // 返回nil，如果instance为nil
 }
