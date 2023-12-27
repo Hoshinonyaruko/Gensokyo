@@ -527,6 +527,20 @@ func C2CMessageEventHandler() event.C2CMessageEventHandler {
 	}
 }
 
+// GroupAddRobotEventHandler 实现处理 群机器人新增 事件的回调
+func GroupAddRobotEventHandler() event.GroupAddRobotEventHandler {
+	return func(event *dto.WSPayload, data *dto.GroupAddBotEvent) error {
+		return p.ProcessGroupAddBot(data)
+	}
+}
+
+// GroupDelRobotEventHandler 实现处理 群机器人删除 事件的回调
+func GroupDelRobotEventHandler() event.GroupDelRobotEventHandler {
+	return func(event *dto.WSPayload, data *dto.GroupAddBotEvent) error {
+		return p.ProcessGroupDelBot(data)
+	}
+}
+
 func getHandlerByName(handlerName string) (interface{}, bool) {
 	switch handlerName {
 	case "ReadyHandler": //连接成功
@@ -554,6 +568,10 @@ func getHandlerByName(handlerName string) (interface{}, bool) {
 		return GroupATMessageEventHandler(), true
 	case "C2CMessageEventHandler": //群私聊
 		return C2CMessageEventHandler(), true
+	case "GroupAddRobotEventHandler": //群私聊
+		return GroupAddRobotEventHandler(), true
+	case "GroupDelRobotEventHandler": //群私聊
+		return GroupDelRobotEventHandler(), true
 	default:
 		log.Printf("Unknown handler: %s\n", handlerName)
 		return nil, false

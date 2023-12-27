@@ -40,6 +40,8 @@ const (
 	EventInteractionCreate     EventType = "INTERACTION_CREATE"
 	EventGroupAtMessageCreate  EventType = "GROUP_AT_MESSAGE_CREATE"
 	EventC2CMessageCreate      EventType = "C2C_MESSAGE_CREATE"
+	EventGroupAddRobot         EventType = "GROUP_ADD_ROBOT"
+	EventGroupDelRobot         EventType = "GROUP_DEL_ROBOT"
 )
 
 // intentEventMap 不同 intent 对应的事件定义
@@ -50,7 +52,7 @@ var intentEventMap = map[Intent][]EventType{
 	},
 	IntentGuildMembers:  {EventGuildMemberAdd, EventGuildMemberUpdate, EventGuildMemberRemove},
 	IntentGuildMessages: {EventMessageCreate, EventMessageDelete},
-	IntentGroupMessages: {EventGroupAtMessageCreate, EventC2CMessageCreate},
+	IntentGroupMessages: {EventGroupAtMessageCreate, EventC2CMessageCreate, EventGroupAddRobot, EventGroupDelRobot},
 
 	IntentGuildMessageReactions: {EventMessageReactionAdd, EventMessageReactionRemove},
 	IntentGuildAtMessage:        {EventAtMessageCreate, EventPublicMessageDelete},

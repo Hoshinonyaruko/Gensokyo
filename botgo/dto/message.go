@@ -43,6 +43,13 @@ type Message struct {
 	Ret int `json:"ret,omitempty"`
 }
 
+// GroupAddBotEvent 表示群添加机器人事件的数据结构
+type GroupAddBotEvent struct {
+	GroupOpenID    string `json:"group_openid"`
+	OpMemberOpenID string `json:"op_member_openid"`
+	Timestamp      int64  `json:"timestamp"`
+}
+
 type MediaResponse struct {
 	//UUID
 	FileUUID string `json:"file_uuid"`

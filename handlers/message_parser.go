@@ -338,6 +338,7 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 		//处理前 先去前后空
 		messageText = strings.TrimSpace(msg.Content)
 	}
+	//mylog.Printf("1[%v]", messageText)
 
 	// 将messageText里的BotID替换成AppID
 	messageText = strings.ReplaceAll(messageText, BotID, AppID)
@@ -380,6 +381,7 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 			messageText = strings.TrimSpace(messageText)
 		}
 	}
+	//mylog.Printf("2[%v]", messageText)
 
 	// 检查是否需要移除前缀
 	if config.GetRemovePrefixValue() {
@@ -449,7 +451,7 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 			}
 		}
 	}
-
+	//mylog.Printf("3[%v]", messageText)
 	//检查是否启用黑名单模式
 	if config.GetBlackPrefixMode() {
 		// 获取黑名单数组
@@ -486,15 +488,21 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 			}
 			// 检查 messageText 的长度是否大于 prefix 的长度
 			if len(messageText) > len(vp.Prefix) {
-				// 移除找到的前缀
-				messageText = strings.TrimPrefix(messageText, vp.Prefix)
-				messageText = strings.TrimSpace(messageText)
-				matchedPrefix = &vp
+				// 移除找到的前缀 且messageText不为空格
+				if messageText != " " {
+					messageText = strings.TrimPrefix(messageText, vp.Prefix)
+					messageText = strings.TrimSpace(messageText)
+					matchedPrefix = &vp
+				}
 				break // 只移除第一个匹配的前缀
 			}
 		}
 	}
 
+	// 已经完成了移除前缀等操作,进行aliases替换
+	aliases := config.GetAlias()
+	messageText = processMessageText(messageText, aliases)
+	//mylog.Printf("4[%v]", messageText)
 	// 检查是否启用白名单模式
 	if config.GetWhitePrefixMode() && matchedPrefix != nil {
 		// 获取白名单反转标志
@@ -558,7 +566,7 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 		originalPrefix = strings.TrimPrefix(originalPrefix, "*")
 		messageText = originalPrefix + messageText
 	}
-
+	//mylog.Printf("5[%v]", messageText)
 	// 如果未启用白名单模式或没有匹配的虚拟前缀，执行默认逻辑
 
 	// 处理图片附件
@@ -580,7 +588,26 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 			messageText += imageCQ
 		}
 	}
+	//mylog.Printf("6[%v]", messageText)
+	return messageText
+}
 
+// replaceFirstOccurrence 替换字符串中的第一个匹配项
+func replaceFirstOccurrence(s, old, new string) string {
+	if idx := strings.Index(s, old); idx != -1 {
+		return s[:idx] + new + s[idx+len(old):]
+	}
+	return s
+}
+
+// processMessageText 处理消息文本
+func processMessageText(messageText string, aliases []string) string {
+	for i := 0; i < len(aliases); i += 2 {
+		// 确保别名数组中有成对的元素
+		if i+1 < len(aliases) {
+			messageText = replaceFirstOccurrence(messageText, aliases[i], aliases[i+1])
+		}
+	}
 	return messageText
 }
 
