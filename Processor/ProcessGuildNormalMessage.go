@@ -245,7 +245,6 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 			switch role {
 			case "4":
 				channelRoleName = "owner" //群主/创建者为4
-				break
 			case "2":
 				channelRoleName = "admin" //管理员（超级管理员）为2
 			}

@@ -34,6 +34,8 @@ var DefaultHandlers struct {
 
 	GroupATMessage GroupATMessageEventHandler
 	C2CMessage     C2CMessageEventHandler
+	GroupAddbot    GroupAddRobotEventHandler
+	GroupDelbot    GroupDelRobotEventHandler
 }
 
 // ReadyHandler 可以处理 ws 的 ready 事件
@@ -105,6 +107,12 @@ type GroupATMessageEventHandler func(event *dto.WSPayload, data *dto.WSGroupATMe
 // C2CMessageEventHandler 机器人消息事件 handler
 type C2CMessageEventHandler func(event *dto.WSPayload, data *dto.WSC2CMessageData) error
 
+// GroupAddRobot 机器人新增事件 handler
+type GroupAddRobotEventHandler func(event *dto.WSPayload, data *dto.GroupAddBotEvent) error
+
+// GroupDelRobot 机器人删除事件 handler
+type GroupDelRobotEventHandler func(event *dto.WSPayload, data *dto.GroupAddBotEvent) error
+
 // ************************************************
 
 // RegisterHandlers 注册事件回调，并返回 intent 用于 websocket 的鉴权
@@ -127,6 +135,10 @@ func RegisterHandlers(handlers ...interface{}) dto.Intent {
 		case InteractionEventHandler:
 			DefaultHandlers.Interaction = handle
 			i = i | dto.EventToIntent(dto.EventInteractionCreate)
+		case GroupAddRobotEventHandler:
+			DefaultHandlers.GroupAddbot = handle
+		case GroupDelRobotEventHandler:
+			DefaultHandlers.GroupDelbot = handle
 		default:
 		}
 	}
