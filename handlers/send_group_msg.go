@@ -165,6 +165,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		if config.GetDevMsgID() {
 			messageID = "1000"
 		}
+		mylog.Printf("群组发信息使用messageID:[%v]", messageID)
 		var singleItem = make(map[string][]string)
 		var imageType, imageUrl string
 		imageCount := 0
