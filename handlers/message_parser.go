@@ -42,11 +42,11 @@ type ServerResponse struct {
 	Echo    interface{} `json:"echo"`
 }
 
-// 发送成功回执 todo 返回可互转的messageid
+// 发送成功回执 todo 返回可互转的messageid 实现频道撤回api
 func SendResponse(client callapi.Client, err error, message *callapi.ActionMessage) (string, error) {
 	// 设置响应值
 	response := ServerResponse{}
-	response.Data.MessageID = 0 // todo 实现messageid转换
+	response.Data.MessageID = 123 // todo 实现messageid转换
 	response.Echo = message.Echo
 	if err != nil {
 		response.Message = err.Error() // 可选：在响应中添加错误消息
