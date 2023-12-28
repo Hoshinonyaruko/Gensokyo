@@ -130,6 +130,7 @@ func (p *Processors) ProcessGroupAddBot(data *dto.GroupAddBotEvent) error {
 		Action: "send_group_msg",
 		Params: callapi.ParamsContent{
 			GroupID: strconv.FormatInt(GroupID64, 10), // 转换 GroupID 类型
+			UserID:  strconv.FormatInt(userid64, 10),
 			Message: selectedIntro,
 		},
 	}

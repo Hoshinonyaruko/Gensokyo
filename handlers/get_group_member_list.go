@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
@@ -53,7 +54,7 @@ func GetGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 
 	switch msgType {
 	case "group":
-		mylog.Printf("getGroupMemberList(group): 开始从本地获取群成员列表")
+		mylog.Printf("getGroupMemberList(group): 开始从本地获取群成员列表(请在config打开idmap-pro以缓存群成员列表)")
 		// 实现的功能
 		var members []MemberList
 
@@ -138,6 +139,69 @@ func GetGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		if err != nil {
 			mylog.Printf("Failed to fetch group members for guild %s: %v", value, err)
 			return "", nil
+		}
+		// 检查是否是 11253 错误
+		if err != nil && strings.Contains(err.Error(), `"code":11253`) {
+			mylog.Printf("getGroupMemberList(guild): 开始从本地获取频道成员列表(请在config打开idmap-pro以缓存频道成员列表)")
+			// 实现的功能
+			var members []MemberList
+
+			// 使用 message.Params.GroupID.(string) 作为 id 来调用 FindSubKeysById
+			userIDs, err := idmap.FindSubKeysById(message.Params.GroupID.(string))
+			if err != nil {
+				mylog.Printf("Error retrieving user IDs: %v", err)
+				return "", nil // 或者处理错误
+			}
+
+			// 获取当前时间的前一天，并转换为10位时间戳
+			yesterday := time.Now().AddDate(0, 0, -1).Unix()
+
+			for _, userID := range userIDs {
+				userIDInt, err := strconv.ParseInt(userID, 10, 64)
+				if err != nil {
+					mylog.Printf("Error ParseInt162: %v", err)
+				}
+				groupIDInt, err := strconv.ParseInt(message.Params.GroupID.(string), 10, 64)
+				if err != nil {
+					mylog.Printf("Error ParseInt166: %v", err)
+				}
+				joinTimeInt := int32(yesterday)
+				member := MemberList{
+					UserID:          userIDInt,
+					GroupID:         groupIDInt,
+					Nickname:        "主人",
+					Card:            "主人",
+					Sex:             "0",
+					Age:             0,
+					Area:            "0",
+					JoinTime:        joinTimeInt,
+					LastSentTime:    0,
+					Level:           "0",
+					Role:            "member",
+					Unfriendly:      false,
+					Title:           "0",
+					TitleExpireTime: 0,
+					CardChangeable:  false,
+					ShutUpTimestamp: 0,
+				}
+				members = append(members, member)
+			}
+			mylog.Printf("member message.Echors: %+v\n", message.Echo)
+
+			responseJSON := buildResponse(members, message.Echo)
+			mylog.Printf("getGroupMemberList(频道): %s\n", responseJSON)
+
+			err = client.SendMessage(responseJSON)
+			if err != nil {
+				mylog.Printf("Error sending message via client: %v", err)
+			}
+			result, err := ConvertMapToJSONString(responseJSON)
+			if err != nil {
+				mylog.Printf("Error marshaling data: %v", err)
+				//todo 符合onebotv11 ws返回的错误码
+				return "", nil
+			}
+			return string(result), nil
 		}
 
 		// mylog.Println("Number of members in membersFromAPI:", len(membersFromAPI))
