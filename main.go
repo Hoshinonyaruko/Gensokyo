@@ -295,6 +295,7 @@ func main() {
 	}
 	r.GET("/getid", server.GetIDHandler)
 	r.GET("/updateport", server.HandleIpupdate)
+	r.POST("/delpic", server.DeleteImageHandler(rateLimiter))
 	r.POST("/uploadpic", server.UploadBase64ImageHandler(rateLimiter))
 	r.POST("/uploadrecord", server.UploadBase64RecordHandler(rateLimiter))
 	r.Static("/channel_temp", "./channel_temp")
