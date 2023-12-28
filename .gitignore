@@ -18,5 +18,8 @@ log/
 # ignore dist
 webui/dist/
 
-#ignore data
+# ignore data
 data/
+
+# ingore idea
+.idea/
