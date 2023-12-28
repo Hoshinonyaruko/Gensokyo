@@ -55,10 +55,10 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 	var ret *dto.GroupMessageResponse
 	var retmsg string
 
-	if message.Params.UserID != "" {
-		idInt64, err = ConvertToInt64(message.Params.UserID)
-	} else if message.Params.GroupID != "" {
+	if message.Params.GroupID != "" {
 		idInt64, err = ConvertToInt64(message.Params.GroupID)
+	} else if message.Params.UserID != "" {
+		idInt64, err = ConvertToInt64(message.Params.UserID)
 	}
 
 	//设置递归 对直接向gsk发送action时有效果
