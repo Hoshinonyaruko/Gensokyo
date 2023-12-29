@@ -309,7 +309,7 @@ func createCQImageMessage(base64Image string) string {
 }
 
 // 处理at和其他定形文到onebotv11格式(cq码)
-func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI, apiv2 openapi.OpenAPI, vgid int64, vuid int64) string {
+func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI, apiv2 openapi.OpenAPI, vgid int64, vuid int64, whitenable bool) string {
 	var msg *dto.Message
 	var menumsg bool
 	var messageText string
@@ -392,7 +392,7 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 	}
 
 	// 检查是否启用白名单模式
-	if config.GetWhitePrefixMode() {
+	if config.GetWhitePrefixMode() && whitenable {
 		// 获取白名单反转标志
 		whiteBypassRevers := config.GetWhiteBypassRevers()
 
