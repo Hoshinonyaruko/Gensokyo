@@ -128,6 +128,7 @@ type Settings struct {
 	AliyunAudit            bool                 `yaml:"a_audit"`
 	Alias                  []string             `yaml:"alias"`
 	SelfIntroduce          []string             `yaml:"self_introduce"`
+	WhiteEnable            []bool               `yaml:"white_enable"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -1602,4 +1603,26 @@ func GetSelfIntroduce() []string {
 		return instance.Settings.SelfIntroduce
 	}
 	return nil // 返回nil，如果instance为nil
+}
+
+// 获取WhiteEnable的值
+func GetWhiteEnable(index int) bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	// 检查instance或instance.Settings.WhiteEnable是否为nil
+	if instance == nil || instance.Settings.WhiteEnable == nil {
+		return true // 如果为nil，返回默认值true
+	}
+
+	// 调整索引以符合从0开始的数组索引
+	adjustedIndex := index - 1
+
+	// 检查索引是否在数组范围内
+	if adjustedIndex >= 0 && adjustedIndex < len(instance.Settings.WhiteEnable) {
+		return instance.Settings.WhiteEnable[adjustedIndex]
+	}
+
+	// 如果索引超出范围，返回默认值true
+	return true
 }

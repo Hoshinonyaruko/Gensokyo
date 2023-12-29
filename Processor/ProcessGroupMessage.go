@@ -62,7 +62,7 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 		}
 	}
 	// 转换at
-	messageText := handlers.RevertTransformedText(data, "group", p.Api, p.Apiv2, GroupID64, userid64)
+	messageText := handlers.RevertTransformedText(data, "group", p.Api, p.Apiv2, GroupID64, userid64, config.GetWhiteEnable(4))
 	if messageText == "" {
 		mylog.Printf("信息被自定义黑白名单拦截")
 		return nil
