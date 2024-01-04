@@ -71,18 +71,16 @@ func HandleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 		//用GroupID给ChannelID赋值,因为我们是把频道虚拟成了群
 		message.Params.ChannelID = message.Params.GroupID.(string)
 		var RChannelID string
-		if config.GetIdmapPro() {
-			// 使用RetrieveRowByIDv2还原真实的ChannelID
+		if message.Params.UserID != nil && config.GetIdmapPro() {
 			RChannelID, _, err = idmap.RetrieveRowByIDv2Pro(message.Params.ChannelID, message.Params.UserID.(string))
-			if err != nil {
-				mylog.Printf("error retrieving real RChannelID: %v", err)
-			}
-		} else {
+			mylog.Printf("测试,通过Proid获取的RChannelID:%v", RChannelID)
+		}
+		if RChannelID == "" {
 			// 使用RetrieveRowByIDv2还原真实的ChannelID
 			RChannelID, err = idmap.RetrieveRowByIDv2(message.Params.ChannelID)
-			if err != nil {
-				mylog.Printf("error retrieving real RChannelID: %v", err)
-			}
+		}
+		if err != nil {
+			mylog.Printf("error retrieving real RChannelID: %v", err)
 		}
 		message.Params.ChannelID = RChannelID
 		retmsg, _ = HandleSendGuildChannelMsg(client, api, apiv2, message)
