@@ -77,6 +77,7 @@ func (p *Processors) ProcessGroupAddBot(data *dto.GroupAddBotEvent) error {
 			return nil
 		}
 	}
+  
 	var timestampInt64 int64
 	switch v := data.Timestamp.(type) {
 	case string:
