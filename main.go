@@ -345,6 +345,30 @@ func main() {
 			c.Header("Content-Type", "application/json")
 			c.String(200, content)
 		})
+
+		// 调用 config.GetIdentifyAppids 获取 appid 数组
+		identifyAppids := config.GetIdentifyAppids()
+
+		// 如果 identifyAppids 不是 nil 且有多个元素
+		if len(identifyAppids) > 1 {
+			// 从数组中去除 config.GetAppID() 来避免重复
+			var filteredAppids []int64
+			for _, appid := range identifyAppids {
+				if appid != int64(config.GetAppID()) {
+					filteredAppids = append(filteredAppids, appid)
+				}
+			}
+
+			// 为每个 appid 设置路由
+			for _, appid := range filteredAppids {
+				fileName := fmt.Sprintf("%d.json", appid)
+				r.GET("/"+fileName, func(c *gin.Context) {
+					content := fmt.Sprintf(`{"bot_appid":%d}`, appid)
+					c.Header("Content-Type", "application/json")
+					c.String(200, content)
+				})
+			}
+		}
 	}
 	// 创建一个http.Server实例（主服务器）
 	httpServer := &http.Server{
