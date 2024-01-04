@@ -45,9 +45,9 @@ type Message struct {
 
 // GroupAddBotEvent 表示群添加机器人事件的数据结构
 type GroupAddBotEvent struct {
-	GroupOpenID    string `json:"group_openid"`
-	OpMemberOpenID string `json:"op_member_openid"`
-	Timestamp      int64  `json:"timestamp"`
+	GroupOpenID    string      `json:"group_openid"`
+	OpMemberOpenID string      `json:"op_member_openid"`
+	Timestamp      interface{} `json:"timestamp"`
 }
 
 type MediaResponse struct {
