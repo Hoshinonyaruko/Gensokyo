@@ -129,6 +129,7 @@ type Settings struct {
 	Alias                  []string             `yaml:"alias"`
 	SelfIntroduce          []string             `yaml:"self_introduce"`
 	WhiteEnable            []bool               `yaml:"white_enable"`
+	IdentifyAppids         []int64              `yaml:"identify_appids"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -1625,4 +1626,14 @@ func GetWhiteEnable(index int) bool {
 
 	// 如果索引超出范围，返回默认值true
 	return true
+}
+
+// 获取IdentifyAppids的值
+func GetIdentifyAppids() []int64 {
+	mu.Lock()
+	defer mu.Unlock()
+	if instance != nil {
+		return instance.Settings.IdentifyAppids
+	}
+	return nil // 返回nil，如果instance为nil
 }
