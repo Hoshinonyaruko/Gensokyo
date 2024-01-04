@@ -2,6 +2,8 @@
 package Processor
 
 import (
+	"strconv"
+
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
@@ -31,6 +33,24 @@ func (p *Processors) ProcessGroupDelBot(data *dto.GroupAddBotEvent) error {
 			return nil
 		}
 	}
+
+	var timestampInt64 int64
+	switch v := data.Timestamp.(type) {
+	case string:
+		timestampInt64, err = strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			mylog.Printf("Error converting timestamp string to int64: %v", err)
+			return nil
+		}
+	case int64:
+		timestampInt64 = v
+	case float64:
+		timestampInt64 = int64(v)
+	default:
+		mylog.Printf("Invalid type for timestamp: %T", v)
+		return nil
+	}
+
 	mylog.Printf("Bot被[%v]从群[%v]移出", userid64, GroupID64)
 	Notice = GroupNoticeEvent{
 		GroupID:    GroupID64,
@@ -39,7 +59,7 @@ func (p *Processors) ProcessGroupDelBot(data *dto.GroupAddBotEvent) error {
 		PostType:   "notice",
 		SelfID:     int64(config.GetAppID()),
 		SubType:    "kick_me",
-		Time:       data.Timestamp,
+		Time:       timestampInt64,
 		UserID:     userid64,
 	}
 	groupMsgMap := structToMap(Notice)

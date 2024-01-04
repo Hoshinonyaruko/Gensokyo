@@ -77,6 +77,24 @@ func (p *Processors) ProcessGroupAddBot(data *dto.GroupAddBotEvent) error {
 			return nil
 		}
 	}
+  
+	var timestampInt64 int64
+	switch v := data.Timestamp.(type) {
+	case string:
+		timestampInt64, err = strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			mylog.Printf("Error converting timestamp string to int64: %v", err)
+			return nil
+		}
+	case int64:
+		timestampInt64 = v
+	case float64:
+		timestampInt64 = int64(v)
+	default:
+		mylog.Printf("Invalid type for timestamp: %T", v)
+		return nil
+	}
+
 	mylog.Printf("Bot被[%v]邀请进入群[%v]", userid64, GroupID64)
 	Request = GroupRequestEvent{
 		Comment:     "",
@@ -86,7 +104,7 @@ func (p *Processors) ProcessGroupAddBot(data *dto.GroupAddBotEvent) error {
 		RequestType: "group",
 		SelfID:      int64(config.GetAppID()),
 		SubType:     "invite",
-		Time:        data.Timestamp,
+		Time:        timestampInt64,
 		UserID:      userid64,
 	}
 	Notice = GroupNoticeEvent{
@@ -96,7 +114,7 @@ func (p *Processors) ProcessGroupAddBot(data *dto.GroupAddBotEvent) error {
 		PostType:   "notice",
 		SelfID:     int64(config.GetAppID()),
 		SubType:    "invite",
-		Time:       data.Timestamp,
+		Time:       timestampInt64,
 		UserID:     userid64,
 	}
 	groupMsgMap := structToMap(Request)
