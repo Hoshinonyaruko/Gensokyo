@@ -350,7 +350,7 @@ func main() {
 		identifyAppids := config.GetIdentifyAppids()
 
 		// 如果 identifyAppids 不是 nil 且有多个元素
-		if len(identifyAppids) > 1 {
+		if len(identifyAppids) >= 1 {
 			// 从数组中去除 config.GetAppID() 来避免重复
 			var filteredAppids []int64
 			for _, appid := range identifyAppids {
