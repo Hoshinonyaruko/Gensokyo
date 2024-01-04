@@ -33,7 +33,6 @@ func (p *Processors) ProcessGroupDelBot(data *dto.GroupAddBotEvent) error {
 			return nil
 		}
 	}
-
 	var timestampInt64 int64
 	switch v := data.Timestamp.(type) {
 	case string:
@@ -50,7 +49,6 @@ func (p *Processors) ProcessGroupDelBot(data *dto.GroupAddBotEvent) error {
 		mylog.Printf("Invalid type for timestamp: %T", v)
 		return nil
 	}
-
 	mylog.Printf("Bot被[%v]从群[%v]移出", userid64, GroupID64)
 	Notice = GroupNoticeEvent{
 		GroupID:    GroupID64,

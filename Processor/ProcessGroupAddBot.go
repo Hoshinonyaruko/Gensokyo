@@ -77,7 +77,6 @@ func (p *Processors) ProcessGroupAddBot(data *dto.GroupAddBotEvent) error {
 			return nil
 		}
 	}
-  
 	var timestampInt64 int64
 	switch v := data.Timestamp.(type) {
 	case string:
@@ -94,7 +93,7 @@ func (p *Processors) ProcessGroupAddBot(data *dto.GroupAddBotEvent) error {
 		mylog.Printf("Invalid type for timestamp: %T", v)
 		return nil
 	}
-
+  
 	mylog.Printf("Bot被[%v]邀请进入群[%v]", userid64, GroupID64)
 	Request = GroupRequestEvent{
 		Comment:     "",
