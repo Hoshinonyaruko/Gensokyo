@@ -1145,6 +1145,58 @@ func FindSubKeysById(id string) ([]string, error) {
 	return subKeys, nil
 }
 
+// FindSubKeysByIdPro 根据1个值获取key中的k:v给出k获取所有v，通过网络调用
+func FindSubKeysByIdPro(id string) ([]string, error) {
+	if config.GetLotusValue() {
+		// 使用网络请求方式
+		serverDir := config.GetServer_dir()
+		portValue := config.GetPortValue()
+
+		// 根据portValue确定协议
+		protocol := "http"
+		if portValue == "443" {
+			protocol = "https"
+		}
+
+		// 构建请求URL
+		url := fmt.Sprintf("%s://%s:%s/getid?type=14&id=%s", protocol, serverDir, portValue, id)
+		resp, err := http.Get(url)
+		if err != nil {
+			return nil, fmt.Errorf("failed to send request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		// 解析响应
+		var response map[string]interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+			return nil, fmt.Errorf("failed to decode response: %v", err)
+		}
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("error response from server: %s", response["error"])
+		}
+
+		keys, ok := response["keys"].([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("invalid response format for keys")
+		}
+
+		// 将interface{}类型的keys转换为[]string
+		var resultKeys []string
+		for _, key := range keys {
+			if strKey, ok := key.(string); ok {
+				resultKeys = append(resultKeys, strKey)
+			} else {
+				return nil, fmt.Errorf("invalid key format in response")
+			}
+		}
+
+		return resultKeys, nil
+	}
+
+	// 如果lotus为假，调用本地函数
+	return FindSubKeysById(id)
+}
+
 // 场景: xxx:yyy zzz:bbb  zzz:bbb xxx:yyy 把xxx(id)替换为newID 比如更换群号(会卡住)
 func UpdateKeysWithNewID(id, newID string) error {
 	return db.Update(func(tx *bolt.Tx) error {
