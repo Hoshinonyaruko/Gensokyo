@@ -243,6 +243,7 @@ func (p *Processors) BroadcastMessageToAll(message map[string]interface{}) error
 
 	// 发送到我们作为客户端的Wsclient
 	for _, client := range p.Wsclient {
+		//mylog.Printf("第%v个Wsclient", test)
 		err := client.SendMessage(message)
 		if err != nil {
 			errors = append(errors, fmt.Sprintf("error sending private message via wsclient: %v", err))

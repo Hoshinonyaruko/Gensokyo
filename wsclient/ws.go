@@ -42,9 +42,6 @@ func (c *WebSocketClient) SendMessage(message map[string]interface{}) error {
 	err = c.conn.WriteMessage(websocket.TextMessage, msgBytes)
 	if err != nil {
 		mylog.Println("Error sending message:", err)
-		// if !c.isReconnecting {
-		// 	go c.Reconnect()
-		// }
 		// 发送失败，将消息放入channel
 		go func() {
 			c.sendFailures <- message
@@ -94,16 +91,15 @@ func (client *WebSocketClient) Reconnect() {
 	reconnecttimes := config.GetReconnecTimes()
 	newClient, err := NewWebSocketClient(client.urlStr, client.botID, client.api, client.apiv2, reconnecttimes)
 	if err == nil && newClient != nil {
-		client.mutex.Lock()        // 在替换连接之前锁定
-		oldCancel := client.cancel // 保存旧的取消函数
+		client.mutex.Lock() // 在替换连接之前锁定
+		client.cancel()     // 退出旧的连接
 		client.conn = newClient.conn
 		client.api = newClient.api
 		client.apiv2 = newClient.apiv2
-		oldCancel()                      // 停止所有相关的旧协程
 		client.cancel = newClient.cancel // 更新取消函数
 		client.mutex.Unlock()
 		// 重发失败的消息
-		go newClient.processFailedMessages(oldSendFailures)
+		newClient.processFailedMessages(oldSendFailures)
 		mylog.Println("Successfully reconnected to WebSocket.")
 		return
 	}

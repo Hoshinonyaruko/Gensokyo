@@ -130,6 +130,7 @@ type Settings struct {
 	SelfIntroduce          []string             `yaml:"self_introduce"`
 	WhiteEnable            []bool               `yaml:"white_enable"`
 	IdentifyAppids         []int64              `yaml:"identify_appids"`
+	TransFormApiIds        bool                 `yaml:"transform_api_ids"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -1636,4 +1637,16 @@ func GetIdentifyAppids() []int64 {
 		return instance.Settings.IdentifyAppids
 	}
 	return nil // 返回nil，如果instance为nil
+}
+
+// 获取 TransFormApiIds 的值
+func GetTransFormApiIds() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to TransFormApiIds value.")
+		return false
+	}
+	return instance.Settings.TransFormApiIds
 }
