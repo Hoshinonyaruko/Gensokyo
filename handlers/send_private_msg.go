@@ -68,7 +68,7 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 	}
 
 	switch msgType {
-	case "group_private":
+	case "group_private","group":
 		//私聊信息
 		var UserID string
 		if config.GetIdmapPro() {
@@ -266,7 +266,7 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 				retmsg, _ = SendResponse(client, err, &message)
 			}
 		}
-	case "guild_private":
+	case "guild_private","guild":
 		//当收到发私信调用 并且来源是频道
 		retmsg, _ = HandleSendGuildChannelPrivateMsg(client, api, apiv2, message, nil, nil)
 	default:
