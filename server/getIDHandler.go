@@ -214,6 +214,15 @@ func GetIDHandler(c *gin.Context) {
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"row": newRow})
+	case 14:
+		id := c.Query("id")
+		keys, err := idmap.FindSubKeysByIdPro(id)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"keys": keys})
 	}
 
 }
