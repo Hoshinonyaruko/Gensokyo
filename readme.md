@@ -40,6 +40,9 @@ _✨ 基于 [OneBot](https://github.com/howmanybots/onebot/blob/master/README.md
   ·
   <a href="https://github.com/hoshinonyaruko/gensokyo/blob/master/CONTRIBUTING.md">参与贡献</a>
 </p>
+<p align="center">
+  <a href="https://gensokyo.bot">项目主页:gensokyo.bot</a>
+</p>
 
 ## 引用
 - [`tencent-connect/botgo`](https://github.com/tencent-connect/botgo): 本项目引用了此项目,并做了一点改动.
