@@ -25,26 +25,18 @@ func HandleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 		// 当 message.Echo 是字符串类型时执行此块
 		msgType = echo.GetMsgTypeByKey(echoStr)
 	}
-	//如果获取不到 就用group_id获取信息类型
 	if msgType == "" {
 		msgType = GetMessageTypeByGroupid(config.GetAppIDStr(), message.Params.GroupID)
 	}
-	mylog.Printf("测试1:%v", msgType)
-	//如果获取不到 就用user_id获取信息类型
 	if msgType == "" {
 		msgType = GetMessageTypeByUserid(config.GetAppIDStr(), message.Params.UserID)
 	}
-	mylog.Printf("测试2:%v", msgType)
-	//顺序有讲究
 	if msgType == "" {
 		msgType = GetMessageTypeByGroupidV2(message.Params.GroupID)
 	}
-	mylog.Printf("测试3:%v", msgType)
-	//新增 内存获取不到从数据库获取
 	if msgType == "" {
 		msgType = GetMessageTypeByUseridV2(message.Params.UserID)
 	}
-	mylog.Printf("测试4:%v", msgType)
 
 	var idInt64, idInt642 int64
 	var err error
