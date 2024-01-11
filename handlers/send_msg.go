@@ -41,7 +41,7 @@ func HandleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 	if msgType == "" {
 		msgType = GetMessageTypeByUseridV2(message.Params.UserID)
 	}
-
+  
 	var idInt64, idInt642 int64
 	var err error
 
