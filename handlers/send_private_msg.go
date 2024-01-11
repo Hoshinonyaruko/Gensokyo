@@ -29,13 +29,13 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		msgType = echo.GetMsgTypeByKey(echoStr)
 	}
 
-	//如果获取不到 就用group_id获取信息类型
-	if msgType == "" {
-		msgType = GetMessageTypeByGroupid(config.GetAppIDStr(), message.Params.GroupID)
-	}
 	//如果获取不到 就用user_id获取信息类型
 	if msgType == "" {
 		msgType = GetMessageTypeByUserid(config.GetAppIDStr(), message.Params.UserID)
+	}
+	//顺序,私聊优先从UserID推断类型会更准确
+	if msgType == "" {
+		msgType = GetMessageTypeByGroupid(config.GetAppIDStr(), message.Params.GroupID)
 	}
 	//新增 内存获取不到从数据库获取
 	if msgType == "" {
@@ -68,7 +68,7 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 	}
 
 	switch msgType {
-	case "group_private","group":
+	case "group_private", "group":
 		//私聊信息
 		var UserID string
 		if config.GetIdmapPro() {
@@ -266,7 +266,7 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 				retmsg, _ = SendResponse(client, err, &message)
 			}
 		}
-	case "guild_private","guild":
+	case "guild_private", "guild":
 		//当收到发私信调用 并且来源是频道
 		retmsg, _ = HandleSendGuildChannelPrivateMsg(client, api, apiv2, message, nil, nil)
 	default:
