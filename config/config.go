@@ -131,6 +131,8 @@ type Settings struct {
 	WhiteEnable            []bool               `yaml:"white_enable"`
 	IdentifyAppids         []int64              `yaml:"identify_appids"`
 	TransFormApiIds        bool                 `yaml:"transform_api_ids"`
+	CustomTemplateID       string               `yaml:"custom_template_id"`
+	KeyBoardID             string               `yaml:"keyboard_id"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -1649,4 +1651,28 @@ func GetTransFormApiIds() bool {
 		return false
 	}
 	return instance.Settings.TransFormApiIds
+}
+
+// 获取 CustomTemplateID 的值
+func GetCustomTemplateID() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get CustomTemplateID.")
+		return ""
+	}
+	return instance.Settings.CustomTemplateID
+}
+
+// 获取 KeyBoardIDD 的值
+func GetKeyBoardID() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get KeyBoardID.")
+		return ""
+	}
+	return instance.Settings.KeyBoardID
 }
