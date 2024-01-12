@@ -135,6 +135,8 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 	// 根据条件判断是否添加Echo字段
 	if config.GetTwoWayEcho() {
 		groupMsg.Echo = echostr
+		//用向应用端(如果支持)发送echo,来确定客户端的send_msg对应的触发词原文
+		echo.AddMsgIDv3(AppIDString, echostr, messageText)
 	}
 	// 获取MasterID数组
 	masterIDs := config.GetMasterID()

@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
@@ -18,6 +20,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/hoshinonyaruko/gensokyo/silk"
 	"github.com/tencent-connect/botgo/dto"
+	"github.com/tencent-connect/botgo/dto/keyboard"
 	"github.com/tencent-connect/botgo/openapi"
 )
 
@@ -33,21 +36,17 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		// 当 message.Echo 是字符串类型时执行此块
 		msgType = echo.GetMsgTypeByKey(echoStr)
 	}
-	//如果获取不到 就用user_id获取信息类型
-	if msgType == "" {
-		msgType = GetMessageTypeByUserid(config.GetAppIDStr(), message.Params.UserID)
-	}
-
-	//如果获取不到 就用group_id获取信息类型
 	if msgType == "" {
 		msgType = GetMessageTypeByGroupid(config.GetAppIDStr(), message.Params.GroupID)
 	}
-	//新增 内存获取不到从数据库获取
 	if msgType == "" {
-		msgType = GetMessageTypeByUseridV2(message.Params.UserID)
+		msgType = GetMessageTypeByUserid(config.GetAppIDStr(), message.Params.UserID)
 	}
 	if msgType == "" {
 		msgType = GetMessageTypeByGroupidV2(message.Params.GroupID)
+	}
+	if msgType == "" {
+		msgType = GetMessageTypeByUseridV2(message.Params.UserID)
 	}
 	mylog.Printf("send_group_msg获取到信息类型:%v", msgType)
 	var idInt64 int64
@@ -202,26 +201,52 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				mylog.Printf("Error: Expected RichMediaMessage type for key ")
 				return "", nil
 			}
-			// 上传图片并获取FileInfo
-			fileInfo, err := uploadMedia(context.TODO(), message.Params.GroupID.(string), richMediaMessage, apiv2)
-			if err != nil {
-				mylog.Printf("上传图片失败: %v", err)
-				return "", nil // 或其他错误处理
+			var groupMessage *dto.MessageToCreate
+			var transmd bool
+			var md *dto.Markdown
+			var kb *keyboard.MessageKeyboard
+			//判断是否需要自动转换md
+			if config.GetTwoWayEcho() {
+				md, kb, transmd = auto_md(message, messageText, richMediaMessage)
 			}
-			// 创建包含文本和图像信息的消息
-			msgseq = echo.GetMappingSeq(messageID)
-			echo.AddMappingSeq(messageID, msgseq+1)
-			groupMessage := &dto.MessageToCreate{
-				Content: messageText, // 添加文本内容
-				Media: dto.Media{
-					FileInfo: fileInfo, // 添加图像信息
-				},
-				MsgID:   messageID,
-				MsgSeq:  msgseq,
-				MsgType: 7, // 假设7是组合消息类型
-			}
-			groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
 
+			//如果没有转换成md发送
+			if !transmd {
+				// 上传图片并获取FileInfo
+				fileInfo, err := uploadMedia(context.TODO(), message.Params.GroupID.(string), richMediaMessage, apiv2)
+				if err != nil {
+					mylog.Printf("上传图片失败: %v", err)
+					return "", nil // 或其他错误处理
+				}
+				// 创建包含文本和图像信息的消息
+				msgseq = echo.GetMappingSeq(messageID)
+				echo.AddMappingSeq(messageID, msgseq+1)
+				groupMessage = &dto.MessageToCreate{
+					Content: messageText, // 添加文本内容
+					Media: dto.Media{
+						FileInfo: fileInfo, // 添加图像信息
+					},
+					MsgID:   messageID,
+					MsgSeq:  msgseq,
+					MsgType: 7, // 假设7是组合消息类型
+				}
+				groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
+			} else {
+				//将kb和md组合成groupMessage并用MsgType=2发送
+
+				msgseq = echo.GetMappingSeq(messageID)
+				echo.AddMappingSeq(messageID, msgseq+1)
+				groupMessage = &dto.MessageToCreate{
+					Content:  "markdown", // 添加文本内容
+					MsgID:    messageID,
+					MsgSeq:   msgseq,
+					Markdown: md,
+					Keyboard: kb,
+					MsgType:  2, // 假设7是组合消息类型
+				}
+				groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
+
+			}
 			// 发送组合消息
 			ret, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 			if err != nil {
@@ -1019,4 +1044,112 @@ func SendStackMessages(apiv2 openapi.OpenAPI, messageid string, originalGroupID 
 		}
 
 	}
+}
+
+func auto_md(message callapi.ActionMessage, messageText string, richMediaMessage *dto.RichMediaMessage) (md *dto.Markdown, kb *keyboard.MessageKeyboard, transmd bool) {
+	if echoStr, ok := message.Echo.(string); ok {
+		// 当 message.Echo 是字符串类型时才执行此块
+		msg_on_touch := echo.GetMsgIDv3(config.GetAppIDStr(), echoStr)
+		mylog.Printf("msg_on_touch:%v", msg_on_touch)
+		// 判断是否是 GetVisualkPrefixs 数组开头的文本
+		visualkPrefixs := config.GetVisualkPrefixs()
+		var matchedPrefix *config.VisualPrefixConfig
+		// 去掉前缀开头的*
+		for i, vp := range visualkPrefixs {
+			if strings.HasPrefix(vp.Prefix, "*") {
+				visualkPrefixs[i].Prefix = strings.TrimPrefix(vp.Prefix, "*")
+			}
+		}
+
+		for _, vp := range visualkPrefixs {
+			if strings.HasPrefix(msg_on_touch, vp.Prefix) {
+				if len(msg_on_touch) >= len(vp.Prefix) {
+					if msg_on_touch != " " {
+						transmd = true
+						matchedPrefix = &vp
+						break // 匹配到了
+					}
+				}
+			}
+		}
+		if transmd {
+			//将messageText和groupReply组合成一个md
+			// 处理 Markdown
+			CustomTemplateID := config.GetCustomTemplateID()
+			imgURL := richMediaMessage.URL
+			height, width, err := images.GetImageDimensions(imgURL)
+			if err != nil {
+				mylog.Printf("获取图片宽高出错")
+			}
+			imgDesc := fmt.Sprintf("图片 #%dpx #%dpx", width, height)
+			// 检查messageText是否以\r开头
+			if !strings.HasPrefix(messageText, "\r") {
+				messageText = "\r" + messageText
+			}
+			// 创建 MarkdownParams 的实例
+			mdParams := []*dto.MarkdownParams{
+				{Key: "text_start", Values: []string{" "}}, //空着
+				{Key: "img_dec", Values: []string{imgDesc}},
+				{Key: "img_url", Values: []string{imgURL}},
+				{Key: "text_end", Values: []string{messageText}},
+			}
+			// 组合模板 Markdown
+			md = &dto.Markdown{
+				CustomTemplateID: CustomTemplateID,
+				Params:           mdParams,
+			}
+			whiteList := matchedPrefix.WhiteList
+			// 创建 CustomKeyboard
+			customKeyboard := &keyboard.CustomKeyboard{
+				Rows: []*keyboard.Row{},
+			}
+
+			var currentRow *keyboard.Row
+			buttonCount := 0 // 当前行的按钮计数
+
+			for _, whiteLabel := range whiteList {
+				// 使用 strconv.Atoi 检查 whiteLabel 是否为纯数字
+				if _, err := strconv.Atoi(whiteLabel); err == nil {
+					// 如果没有错误，表示 whiteLabel 是一个数字，因此忽略这个元素并继续下一个迭代
+					continue
+				}
+
+				// 创建按钮
+				button := &keyboard.Button{
+					RenderData: &keyboard.RenderData{
+						Label:        whiteLabel,
+						VisitedLabel: whiteLabel,
+						Style:        1,
+					},
+					Action: &keyboard.Action{
+						Type: 2, // 帮用户输入二级指令
+						Permission: &keyboard.Permission{
+							Type: 2, //所有人可操作
+						},
+						Data:          msg_on_touch + " " + whiteLabel,
+						UnsupportTips: "请升级新版手机QQ",
+					},
+				}
+
+				// 如果当前行为空或已满（4个按钮），则创建一个新行
+				if currentRow == nil || buttonCount == 4 {
+					currentRow = &keyboard.Row{}
+					customKeyboard.Rows = append(customKeyboard.Rows, currentRow)
+					buttonCount = 0 // 重置按钮计数
+				}
+
+				// 将按钮添加到当前行
+				currentRow.Buttons = append(currentRow.Buttons, button)
+				buttonCount++
+			}
+
+			// 在循环结束后，最后一行可能不满4个按钮，但已经被正确处理
+
+			// 创建 MessageKeyboard 并设置其 Content
+			kb = &keyboard.MessageKeyboard{
+				Content: customKeyboard,
+			}
+		}
+	}
+	return md, kb, transmd
 }
