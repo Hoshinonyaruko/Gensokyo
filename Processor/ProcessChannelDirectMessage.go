@@ -141,6 +141,8 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 		// 根据条件判断是否添加Echo字段
 		if config.GetTwoWayEcho() {
 			privateMsg.Echo = echostr
+			//用向应用端(如果支持)发送echo,来确定客户端的send_msg对应的触发词原文
+			echo.AddMsgIDv3(AppIDString, echostr, messageText)
 		}
 		// 将当前s和appid和message进行映射
 		echo.AddMsgID(AppIDString, s, data.ID)
@@ -218,6 +220,8 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 			// 根据条件判断是否添加Echo字段
 			if config.GetTwoWayEcho() {
 				onebotMsg.Echo = echostr
+				//用向应用端(如果支持)发送echo,来确定客户端的send_msg对应的触发词原文
+				echo.AddMsgIDv3(AppIDString, echostr, messageText)
 			}
 			// 获取MasterID数组
 			masterIDs := config.GetMasterID()
@@ -368,6 +372,8 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 			// 根据条件判断是否添加Echo字段
 			if config.GetTwoWayEcho() {
 				groupMsg.Echo = echostr
+				//用向应用端(如果支持)发送echo,来确定客户端的send_msg对应的触发词原文
+				echo.AddMsgIDv3(AppIDString, echostr, messageText)
 			}
 			// 获取MasterID数组
 			masterIDs := config.GetMasterID()

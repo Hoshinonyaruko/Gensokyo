@@ -60,6 +60,10 @@ type Action struct {
 	ClickLimit           uint32      `json:"click_limit,omitempty"`              // 可点击的次数, 默认不限
 	Data                 string      `json:"data,omitempty"`                     // 操作相关数据
 	AtBotShowChannelList bool        `json:"at_bot_show_channel_list,omitempty"` // false:当前 true:弹出展示子频道选择器
+	UnsupportTips        string      `json:"unsupport_tips"`                     //2024-1-12 新增字段
+	AnChor               int         `json:"anchor"`                             //本字段仅在指令按钮下有效，设置后后会忽略 action.enter 配置。设置为 1 时 ，点击按钮自动唤起启手Q选图器，其他值暂无效果。（仅支持手机端版本 8983+ 的单聊场景，桌面端不支持）
+	Enter                bool        `json:"enter"`                              //指令按钮可用，点击按钮后直接自动发送 data，默认 false。支持版本 8983
+	Reply                bool        `json:"reply"`                              //指令按钮可用，指令是否带引用回复本消息，默认 false。支持版本 8983
 }
 
 // Permission 按纽操作权限

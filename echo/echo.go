@@ -106,6 +106,15 @@ func AddMsgIDv3(appid string, s string, msgID string) {
 	globalEchoMapping.msgIDMapping[key] = msgID
 }
 
+// GetMsgIDv3 返回给定appid和s的msgID
+func GetMsgIDv3(appid string, s string) string {
+	key := globalEchoMapping.GenerateKeyv3(appid, s)
+	globalEchoMapping.mu.Lock()
+	defer globalEchoMapping.mu.Unlock()
+
+	return globalEchoMapping.msgIDMapping[key]
+}
+
 // 添加group和userid对应的messageid
 func AddMsgIDv2(appid string, groupid int64, userid int64, msgID string) {
 	key := globalEchoMapping.GenerateKeyv2(appid, groupid, userid)

@@ -128,6 +128,8 @@ settings:
   custom_bot_name : "Gensokyo全域机器人"                   #自定义机器人名字,会在api调用中返回,默认Gensokyo全域机器人
  
   twoway_echo : false               #是否采用双向echo,根据机器人选择,獭獭\早苗 true 红色问答\椛椛 或者其他 请使用 false
+  custom_template_id : ""           #自动转换图文信息到md所需要的id *需要应用端支持双方向echo
+  keyboard_id : ""                  #自动转换图文信息到md所需要的按钮id *需要应用端支持双方向echo
   lazy_message_id : false           #false=message_id 条条准确对应 true=message_id 按时间范围随机对应(适合主动推送bot)前提,有足够多的活跃信息刷新id池
   
   visible_ip : false                #转换url时,如果server_dir是ip true将以ip形式发出url 默认隐藏url 将server_dir配置为自己域名可以转换url
