@@ -133,6 +133,9 @@ type Settings struct {
 	TransFormApiIds        bool                 `yaml:"transform_api_ids"`
 	CustomTemplateID       string               `yaml:"custom_template_id"`
 	KeyBoardID             string               `yaml:"keyboard_id"`
+	Uin                    int64                `yaml:"uin"`
+	VwhitePrefixMode       bool                 `yaml:"v_white_prefix_mode"`
+	Enters                 []string             `yaml:"enters"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -1675,4 +1678,36 @@ func GetKeyBoardID() string {
 		return ""
 	}
 	return instance.Settings.KeyBoardID
+}
+
+// 获取Uin String
+func GetUinStr() string {
+	mu.Lock()
+	defer mu.Unlock()
+	if instance != nil {
+		return fmt.Sprintf("%d", instance.Settings.Uin)
+	}
+	return "0"
+}
+
+// 获取 VV GetVwhitePrefixMode 的值
+func GetVwhitePrefixMode() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to VwhitePrefixMode value.")
+		return false
+	}
+	return instance.Settings.VwhitePrefixMode
+}
+
+// 获取Enters的值
+func GetEnters() []string {
+	mu.Lock()
+	defer mu.Unlock()
+	if instance != nil {
+		return instance.Settings.Enters
+	}
+	return nil // 返回nil，如果instance为nil
 }

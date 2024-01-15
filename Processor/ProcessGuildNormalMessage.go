@@ -111,6 +111,8 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 		//todo 完善频道ob信息
 		//懒message_id池
 		echo.AddLazyMessageId(data.ChannelID, data.ID, time.Now())
+		//懒message_id池
+		echo.AddLazyMessageId(strconv.FormatInt(userid64, 10), data.ID, time.Now())
 
 		//调试
 		PrintStructWithFieldNames(onebotMsg)
@@ -272,6 +274,8 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 		echo.AddMsgType(AppIDString, ChannelID64, "guild")
 		//懒message_id池
 		echo.AddLazyMessageId(strconv.FormatInt(ChannelID64, 10), data.ID, time.Now())
+		//懒message_id池
+		echo.AddLazyMessageId(strconv.FormatInt(userid64, 10), data.ID, time.Now())
 
 		//调试
 		PrintStructWithFieldNames(groupMsg)

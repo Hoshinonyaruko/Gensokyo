@@ -85,6 +85,11 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			//由于实现了Params的自定义unmarshell 所以可以类型安全的断言为string
 			messageID = echo.GetLazyMessagesId(message.Params.GroupID.(string))
 			mylog.Printf("GetLazyMessagesId: %v", messageID)
+			//如果应用端传递了user_id 就让at不要顺序乱套
+			if message.Params.UserID != nil {
+				messageID = echo.GetLazyMessagesId(message.Params.UserID.(string))
+				mylog.Printf("GetLazyMessagesIdv2: %v", messageID)
+			}
 			if messageID != "" {
 				//尝试发送栈内信息
 				SSM = true
@@ -1082,6 +1087,10 @@ func auto_md(message callapi.ActionMessage, messageText string, richMediaMessage
 				mylog.Printf("获取图片宽高出错")
 			}
 			imgDesc := fmt.Sprintf("图片 #%dpx #%dpx", width, height)
+			// 将所有的\r\n替换为\r
+			messageText = strings.ReplaceAll(messageText, "\r\n", "\r")
+			// 将所有的\n替换为\r
+			messageText = strings.ReplaceAll(messageText, "\n", "\r")
 			// 检查messageText是否以\r开头
 			if !strings.HasPrefix(messageText, "\r") {
 				messageText = "\r" + messageText
@@ -1108,26 +1117,64 @@ func auto_md(message callapi.ActionMessage, messageText string, richMediaMessage
 			buttonCount := 0 // 当前行的按钮计数
 
 			for _, whiteLabel := range whiteList {
-				// 使用 strconv.Atoi 检查 whiteLabel 是否为纯数字
-				if _, err := strconv.Atoi(whiteLabel); err == nil {
-					// 如果没有错误，表示 whiteLabel 是一个数字，因此忽略这个元素并继续下一个迭代
-					continue
+				// 如果whiteList的成员数大于或等于15，才检查whiteLabel是否为纯数字
+				if len(whiteList) >= 15 {
+					if _, err := strconv.Atoi(whiteLabel); err == nil {
+						// 如果没有错误，表示 whiteLabel 是一个数字，因此忽略这个元素并继续下一个迭代
+						// 避免 因为纯数字按钮太多导致混乱,但是少量的纯数字按钮可以允许
+						continue
+					}
+				}
+				// 检查msg_on_touch是否已经以whiteLabel结尾
+				//场景 按钮递归时 比如 随机meme 再来一次,同时随机meme是*类型一级指令
+				var dataLabel string
+				if !strings.HasSuffix(msg_on_touch, whiteLabel) {
+					dataLabel = msg_on_touch + whiteLabel
+				} else {
+					dataLabel = msg_on_touch
 				}
 
+				var actiontype keyboard.ActionType
+				var permission *keyboard.Permission
+				var actiondata string
+				//检查是否设置了enter数组
+				enter := checkDataLabelPrefix(dataLabel)
+				switch whiteLabel {
+				case "邀请机器人":
+					botuin := config.GetUinStr()
+					botappid := config.GetAppIDStr()
+					boturl := BuildQQBotShareLink(botuin, botappid)
+					actiontype = 0
+					actiondata = boturl
+					permission = &keyboard.Permission{
+						Type: 2, // 所有人可操作
+					}
+				case "测试按钮回调":
+					actiontype = 1
+					actiondata = "收到就代表是管理员哦"
+					permission = &keyboard.Permission{
+						Type: 1, // 仅管理可操作
+					}
+				default:
+					actiontype = 2         //帮用户输入指令
+					actiondata = dataLabel //从虚拟前缀的二级指令组合md按钮
+					permission = &keyboard.Permission{
+						Type: 2, // 所有人可操作
+					}
+				}
 				// 创建按钮
 				button := &keyboard.Button{
 					RenderData: &keyboard.RenderData{
 						Label:        whiteLabel,
 						VisitedLabel: whiteLabel,
-						Style:        1,
+						Style:        1, //蓝色边缘
 					},
 					Action: &keyboard.Action{
-						Type: 2, // 帮用户输入二级指令
-						Permission: &keyboard.Permission{
-							Type: 2, //所有人可操作
-						},
-						Data:          msg_on_touch + " " + whiteLabel,
+						Type:          actiontype,
+						Permission:    permission,
+						Data:          actiondata,
 						UnsupportTips: "请升级新版手机QQ",
+						Enter:         enter,
 					},
 				}
 
@@ -1152,4 +1199,20 @@ func auto_md(message callapi.ActionMessage, messageText string, richMediaMessage
 		}
 	}
 	return md, kb, transmd
+}
+
+// 构建QQ群机器人分享链接的函数
+func BuildQQBotShareLink(uin string, appid string) string {
+	return fmt.Sprintf("https://qun.qq.com/qunpro/robot/qunshare?robot_uin=%s&robot_appid=%s", uin, appid)
+}
+
+// 检查dataLabel是否以config中getenters返回的任一字符串开头
+func checkDataLabelPrefix(dataLabel string) bool {
+	enters := config.GetEnters()
+	for _, enter := range enters {
+		if enter != "" && strings.HasPrefix(dataLabel, enter) {
+			return true
+		}
+	}
+	return false
 }

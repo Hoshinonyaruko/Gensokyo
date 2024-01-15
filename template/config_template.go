@@ -6,7 +6,8 @@ settings:
   #反向ws设置
   ws_address: ["ws://<YOUR_WS_ADDRESS>:<YOUR_WS_PORT>"] # WebSocket服务的地址 支持多个["","",""]
   ws_token: ["","",""]              #连接wss地址时服务器所需的token,按顺序一一对应,如果是ws地址,没有密钥,请留空.
-  app_id: 12345                             # 你的应用ID
+  app_id: 12345                                      # 你的应用ID
+  uin : 0                                            # 你的机器人QQ号,点击机器人资料卡查看  
   token: "<YOUR_APP_TOKEN>"                          # 你的应用令牌
   client_secret: "<YOUR_CLIENT_SECRET>"              # 你的客户端密钥
 
@@ -19,7 +20,7 @@ settings:
     # - "MemberEventHandler"                         # 频道成员新增
     # - "ChannelEventHandler"                        # 频道事件
     # - "CreateMessageHandler"                       # 频道不at信息 私域机器人需要开启 公域机器人开启会连接失败
-    # - "InteractionHandler"                         # 添加频道互动回应
+    # - "InteractionHandler"                         # 添加频道互动回应 卡片按钮data回调事件
     # - "GroupATMessageEventHandler"                 # 群at信息 仅频道机器人时候需要注释
     # - "C2CMessageEventHandler"                     # 群私聊 仅频道机器人时候需要注释
     # - "ThreadEventHandler"                         # 发帖事件 (当前版本已禁用)
@@ -92,6 +93,7 @@ settings:
   add_at_group : false              #自动在群聊指令前加上at,某些机器人写法特别,必须有at才反应时,请打开,默认请关闭(如果需要at,不需要at指令混杂,请优化代码适配群场景,群场景目前没有at概念)
 
   white_prefix_mode : false         #公域 过审用 指令白名单模式开关 如果审核严格 请开启并设置白名单指令 以白名单开头的指令会被通过,反之被拦截
+  v_white_prefix_mode : true        #虚拟二级指令(虚拟前缀)的白名单,默认开启,有二级指令帮助的效果
   white_prefixs : [""]              #可设置多个 比如设置 机器人 测试 则只有信息以机器人 测试开头会相应 remove_prefix remove_at 需为true时生效
   white_bypass : []                 #格式[1,2,3],白名单不生效的群或用户(私聊时),用于设置自己的灰度沙箱群/灰度沙箱私聊,避免开发测试时反复开关白名单的不便,请勿用于生产环境.
   white_enable : [true,true,true,true,true] #指令白名单生效范围,5个分别对应,频道公(ATMessageEventHandler),频道私(CreateMessageHandler),频道私聊,群,群私聊,改成false,这个范围就不生效指令白名单(使用场景:群全量,频道私域的机器人,或有私信资质的机器人)
@@ -101,11 +103,12 @@ settings:
   black_prefix_mode : false         #公私域 过审用 指令黑名单模式开关 过滤被审核打回的指令不响应 无需改机器人后端
   black_prefixs : [""]              #可设置多个 比如设置 查询 则查询开头的信息均被拦截 防止审核失败
   alias : ["",""]                   #两两成对,指令替换,"a","b","c","d"代表将a开头替换为b开头,c开头替换为d开头.
+  enters : ["",""]                  #自动md卡片点击直接触发,小众功能,满足以下条件:应用端支持双向echo+设置了visual_prefixs和whiteList
 
   visual_prefixs :                  #虚拟前缀 与white_prefixs配合使用 处理流程自动忽略该前缀 remove_prefix remove_at 需为true时生效
   - prefix: ""                      #虚拟前缀开头 例 你有3个指令 帮助 测试 查询 将 prefix 设置为 工具类 后 则可通过 工具类 帮助 触发机器人
     whiteList: [""]                 #开关状态取决于 white_prefix_mode 为每一个二级指令头设计独立的白名单
-    No_White_Response : ""                                   
+    No_White_Response : ""          #带有*代表不忽略掉,但是应用二级白名单的普通指令   如果  whiteList=邀请机器人 就是邀请机器人按钮                    
   - prefix: ""
     whiteList: [""]
     No_White_Response : "" 
