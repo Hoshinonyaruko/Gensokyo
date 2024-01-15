@@ -119,7 +119,8 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 				segmentContent = "[CQ:at,qq=" + qqNumber + "]"
 			case "markdown":
 				mdContent, _ := segmentMap["data"].(map[string]interface{})["data"].(string)
-				segmentContent = "[CQ:markdown,data=" + mdContent + "]"
+				encoded := "base64://" + base64.StdEncoding.EncodeToString([]byte(mdContent))
+				segmentContent = "[CQ:markdown,data=" + encoded + "]"
 			}
 
 			messageText += segmentContent
@@ -145,7 +146,8 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 			messageText = "[CQ:at,qq=" + qqNumber + "]"
 		case "markdown":
 			mdContent, _ := message["data"].(map[string]interface{})["data"].(string)
-			messageText = "[CQ:markdown,data=" + mdContent + "]"
+			encoded := "base64://" + base64.StdEncoding.EncodeToString([]byte(mdContent))
+			messageText = "[CQ:markdown,data=" + encoded + "]"
 		}
 	default:
 		mylog.Println("Unsupported message format: params.message field is not a string, map or slice")
