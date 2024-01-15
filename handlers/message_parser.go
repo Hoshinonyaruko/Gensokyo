@@ -118,8 +118,12 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 				qqNumber, _ := segmentMap["data"].(map[string]interface{})["qq"].(string)
 				segmentContent = "[CQ:at,qq=" + qqNumber + "]"
 			case "markdown":
-				mdContent, _ := segmentMap["data"].(map[string]interface{})["data"].(string)
-				encoded := "base64://" + base64.StdEncoding.EncodeToString([]byte(mdContent))
+				mdContentMap, _ := segmentMap["data"].(map[string]interface{})["data"].(map[string]interface{})
+				mdContentBytes, err := json.Marshal(mdContentMap)
+				if err != nil {
+					fmt.Println("Error marshaling mdContentMap to JSON:", err)
+				}
+				encoded := base64.StdEncoding.EncodeToString(mdContentBytes)
 				segmentContent = "[CQ:markdown,data=" + encoded + "]"
 			}
 
@@ -145,8 +149,13 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 			qqNumber, _ := message["data"].(map[string]interface{})["qq"].(string)
 			messageText = "[CQ:at,qq=" + qqNumber + "]"
 		case "markdown":
-			mdContent, _ := message["data"].(map[string]interface{})["data"].(string)
-			encoded := "base64://" + base64.StdEncoding.EncodeToString([]byte(mdContent))
+			mdContentMap, _ := message["data"].(map[string]interface{})["data"].(map[string]interface{})
+			mdContentBytes, err := json.Marshal(mdContentMap)
+			if err != nil {
+				fmt.Println("Error marshaling mdContentMap to JSON:", err)
+
+			}
+			encoded := "base64://" + base64.StdEncoding.EncodeToString(mdContentBytes)
 			messageText = "[CQ:markdown,data=" + encoded + "]"
 		}
 	default:
