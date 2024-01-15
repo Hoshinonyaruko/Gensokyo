@@ -112,6 +112,18 @@ type OnebotPrivateMessage struct {
 	IsBindedUserId  bool          `json:"is_binded_user_id,omitempty"` //当前用户号号是否是binded后的
 }
 
+// onebotv11标准扩展
+type OnebotInteractionNotice struct {
+	GroupID    int64                  `json:"group_id,omitempty"`
+	NoticeType string                 `json:"notice_type,omitempty"`
+	PostType   string                 `json:"post_type,omitempty"`
+	SelfID     int64                  `json:"self_id,omitempty"`
+	SubType    string                 `json:"sub_type,omitempty"`
+	Time       int64                  `json:"time,omitempty"`
+	UserID     int64                  `json:"user_id,omitempty"`
+	Data       *dto.WSInteractionData `json:"data,omitempty"`
+}
+
 type PrivateSender struct {
 	Nickname string `json:"nickname"`
 	UserID   int64  `json:"user_id"` // Can be either string or int depending on logic
@@ -123,19 +135,63 @@ func FoxTimestamp() int64 {
 
 // ProcessInlineSearch 处理内联查询
 func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
-	//ctx := context.Background() // 或从更高级别传递一个上下文
+	// 转换appid
+	var userid64 int64
+	var GroupID64 int64
+	var err error
+	var fromgid, fromuid string
+	if data.GroupOpenID != "" {
+		fromgid = data.GroupOpenID
+		fromuid = data.GroupMemberOpenID
+	} else {
+		fromgid = data.ChannelID
+		fromuid = "0"
+	}
+	if config.GetIdmapPro() {
+		//将真实id转为int userid64
+		GroupID64, userid64, err = idmap.StoreIDv2Pro(fromgid, fromuid)
+		if err != nil {
+			mylog.Fatalf("Error storing ID: %v", err)
+		}
+		//当参数不全
+		_, _ = idmap.StoreIDv2(fromgid)
+		_, _ = idmap.StoreIDv2(fromuid)
+		if !config.GetHashIDValue() {
+			mylog.Fatalf("避坑日志:你开启了高级id转换,请设置hash_id为true,并且删除idmaps并重启")
+		}
+	} else {
+		// 映射str的GroupID到int
+		GroupID64, err = idmap.StoreIDv2(fromgid)
+		if err != nil {
+			mylog.Errorf("failed to convert ChannelID to int: %v", err)
+			return nil
+		}
+		// 映射str的userid到int
+		userid64, err = idmap.StoreIDv2(fromuid)
+		if err != nil {
+			mylog.Printf("Error storing ID: %v", err)
+			return nil
+		}
+	}
+	notice := &OnebotInteractionNotice{
+		GroupID:    GroupID64,
+		NoticeType: "interaction",
+		PostType:   "notice",
+		SelfID:     int64(p.Settings.AppID),
+		SubType:    "create",
+		Time:       time.Now().Unix(),
+		UserID:     userid64,
+		Data:       data,
+	}
 
-	// 在这里处理内联查询
-	// 这可能涉及解析查询、调用某些API、获取结果并格式化为响应
-	// ...
+	//调试
+	PrintStructWithFieldNames(notice)
 
-	// 示例：发送响应
-	// response := "Received your interaction!"            // 创建响应消息
-	// err := p.api.PostInteractionResponse(ctx, response) // 替换为您的OpenAPI方法
-	// if err != nil {
-	// 	return err
-	// }
+	// Convert OnebotGroupMessage to map and send
+	noticeMap := structToMap(notice)
 
+	//上报信息到onebotv11应用端(正反ws)
+	p.BroadcastMessageToAll(noticeMap)
 	return nil
 }
 

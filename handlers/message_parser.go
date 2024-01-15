@@ -503,8 +503,8 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 	aliases := config.GetAlias()
 	messageText = processMessageText(messageText, aliases)
 	//mylog.Printf("4[%v]", messageText)
-	// 检查是否启用白名单模式
-	if config.GetWhitePrefixMode() && matchedPrefix != nil {
+	// 检查是否启用二级白名单模式
+	if config.GetVwhitePrefixMode() && matchedPrefix != nil {
 		// 获取白名单反转标志
 		whiteBypassRevers := config.GetWhiteBypassRevers()
 

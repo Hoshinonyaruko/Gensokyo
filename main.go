@@ -523,7 +523,6 @@ func DirectMessageHandler() event.DirectMessageEventHandler {
 // CreateMessageHandler 处理消息事件 私域的事件 不at信息
 func CreateMessageHandler() event.MessageEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSMessageData) error {
-		log.Println("收到私域信息", data)
 		return p.ProcessGuildNormalMessage(data)
 	}
 }
@@ -531,7 +530,7 @@ func CreateMessageHandler() event.MessageEventHandler {
 // InteractionHandler 处理内联交互事件
 func InteractionHandler() event.InteractionEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSInteractionData) error {
-		log.Println(data)
+		mylog.Printf("收到按钮回调:%v", data)
 		return p.ProcessInlineSearch(data)
 	}
 }

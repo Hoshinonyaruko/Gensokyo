@@ -55,7 +55,7 @@ type RenderData struct {
 
 // Action 按纽点击操作
 type Action struct {
-	Type                 ActionType  `json:"type,omitempty"`                     // 操作类型
+	Type                 ActionType  `json:"type,omitempty"`                     // 操作类型 设置 0 跳转按钮：http 或 小程序 客户端识别 scheme，设置 1 回调按钮：回调后台接口, data 传给后台，设置 2 指令按钮：自动在输入框插入 @bot data
 	Permission           *Permission `json:"permission,omitempty"`               // 可操作
 	ClickLimit           uint32      `json:"click_limit,omitempty"`              // 可点击的次数, 默认不限
 	Data                 string      `json:"data,omitempty"`                     // 操作相关数据
@@ -68,10 +68,10 @@ type Action struct {
 
 // Permission 按纽操作权限
 type Permission struct {
-	// Type 操作权限类型
+	// Type 操作权限类型 0 指定用户可操作，1 仅管理者可操作，2 所有人可操作，3 指定身份组可操作（仅频道可用）
 	Type PermissionType `json:"type,omitempty"`
-	// SpecifyRoleIDs 身份组
+	// SpecifyRoleIDs 身份组（仅频道可用）
 	SpecifyRoleIDs []string `json:"specify_role_ids,omitempty"`
-	// SpecifyUserIDs 指定 UserID
+	// SpecifyUserIDs 指定 UserID 有权限的用户 id 的列表
 	SpecifyUserIDs []string `json:"specify_user_ids,omitempty"`
 }
