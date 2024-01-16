@@ -144,6 +144,10 @@ settings:
   bind_prefix : "/bind"             #需设置   #增强配置项  master_id 可触发
   me_prefix : "/me"                 #需设置   #增强配置项  master_id 可触发
   unlock_prefix : "/unlock"         #频道私信卡住了? gsk可以帮到你 在任意子频道发送unlock 你会收到来自机器人的频道私信
+  link_prefix : "/link"             #友情链接配置 配置custom_template_id后可用(https://www.yuque.com/km57bt/hlhnxg/tzbr84y59dbz6pib)
+  link_bots : ["",""]               #发送友情链接时 下方按钮携带的机器人 格式 "appid-qq-name","appid-qq-name"
+  link_text : ""                    #友情链接文本 不可为空!
+  link_pic : ""                     #友情链接图片 可为空 需url图片 可带端口 不填可能会有显示错误
 
   #穿透\cos\oss类配置(可选!)
   frp_port : "0"                    #不使用请保持为0,frp的端口,frp有内外端口,请在frp软件设置gensokyo的port,并将frp显示的对外端口填入这里
