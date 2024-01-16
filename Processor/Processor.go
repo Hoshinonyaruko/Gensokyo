@@ -23,9 +23,11 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/handlers"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
+	"github.com/hoshinonyaruko/gensokyo/images"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/hoshinonyaruko/gensokyo/wsclient"
 	"github.com/tencent-connect/botgo/dto"
+	"github.com/tencent-connect/botgo/dto/keyboard"
 	"github.com/tencent-connect/botgo/openapi"
 )
 
@@ -552,6 +554,13 @@ func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}
 		mylog.Printf("您没有权限,使用临时指令：%s 忽略权限检查,或将masterid设置为空数组", tempCmd)
 		SendMessage("您没有权限,请配置config.yml或查看日志,使用临时指令", data, Type, p.Api, p.Apiv2)
 	}
+
+	//link指令
+	if Type == "group" && strings.HasPrefix(cleanedMessage, config.GetLinkPrefix()) {
+		md, kb := generateMdByConfig()
+		SendMessageMd(md, kb, data, Type, p.Api, p.Apiv2)
+	}
+
 	return nil
 }
 
@@ -789,6 +798,113 @@ func SendMessage(messageText string, data interface{}, messageType string, api o
 	return nil
 }
 
+// SendMessageMd  发送Md消息根据不同的类型
+func SendMessageMd(md *dto.Markdown, kb *keyboard.MessageKeyboard, data interface{}, messageType string, api openapi.OpenAPI, apiv2 openapi.OpenAPI) error {
+	// 强制类型转换，获取Message结构
+	var msg *dto.Message
+	switch v := data.(type) {
+	case *dto.WSGroupATMessageData:
+		msg = (*dto.Message)(v)
+	case *dto.WSATMessageData:
+		msg = (*dto.Message)(v)
+	case *dto.WSMessageData:
+		msg = (*dto.Message)(v)
+	case *dto.WSDirectMessageData:
+		msg = (*dto.Message)(v)
+	case *dto.WSC2CMessageData:
+		msg = (*dto.Message)(v)
+	default:
+		return nil
+	}
+	switch messageType {
+	case "guild":
+		// 处理公会消息
+		msgseq := echo.GetMappingSeq(msg.ID)
+		echo.AddMappingSeq(msg.ID, msgseq+1)
+		Message := &dto.MessageToCreate{
+			Content:  "markdown",
+			MsgID:    msg.ID,
+			MsgSeq:   msgseq,
+			Markdown: md,
+			Keyboard: kb,
+			MsgType:  2, //md信息
+		}
+		Message.Timestamp = time.Now().Unix() // 设置时间戳
+		if _, err := api.PostMessage(context.TODO(), msg.ChannelID, Message); err != nil {
+			mylog.Printf("发送文本信息失败: %v", err)
+			return err
+		}
+
+	case "group":
+		// 处理群组消息
+		msgseq := echo.GetMappingSeq(msg.ID)
+		echo.AddMappingSeq(msg.ID, msgseq+1)
+		Message := &dto.MessageToCreate{
+			Content:  "markdown",
+			MsgID:    msg.ID,
+			MsgSeq:   msgseq,
+			Markdown: md,
+			Keyboard: kb,
+			MsgType:  2, //md信息
+		}
+		Message.Timestamp = time.Now().Unix() // 设置时间戳
+		_, err := apiv2.PostGroupMessage(context.TODO(), msg.GroupID, Message)
+		if err != nil {
+			mylog.Printf("发送文本群组信息失败: %v", err)
+			return err
+		}
+
+	case "guild_private":
+		// 处理私信
+		timestamp := time.Now().Unix()
+		timestampStr := fmt.Sprintf("%d", timestamp)
+		dm := &dto.DirectMessage{
+			GuildID:    msg.GuildID,
+			ChannelID:  msg.ChannelID,
+			CreateTime: timestampStr,
+		}
+		msgseq := echo.GetMappingSeq(msg.ID)
+		echo.AddMappingSeq(msg.ID, msgseq+1)
+		Message := &dto.MessageToCreate{
+			Content:  "markdown",
+			MsgID:    msg.ID,
+			MsgSeq:   msgseq,
+			Markdown: md,
+			Keyboard: kb,
+			MsgType:  2, //md信息
+		}
+		Message.Timestamp = time.Now().Unix() // 设置时间戳
+		if _, err := apiv2.PostDirectMessage(context.TODO(), dm, Message); err != nil {
+			mylog.Printf("发送文本信息失败: %v", err)
+			return err
+		}
+
+	case "group_private":
+		// 处理群组私聊消息
+		msgseq := echo.GetMappingSeq(msg.ID)
+		echo.AddMappingSeq(msg.ID, msgseq+1)
+		Message := &dto.MessageToCreate{
+			Content:  "markdown",
+			MsgID:    msg.ID,
+			MsgSeq:   msgseq,
+			Markdown: md,
+			Keyboard: kb,
+			MsgType:  2, //md信息
+		}
+		Message.Timestamp = time.Now().Unix() // 设置时间戳
+		_, err := apiv2.PostC2CMessage(context.TODO(), msg.Author.ID, Message)
+		if err != nil {
+			mylog.Printf("发送文本私聊信息失败: %v", err)
+			return err
+		}
+
+	default:
+		return errors.New("未知的消息类型")
+	}
+
+	return nil
+}
+
 // autobind 函数接受 interface{} 类型的数据
 // commit by 紫夜 2023-11-19
 func (p *Processors) Autobind(data interface{}) error {
@@ -921,4 +1037,111 @@ func GenerateAvatarURL(userID int64) (string, error) {
 
 	// 构建并返回 URL
 	return fmt.Sprintf("http://q%d.qlogo.cn/g?b=qq&nk=%d&s=640", qNumber, userID), nil
+}
+
+// 生成link卡片
+func generateMdByConfig() (md *dto.Markdown, kb *keyboard.MessageKeyboard) {
+	//相关配置获取
+	mdtext := config.GetLinkText()
+	mdtext = "\r" + mdtext
+	CustomTemplateID := config.GetCustomTemplateID()
+	linkBots := config.GetLinkBots()
+	imgURL := config.GetLinkPic()
+
+	//超过16个时候随机显示
+	if len(linkBots) > 16 {
+		linkBots = getRandomSelection(linkBots, 16)
+	}
+
+	//组合 mdParams
+	var mdParams []*dto.MarkdownParams
+	if imgURL != "" {
+		height, width, err := images.GetImageDimensions(imgURL)
+		if err != nil {
+			mylog.Printf("获取图片宽高出错")
+		}
+		imgDesc := fmt.Sprintf("图片 #%dpx #%dpx", width, height)
+		// 创建 MarkdownParams 的实例
+		mdParams = []*dto.MarkdownParams{
+			{Key: "img_dec", Values: []string{imgDesc}},
+			{Key: "img_url", Values: []string{imgURL}},
+			{Key: "text_end", Values: []string{mdtext}},
+		}
+	} else {
+		mdParams = []*dto.MarkdownParams{
+			{Key: "text_end", Values: []string{mdtext}},
+		}
+	}
+
+	// 组合模板 Markdown
+	md = &dto.Markdown{
+		CustomTemplateID: CustomTemplateID,
+		Params:           mdParams,
+	}
+
+	// 创建自定义键盘
+	customKeyboard := &keyboard.CustomKeyboard{}
+	var currentRow *keyboard.Row
+	var buttonCount int
+
+	for _, bot := range linkBots {
+		parts := strings.SplitN(bot, "-", 3)
+		if len(parts) < 3 {
+			continue // 跳过无效的格式
+		}
+		name := parts[2]
+		botuin := parts[1]
+		botappid := parts[0]
+		boturl := handlers.BuildQQBotShareLink(botuin, botappid)
+
+		button := &keyboard.Button{
+			RenderData: &keyboard.RenderData{
+				Label:        name,
+				VisitedLabel: name,
+				Style:        1, // 蓝色边缘
+			},
+			Action: &keyboard.Action{
+				Type:          0,                             // 链接类型
+				Permission:    &keyboard.Permission{Type: 2}, // 所有人可操作
+				Data:          boturl,
+				UnsupportTips: "请升级新版手机QQ",
+			},
+		}
+
+		// 如果当前行为空或已满（4个按钮），则创建一个新行
+		if currentRow == nil || buttonCount == 4 {
+			currentRow = &keyboard.Row{}
+			customKeyboard.Rows = append(customKeyboard.Rows, currentRow)
+			buttonCount = 0
+		}
+
+		// 将按钮添加到当前行
+		currentRow.Buttons = append(currentRow.Buttons, button)
+		buttonCount++
+	}
+
+	// 创建 MessageKeyboard 并设置其 Content
+	kb = &keyboard.MessageKeyboard{
+		Content: customKeyboard,
+	}
+
+	return md, kb
+}
+
+func getRandomSelection(slice []string, max int) []string {
+	if len(slice) <= max {
+		return slice
+	}
+
+	selected := make(map[int]bool)
+	var result []string
+	for len(result) < max {
+		index, _ := rand.Int(rand.Reader, big.NewInt(int64(len(slice))))
+		idx := int(index.Int64())
+		if !selected[idx] {
+			selected[idx] = true
+			result = append(result, slice[idx])
+		}
+	}
+	return result
 }

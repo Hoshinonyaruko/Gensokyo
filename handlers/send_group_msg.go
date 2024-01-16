@@ -1147,13 +1147,35 @@ func auto_md(message callapi.ActionMessage, messageText string, richMediaMessage
 					dataLabel = matchedPrefix.Prefix + whiteLabel
 				}
 
+				//在虚拟二级指令白名单,设置*前缀,代表不真实添加,仅再来一次
+				if strings.HasPrefix(whiteLabel, "*") {
+					//移除whiteLabel前端的*,*仅作为判断,不作为显示
+					whiteLabel = strings.TrimPrefix(whiteLabel, "*")
+					dataLabel = matchedPrefix.Prefix
+				}
+
+				//在虚拟二级指令白名单,设置&前缀,代表仅触发其本身
+				//如果&前缀指令包含了空格 则只显示空格右侧的文本
+				if strings.HasPrefix(whiteLabel, "&") {
+					//移除whiteLabel前端的*,*仅作为判断,不作为显示
+					whiteLabel = strings.TrimPrefix(whiteLabel, "&")
+					//这里是实际填充到data的
+					dataLabel = whiteLabel
+					// 找到最后一个空格的位置 显示空格右边的文本 没有找到空格则不变
+					lastSpaceIndex := strings.LastIndex(whiteLabel, " ")
+					if lastSpaceIndex != -1 && lastSpaceIndex < len(whiteLabel)-1 {
+						// 获取空格右侧的子字符串
+						whiteLabel = whiteLabel[lastSpaceIndex+1:]
+					}
+				}
+
 				var actiontype keyboard.ActionType
 				var permission *keyboard.Permission
 				var actiondata string
 				//检查是否设置了enter数组
 				enter := checkDataLabelPrefix(dataLabel)
 				switch whiteLabel {
-				case "邀请机器人":
+				case "邀请机器人", "邀请我", "添加我":
 					botuin := config.GetUinStr()
 					botappid := config.GetAppIDStr()
 					boturl := BuildQQBotShareLink(botuin, botappid)

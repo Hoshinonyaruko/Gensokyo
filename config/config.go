@@ -136,6 +136,10 @@ type Settings struct {
 	Uin                    int64                `yaml:"uin"`
 	VwhitePrefixMode       bool                 `yaml:"v_white_prefix_mode"`
 	Enters                 []string             `yaml:"enters"`
+	LinkPrefix             string               `yaml:"link_prefix"`
+	LinkBots               []string             `yaml:"link_bots"`
+	LinkText               string               `yaml:"link_text"`
+	LinkPic                string               `yaml:"link_pic"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -1710,4 +1714,52 @@ func GetEnters() []string {
 		return instance.Settings.Enters
 	}
 	return nil // 返回nil，如果instance为nil
+}
+
+// 获取 LinkPrefix
+func GetLinkPrefix() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get LinkPrefix.")
+		return ""
+	}
+	return instance.Settings.LinkPrefix
+}
+
+// 获取 LinkBots 数组
+func GetLinkBots() []string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get LinkBots.")
+		return nil
+	}
+	return instance.Settings.LinkBots
+}
+
+// 获取 LinkText
+func GetLinkText() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get LinkText.")
+		return ""
+	}
+	return instance.Settings.LinkText
+}
+
+// 获取 LinkPic
+func GetLinkPic() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get LinkPic.")
+		return ""
+	}
+	return instance.Settings.LinkPic
 }
