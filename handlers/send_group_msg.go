@@ -1059,15 +1059,22 @@ func auto_md(message callapi.ActionMessage, messageText string, richMediaMessage
 		// 判断是否是 GetVisualkPrefixs 数组开头的文本
 		visualkPrefixs := config.GetVisualkPrefixs()
 		var matchedPrefix *config.VisualPrefixConfig
+		var isSpecialType bool // 用于标记是否为特殊类型
 		// 去掉前缀开头的*
+		// 处理特殊类型前缀
+		specialPrefixes := make(map[int]string)
 		for i, vp := range visualkPrefixs {
 			if strings.HasPrefix(vp.Prefix, "*") {
+				specialPrefixes[i] = vp.Prefix
 				visualkPrefixs[i].Prefix = strings.TrimPrefix(vp.Prefix, "*")
 			}
 		}
 
-		for _, vp := range visualkPrefixs {
+		for i, vp := range visualkPrefixs {
 			if strings.HasPrefix(msg_on_touch, vp.Prefix) {
+				if _, ok := specialPrefixes[i]; ok {
+					isSpecialType = true
+				}
 				if len(msg_on_touch) >= len(vp.Prefix) {
 					if msg_on_touch != " " {
 						transmd = true
@@ -1132,6 +1139,12 @@ func auto_md(message callapi.ActionMessage, messageText string, richMediaMessage
 					dataLabel = msg_on_touch + whiteLabel
 				} else {
 					dataLabel = msg_on_touch
+				}
+				//当虚拟二级指令是*开头,真实的二级指令
+				//以xxxx指令为例 第一次 xxxx 然后 xx攻略 然后 xxxx攻略商店(会失效)
+				//作用 第一次 xxxx 第二次 xxxx攻略 第三次 xxxx商店
+				if isSpecialType && len(msg_on_touch) > len(matchedPrefix.Prefix) {
+					dataLabel = matchedPrefix.Prefix + whiteLabel
 				}
 
 				var actiontype keyboard.ActionType
