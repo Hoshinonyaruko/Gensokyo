@@ -118,13 +118,44 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 				qqNumber, _ := segmentMap["data"].(map[string]interface{})["qq"].(string)
 				segmentContent = "[CQ:at,qq=" + qqNumber + "]"
 			case "markdown":
-				mdContentMap, _ := segmentMap["data"].(map[string]interface{})["data"].(map[string]interface{})
-				mdContentBytes, err := json.Marshal(mdContentMap)
-				if err != nil {
-					fmt.Println("Error marshaling mdContentMap to JSON:", err)
+				mdContent, ok := segmentMap["data"].(map[string]interface{})["data"]
+				if ok {
+					if mdContentMap, isMap := mdContent.(map[string]interface{}); isMap {
+						// mdContent是map[string]interface{}，按map处理
+						mdContentBytes, err := json.Marshal(mdContentMap)
+						if err != nil {
+							mylog.Printf("Error marshaling mdContentMap to JSON:%v", err)
+						}
+						encoded := base64.StdEncoding.EncodeToString(mdContentBytes)
+						segmentContent = "[CQ:markdown,data=" + encoded + "]"
+					} else if mdContentStr, isString := mdContent.(string); isString {
+						// mdContent是string
+						if strings.HasPrefix(mdContentStr, "base64://") {
+							// 如果以base64://开头，直接使用
+							segmentContent = "[CQ:markdown,data=" + mdContentStr + "]"
+						} else {
+							// 处理实体化后的JSON文本
+							mdContentStr = strings.ReplaceAll(mdContentStr, "&amp;", "&")
+							mdContentStr = strings.ReplaceAll(mdContentStr, "&#91;", "[")
+							mdContentStr = strings.ReplaceAll(mdContentStr, "&#93;", "]")
+							mdContentStr = strings.ReplaceAll(mdContentStr, "&#44;", ",")
+
+							// 将处理过的字符串视为JSON对象，进行序列化和编码
+							var jsonMap map[string]interface{}
+							if err := json.Unmarshal([]byte(mdContentStr), &jsonMap); err != nil {
+								mylog.Printf("Error unmarshaling string to JSON:%v", err)
+							}
+							mdContentBytes, err := json.Marshal(jsonMap)
+							if err != nil {
+								mylog.Printf("Error marshaling jsonMap to JSON:%v", err)
+							}
+							encoded := base64.StdEncoding.EncodeToString(mdContentBytes)
+							segmentContent = "[CQ:markdown,data=" + encoded + "]"
+						}
+					}
+				} else {
+					mylog.Printf("Error marshaling markdown segment to interface,contain type but data is nil.")
 				}
-				encoded := base64.StdEncoding.EncodeToString(mdContentBytes)
-				segmentContent = "[CQ:markdown,data=" + encoded + "]"
 			}
 
 			messageText += segmentContent
@@ -149,14 +180,44 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 			qqNumber, _ := message["data"].(map[string]interface{})["qq"].(string)
 			messageText = "[CQ:at,qq=" + qqNumber + "]"
 		case "markdown":
-			mdContentMap, _ := message["data"].(map[string]interface{})["data"].(map[string]interface{})
-			mdContentBytes, err := json.Marshal(mdContentMap)
-			if err != nil {
-				fmt.Println("Error marshaling mdContentMap to JSON:", err)
+			mdContent, ok := message["data"].(map[string]interface{})["data"]
+			if ok {
+				if mdContentMap, isMap := mdContent.(map[string]interface{}); isMap {
+					// mdContent是map[string]interface{}，按map处理
+					mdContentBytes, err := json.Marshal(mdContentMap)
+					if err != nil {
+						mylog.Printf("Error marshaling mdContentMap to JSON:%v", err)
+					}
+					encoded := base64.StdEncoding.EncodeToString(mdContentBytes)
+					messageText = "[CQ:markdown,data=" + encoded + "]"
+				} else if mdContentStr, isString := mdContent.(string); isString {
+					// mdContent是string
+					if strings.HasPrefix(mdContentStr, "base64://") {
+						// 如果以base64://开头，直接使用
+						messageText = "[CQ:markdown,data=" + mdContentStr + "]"
+					} else {
+						// 处理实体化后的JSON文本
+						mdContentStr = strings.ReplaceAll(mdContentStr, "&amp;", "&")
+						mdContentStr = strings.ReplaceAll(mdContentStr, "&#91;", "[")
+						mdContentStr = strings.ReplaceAll(mdContentStr, "&#93;", "]")
+						mdContentStr = strings.ReplaceAll(mdContentStr, "&#44;", ",")
 
+						// 将处理过的字符串视为JSON对象，进行序列化和编码
+						var jsonMap map[string]interface{}
+						if err := json.Unmarshal([]byte(mdContentStr), &jsonMap); err != nil {
+							mylog.Printf("Error unmarshaling string to JSON:%v", err)
+						}
+						mdContentBytes, err := json.Marshal(jsonMap)
+						if err != nil {
+							mylog.Printf("Error marshaling jsonMap to JSON:%v", err)
+						}
+						encoded := base64.StdEncoding.EncodeToString(mdContentBytes)
+						messageText = "[CQ:markdown,data=" + encoded + "]"
+					}
+				}
+			} else {
+				mylog.Printf("Error marshaling markdown segment to interface,contain type but data is nil.")
 			}
-			encoded := "base64://" + base64.StdEncoding.EncodeToString(mdContentBytes)
-			messageText = "[CQ:markdown,data=" + encoded + "]"
 		}
 	default:
 		mylog.Println("Unsupported message format: params.message field is not a string, map or slice")
