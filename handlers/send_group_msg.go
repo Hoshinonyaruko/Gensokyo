@@ -1076,7 +1076,7 @@ func auto_md(message callapi.ActionMessage, messageText string, richMediaMessage
 					isSpecialType = true
 				}
 				if len(msg_on_touch) >= len(vp.Prefix) {
-					if msg_on_touch != " " {
+					if msg_on_touch != "" {
 						transmd = true
 						matchedPrefix = &vp
 						break // 匹配到了
