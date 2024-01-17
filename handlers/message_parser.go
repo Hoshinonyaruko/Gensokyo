@@ -552,6 +552,7 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 		}
 	}
 
+	//从当前信息去掉虚拟前缀(因为是虚拟的),不会实际发给应用端
 	for i, vp := range visualkPrefixs {
 		if strings.HasPrefix(messageText, vp.Prefix) {
 			if _, ok := specialPrefixes[i]; ok {
@@ -560,8 +561,8 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 			}
 			// 检查 messageText 的长度是否大于 prefix 的长度
 			if len(messageText) > len(vp.Prefix) {
-				// 移除找到的前缀 且messageText不为空格
-				if messageText != " " {
+				// 移除找到的前缀 且messageText不为空
+				if messageText != "" {
 					messageText = strings.TrimPrefix(messageText, vp.Prefix)
 					messageText = strings.TrimSpace(messageText)
 					matchedPrefix = &vp
@@ -618,7 +619,20 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 
 			// 遍历白名单数组，检查是否有匹配项
 			for _, prefix := range allPrefixes {
-				if strings.HasPrefix(messageText, prefix) {
+				trimmedPrefix := prefix
+				if strings.HasPrefix(prefix, "*") {
+					// 如果前缀以 * 开头，则移除 *
+					trimmedPrefix = strings.TrimPrefix(prefix, "*")
+				} else if strings.HasPrefix(prefix, "&") {
+					// 如果前缀以 & 开头，则移除 & 并从 trimmedPrefix 前端去除 matchedPrefix.Prefix
+					trimmedPrefix = strings.TrimPrefix(prefix, "&")
+					trimmedPrefix = strings.TrimPrefix(trimmedPrefix, matchedPrefix.Prefix)
+				}
+
+				// 从trimmedPrefix中去除前后空格(可能会有bug)
+				trimmedPrefix = strings.TrimSpace(trimmedPrefix)
+
+				if strings.HasPrefix(messageText, trimmedPrefix) {
 					matched = true
 					break
 				}
