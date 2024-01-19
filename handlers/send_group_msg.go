@@ -1174,8 +1174,9 @@ func auto_md(message callapi.ActionMessage, messageText string, richMediaMessage
 				var actiondata string
 				//检查是否设置了enter数组
 				enter := checkDataLabelPrefix(dataLabel)
-				switch whiteLabel {
-				case "邀请机器人", "邀请我", "添加我":
+
+				switch {
+				case strings.HasPrefix(whiteLabel, "邀请机器人"): //默认是群
 					botuin := config.GetUinStr()
 					botappid := config.GetAppIDStr()
 					boturl := BuildQQBotShareLink(botuin, botappid)
@@ -1184,19 +1185,49 @@ func auto_md(message callapi.ActionMessage, messageText string, richMediaMessage
 					permission = &keyboard.Permission{
 						Type: 2, // 所有人可操作
 					}
-				case "测试按钮回调":
+				case strings.HasPrefix(whiteLabel, "添加到群聊"):
+					botuin := config.GetUinStr()
+					botappid := config.GetAppIDStr()
+					boturl := BuildQQBotShareLink(botuin, botappid)
+					actiontype = 0
+					actiondata = boturl
+					permission = &keyboard.Permission{
+						Type: 2, // 所有人可操作
+					}
+				case strings.HasPrefix(whiteLabel, "添加到频道"):
+					botuin := config.GetUinStr()
+					botappid := config.GetAppIDStr()
+					boturl := BuildQQBotShareLinkGuild(botuin, botappid)
+					actiontype = 0
+					actiondata = boturl
+					permission = &keyboard.Permission{
+						Type: 2, // 所有人可操作
+					}
+				case strings.HasPrefix(whiteLabel, "权限判断"):
 					actiontype = 1
 					actiondata = "收到就代表是管理员哦"
 					permission = &keyboard.Permission{
 						Type: 1, // 仅管理可操作
 					}
+				case strings.HasPrefix(whiteLabel, "%"):
+					// 分割whiteLabel来获取显示内容和URL
+					parts := strings.SplitN(whiteLabel[1:], " ", 2) // [1:] 用于去除白名单标签开头的'%'
+					if len(parts) == 2 {
+						whiteLabel = parts[0] // 显示内容
+						actiondata = parts[1] // URL
+						actiontype = 0        // 链接类型
+						permission = &keyboard.Permission{
+							Type: 2, // 所有人可操作
+						}
+					}
 				default:
-					actiontype = 2         //帮用户输入指令
+					actiontype = 2         //帮用户输入指令 用户自己回车发送
 					actiondata = dataLabel //从虚拟前缀的二级指令组合md按钮
 					permission = &keyboard.Permission{
 						Type: 2, // 所有人可操作
 					}
 				}
+
 				// 创建按钮
 				button := &keyboard.Button{
 					RenderData: &keyboard.RenderData{
@@ -1239,6 +1270,11 @@ func auto_md(message callapi.ActionMessage, messageText string, richMediaMessage
 // 构建QQ群机器人分享链接的函数
 func BuildQQBotShareLink(uin string, appid string) string {
 	return fmt.Sprintf("https://qun.qq.com/qunpro/robot/qunshare?robot_uin=%s&robot_appid=%s", uin, appid)
+}
+
+// 构建QQ群机器人分享链接的函数
+func BuildQQBotShareLinkGuild(uin string, appid string) string {
+	return fmt.Sprintf("https://qun.qq.com/qunpro/robot/share?robot_appid=%s", appid)
 }
 
 // 检查dataLabel是否以config中getenters返回的任一字符串开头
