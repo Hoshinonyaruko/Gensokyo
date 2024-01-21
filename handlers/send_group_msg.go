@@ -87,7 +87,8 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			mylog.Printf("GetLazyMessagesId: %v", messageID)
 			//如果应用端传递了user_id 就让at不要顺序乱套
 			if message.Params.UserID != nil {
-				messageID = echo.GetLazyMessagesId(message.Params.UserID.(string))
+				//messageID = echo.GetLazyMessagesId(message.Params.UserID.(string))
+				messageID = echo.GetLazyMessagesIdv2(message.Params.GroupID.(string), message.Params.UserID.(string))
 				mylog.Printf("GetLazyMessagesIdv2: %v", messageID)
 			}
 			if messageID != "" {

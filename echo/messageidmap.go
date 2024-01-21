@@ -41,6 +41,15 @@ func AddLazyMessageId(groupID, messageID string, timestamp time.Time) {
 	store.records[groupID] = append(store.records[groupID], messageRecord{messageID: messageID, timestamp: timestamp})
 }
 
+// AddLazyMessageId 添加 message_id 和它的时间戳到指定群号
+func AddLazyMessageIdv2(groupID, userID, messageID string, timestamp time.Time) {
+	store := initInstance()
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	key := groupID + "." + userID
+	store.records[key] = append(store.records[key], messageRecord{messageID: messageID, timestamp: timestamp})
+}
+
 // GetRecentMessages 获取指定群号中最近5分钟内的 message_id
 func GetLazyMessagesId(groupID string) string {
 	store := initInstance()
@@ -59,6 +68,39 @@ func GetLazyMessagesId(groupID string) string {
 		randomIndex := rand.Intn(len(recentMessages))
 		randomMessageID = recentMessages[randomIndex]
 	} else {
+		msgType := GetMessageTypeByGroupidv2(config.GetAppIDStr(), groupID)
+		if strings.HasPrefix(msgType, "guild") {
+			randomMessageID = "1000" // 频道主动信息
+		} else {
+			randomMessageID = ""
+		}
+	}
+	return randomMessageID
+}
+
+// GetLazyMessagesIdv2 获取指定群号和用户ID中最近5分钟内的 message_id
+func GetLazyMessagesIdv2(groupID, userID string) string {
+	store := initInstance()
+	store.mu.RLock()
+	defer store.mu.RUnlock()
+
+	// 构建复合键
+	key := groupID + "." + userID
+
+	fiveMinutesAgo := time.Now().Add(-5 * time.Minute)
+	var recentMessages []string
+	for _, record := range store.records[key] {
+		if record.timestamp.After(fiveMinutesAgo) {
+			recentMessages = append(recentMessages, record.messageID)
+		}
+	}
+
+	var randomMessageID string
+	if len(recentMessages) > 0 {
+		randomIndex := rand.Intn(len(recentMessages))
+		randomMessageID = recentMessages[randomIndex]
+	} else {
+		// 如果没有找到最近消息，处理默认行为
 		msgType := GetMessageTypeByGroupidv2(config.GetAppIDStr(), groupID)
 		if strings.HasPrefix(msgType, "guild") {
 			randomMessageID = "1000" // 频道主动信息
