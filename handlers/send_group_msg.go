@@ -87,11 +87,12 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			mylog.Printf("GetLazyMessagesId: %v", messageID)
 			//如果应用端传递了user_id 就让at不要顺序乱套
 			if message.Params.UserID != nil {
-				//messageID = echo.GetLazyMessagesId(message.Params.UserID.(string))
 				messageID = echo.GetLazyMessagesIdv2(message.Params.GroupID.(string), message.Params.UserID.(string))
 				mylog.Printf("GetLazyMessagesIdv2: %v", messageID)
 			}
-			if messageID != "" {
+			//2000是群主动 此时不能被动转主动
+			//仅在开启lazy_message_id时，有信息主动转被动特性，即，SSM
+			if messageID != "2000" {
 				//尝试发送栈内信息
 				SSM = true
 			}
@@ -144,6 +145,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		}
 		message.Params.GroupID = originalGroupID
 		message.Params.UserID = originalUserID
+		//2000是群主动 此时不能被动转主动
 		if SSM {
 			//mylog.Printf("正在使用Msgid:%v 补发之前失败的主动信息,请注意AtoP不要设置超过3,否则可能会影响正常信息发送", messageID)
 			//mylog.Printf("originalGroupID:%v ", originalGroupID)
@@ -166,9 +168,13 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), message.Params.GroupID)
 			mylog.Println("通过GetMessageIDByUseridOrGroupid函数获取的message_id:", message.Params.GroupID, messageID)
 		}
-		//开发环境用
-		if config.GetDevMsgID() {
-			messageID = "1000"
+		//开发环境用 1000在群里无效
+		// if config.GetDevMsgID() {
+		// 	messageID = "1000"
+		// }
+		if messageID == "2000" {
+			messageID = ""
+			mylog.Println("通过lazymessage_id模式发送群聊/频道主动信息,群聊每月仅4次机会,如果本信息非主动推送信息,请提交issue")
 		}
 		mylog.Printf("群组发信息使用messageID:[%v]", messageID)
 		var singleItem = make(map[string][]string)
