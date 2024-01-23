@@ -123,6 +123,39 @@ func GetLazyMessagesIdv2(groupID, userID string) string {
 	return randomMessageID
 }
 
+// GetLazyMessagesIdv2 获取指定群号和用户ID中最近5分钟内的 message_id
+func GetLazyMessagesIdv2(groupID, userID string) string {
+	store := initInstance()
+	store.mu.RLock()
+	defer store.mu.RUnlock()
+
+	// 构建复合键
+	key := groupID + "." + userID
+
+	fiveMinutesAgo := time.Now().Add(-5 * time.Minute)
+	var recentMessages []string
+	for _, record := range store.records[key] {
+		if record.timestamp.After(fiveMinutesAgo) {
+			recentMessages = append(recentMessages, record.messageID)
+		}
+	}
+
+	var randomMessageID string
+	if len(recentMessages) > 0 {
+		randomIndex := rand.Intn(len(recentMessages))
+		randomMessageID = recentMessages[randomIndex]
+	} else {
+		// 如果没有找到最近消息，处理默认行为
+		msgType := GetMessageTypeByGroupidv2(config.GetAppIDStr(), groupID)
+		if strings.HasPrefix(msgType, "guild") {
+			randomMessageID = "1000" // 频道主动信息
+		} else {
+			randomMessageID = ""
+		}
+	}
+	return randomMessageID
+}
+
 // 通过group_id获取类型
 func GetMessageTypeByGroupidv2(appID string, GroupID interface{}) string {
 	// 从appID和userID生成key
