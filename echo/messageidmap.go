@@ -52,7 +52,7 @@ func AddLazyMessageIdv2(groupID, userID, messageID string, timestamp time.Time) 
 	store.records[key] = append(store.records[key], messageRecord{messageID: messageID, timestamp: timestamp})
 }
 
-// GetRecentMessages 获取指定群号中最近5分钟内的 message_id
+// GetRecentMessages 获取指定群号中最近5分钟内的 message_id~
 func GetLazyMessagesId(groupID string) string {
 	store := initInstance()
 	store.mu.RLock()
@@ -86,7 +86,7 @@ func GetLazyMessagesId(groupID string) string {
 }
 
 // GetLazyMessagesIdv2 获取指定群号和用户ID中最近5分钟内的 message_id
-func GetLazyMessagesIdv2(groupID, userID string) string {
+func GetLazyMessagesIdv2(groupID, userID string) string { //1
 	store := initInstance()
 	store.mu.RLock()
 	defer store.mu.RUnlock()
@@ -124,7 +124,7 @@ func GetLazyMessagesIdv2(groupID, userID string) string {
 }
 
 // 通过group_id获取类型
-func GetMessageTypeByGroupidv2(appID string, GroupID interface{}) string {
+func GetMessageTypeByGroupidv2(appID string, GroupID interface{}) string { //2
 	// 从appID和userID生成key
 	var GroupIDStr string
 	switch u := GroupID.(type) {
