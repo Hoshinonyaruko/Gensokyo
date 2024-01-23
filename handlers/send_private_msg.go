@@ -111,10 +111,14 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), UserID)
 			mylog.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
 		}
-		//开发环境用
-		if config.GetDevMsgID() {
-			messageID = "1000"
+		if messageID == "2000" {
+			messageID = ""
+			mylog.Println("通过lazymsgid发送群私聊主动信息,每月可发送1次")
 		}
+		//开发环境用 私聊不可用1000
+		// if config.GetDevMsgID() {
+		// 	messageID = "1000"
+		// }
 		mylog.Println("私聊发信息messageText:", messageText)
 		//mylog.Println("foundItems:", foundItems)
 
@@ -443,6 +447,10 @@ func HandleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 				mylog.Println("通过GetMessageIDByUseridOrGroupid函数获取的message_id:", originalGroupID, messageID)
 			}
 		}
+	}
+	if messageID == "2000" {
+		messageID = ""
+		mylog.Println("通过lazymsgid发送频道私聊主动信息,若非主动信息请提交issue")
 	}
 	//开发环境用
 	if config.GetDevMsgID() {

@@ -74,6 +74,11 @@ func HandleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), channelID)
 			mylog.Println("通过GetMessageIDByUseridOrGroupid函数获取的message_id:", messageID)
 		}
+		//主动信息
+		if messageID == "2000" {
+			messageID = ""
+			mylog.Println("通过lazymsgid发送频道主动信息,若非主动信息请提交issue")
+		}
 		//开发环境用
 		if config.GetDevMsgID() {
 			messageID = "1000"
