@@ -37,6 +37,7 @@ func handleSendGroupMessage(c *gin.Context, api openapi.OpenAPI, apiV2 openapi.O
 	var retmsg string
 	var req struct {
 		GroupID    int64  `json:"group_id" form:"group_id"`
+		UserID     *int64 `json:"user_id,omitempty" form:"user_id"`
 		Message    string `json:"message" form:"message"`
 		AutoEscape bool   `json:"auto_escape" form:"auto_escape"`
 	}
@@ -65,6 +66,10 @@ func handleSendGroupMessage(c *gin.Context, api openapi.OpenAPI, apiV2 openapi.O
 			GroupID: strconv.FormatInt(req.GroupID, 10), // 注意这里需要转换类型，因为 GroupID 是 int64
 			Message: req.Message,
 		},
+	}
+	// 如果 UserID 存在，则加入到参数中
+	if req.UserID != nil {
+		message.Params.UserID = strconv.FormatInt(*req.UserID, 10)
 	}
 	// 调用处理函数
 	retmsg, err := handlers.HandleSendGroupMsg(client, api, apiV2, message)
