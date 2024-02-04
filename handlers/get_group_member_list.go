@@ -302,7 +302,7 @@ func GetGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				UserID:          userIDUInt,
 				GroupID:         uint64(groupIDInt),
 				Nickname:        memberFromAPI.Nick,
-				Card:            "主人", // 使用默认值
+				Card:            memberFromAPI.Nick, // 使用昵称作为默认值(TODO: 将来可能发生变更)
 				Sex:             "0",  // 使用默认值
 				Age:             0,    // 使用默认值
 				Area:            "0",  // 使用默认值
