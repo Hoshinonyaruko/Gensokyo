@@ -240,13 +240,13 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 	} else {
 		localRecordPattern = regexp.MustCompile(`\[CQ:record,file=file://([^\]]+?)\]`)
 	}
-	httpUrlImagePattern := regexp.MustCompile(`\[CQ:image,file=http://(.+)\]`)
-	httpsUrlImagePattern := regexp.MustCompile(`\[CQ:image,file=https://(.+)\]`)
-	base64ImagePattern := regexp.MustCompile(`\[CQ:image,file=base64://(.+)\]`)
-	base64RecordPattern := regexp.MustCompile(`\[CQ:record,file=base64://(.+)\]`)
-	httpUrlRecordPattern := regexp.MustCompile(`\[CQ:record,file=http://(.+)\]`)
-	httpsUrlRecordPattern := regexp.MustCompile(`\[CQ:record,file=https://(.+)\]`)
-	mdPattern := regexp.MustCompile(`\[CQ:markdown,data=base64://(.+)\]`)
+	httpUrlImagePattern := regexp.MustCompile(`\[CQ:image,file=http://(.+?)\]`)
+	httpsUrlImagePattern := regexp.MustCompile(`\[CQ:image,file=https://(.+?)\]`)
+	base64ImagePattern := regexp.MustCompile(`\[CQ:image,file=base64://(.+?)\]`)
+	base64RecordPattern := regexp.MustCompile(`\[CQ:record,file=base64://(.+?)\]`)
+	httpUrlRecordPattern := regexp.MustCompile(`\[CQ:record,file=http://(.+?)\]`)
+	httpsUrlRecordPattern := regexp.MustCompile(`\[CQ:record,file=https://(.+?)\]`)
+	mdPattern := regexp.MustCompile(`\[CQ:markdown,data=base64://(.+?)\]`)
 
 	patterns := []struct {
 		key     string
