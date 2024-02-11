@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
+	"net/http"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -19,12 +21,14 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
+	"github.com/hoshinonyaruko/gensokyo/images"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/hoshinonyaruko/gensokyo/url"
 	"github.com/skip2/go-qrcode"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/dto/keyboard"
 	"github.com/tencent-connect/botgo/openapi"
+	"github.com/tidwall/gjson"
 	"mvdan.cc/xurls" //xurls是一个从文本提取url的库 适用于多种场景
 )
 
@@ -247,6 +251,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 	httpUrlRecordPattern := regexp.MustCompile(`\[CQ:record,file=http://(.+?)\]`)
 	httpsUrlRecordPattern := regexp.MustCompile(`\[CQ:record,file=https://(.+?)\]`)
 	mdPattern := regexp.MustCompile(`\[CQ:markdown,data=base64://(.+?)\]`)
+	qqMusicPattern := regexp.MustCompile(`\[CQ:music,type=qq,id=(\d+)\]`)
 
 	patterns := []struct {
 		key     string
@@ -261,6 +266,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 		{"url_record", httpUrlRecordPattern},
 		{"url_records", httpsUrlRecordPattern},
 		{"markdown", mdPattern},
+		{"qqmusic", qqMusicPattern},
 	}
 
 	foundItems := make(map[string][]string)
@@ -1014,4 +1020,167 @@ func parseMDData(mdData []byte) (*dto.Markdown, *keyboard.MessageKeyboard, error
 	}
 
 	return md, kb, nil
+}
+
+func parseQQMuiscMDData(musicid string) (*dto.Markdown, *keyboard.MessageKeyboard, error) {
+	info, err := QQMusicSongInfo(musicid)
+	if err != nil {
+		return nil, nil, err
+	}
+	if !info.Get("track_info").Exists() {
+		return nil, nil, errors.New("song not found")
+	}
+	albumMid := info.Get("track_info.album.mid").String()
+	pinfo, _ := FetchTrackInfo(info.Get("track_info.mid").Str)
+	jumpURL := "https://i.y.qq.com/v8/playsong.html?platform=11&appshare=android_qq&appversion=10030010&hosteuin=oKnlNenz7i-s7c**&songmid=" + info.Get("track_info.mid").Str + "&type=0&appsongtype=1&_wv=1&source=qq&ADTAG=qfshare"
+	content := info.Get("track_info.singer.0.name").String()
+
+	//专辑图片
+	PictureUrl := "https://y.gtimg.cn/music/photo_new/T002R180x180M000" + albumMid + ".jpg"
+	//专辑文字
+	musicContent := info.Get("track_info.name").Str + "\r" + content
+	// 处理 Markdown
+	var md *dto.Markdown
+	var CustomTemplateID string
+	//组合 mdParams
+	var mdParams []*dto.MarkdownParams
+	CustomTemplateID = config.GetCustomTemplateID()
+	if CustomTemplateID != "" {
+		if PictureUrl != "" {
+			height, width, err := images.GetImageDimensions(PictureUrl)
+			if err != nil {
+				mylog.Printf("获取图片宽高出错")
+			}
+			imgDesc := fmt.Sprintf("图片 #%dpx #%dpx", width, height)
+			// 创建 MarkdownParams 的实例
+			mdParams = []*dto.MarkdownParams{
+				{Key: "img_dec", Values: []string{imgDesc}},
+				{Key: "img_url", Values: []string{PictureUrl}},
+				{Key: "text_end", Values: []string{"\r" + musicContent}},
+			}
+		} else {
+			mdParams = []*dto.MarkdownParams{
+				{Key: "text_end", Values: []string{"\r" + musicContent}},
+			}
+		}
+	}
+	// 组合模板 Markdown
+	md = &dto.Markdown{
+		CustomTemplateID: CustomTemplateID,
+		Params:           mdParams,
+	}
+	// 使用gjson获取musicUrl
+	musicUrl := gjson.Get(pinfo, "url_mid.data.midurlinfo.0.purl").String()
+	// 处理 Keyboard
+	kb := createMusicKeyboard(jumpURL, musicUrl)
+
+	return md, kb, nil
+}
+
+// QQMusicSongInfo 通过给定id在QQ音乐上查找曲目信息
+func QQMusicSongInfo(id string) (gjson.Result, error) {
+	d, err := FetchSongDetail(id)
+	if err != nil {
+		return gjson.Result{}, err
+	}
+	return gjson.Get(d, "songinfo.data"), nil
+}
+
+func createMusicKeyboard(jumpURL string, musicURL string) *keyboard.MessageKeyboard {
+	// 初始化自定义键盘
+	customKeyboard := &keyboard.CustomKeyboard{}
+	currentRow := &keyboard.Row{} // 创建一个新行
+
+	// 创建歌曲页面跳转按钮
+	songPageButton := &keyboard.Button{
+		RenderData: &keyboard.RenderData{
+			Label:        "立刻播放",
+			VisitedLabel: "已播放",
+			Style:        1, // 蓝色边缘
+		},
+		Action: &keyboard.Action{
+			Type:          0,                             // 链接类型
+			Permission:    &keyboard.Permission{Type: 2}, // 所有人可操作
+			Data:          jumpURL,
+			UnsupportTips: "请升级新版手机QQ",
+		},
+	}
+
+	//这个链接是音乐直链 musicURL 还没有适合能力调用
+
+	// // 创建立即播放按钮
+	// playNowButton := &keyboard.Button{
+	// 	RenderData: &keyboard.RenderData{
+	// 		Label:        "立刻播放",
+	// 		VisitedLabel: "立刻播放",
+	// 		Style:        1, // 蓝色边缘
+	// 	},
+	// 	Action: &keyboard.Action{
+	// 		Type:          0,                             // 链接类型
+	// 		Permission:    &keyboard.Permission{Type: 2}, // 所有人可操作
+	// 		Data:          musicURL,
+	// 		UnsupportTips: "请升级新版手机QQ",
+	// 	},
+	// }
+
+	// 将按钮添加到当前行
+	// currentRow.Buttons = append(currentRow.Buttons, songPageButton, playNowButton)
+	currentRow.Buttons = append(currentRow.Buttons, songPageButton)
+
+	// 将当前行添加到自定义键盘
+	customKeyboard.Rows = append(customKeyboard.Rows, currentRow)
+
+	// 创建 MessageKeyboard 并设置其 Content
+	kb := &keyboard.MessageKeyboard{
+		Content: customKeyboard,
+	}
+
+	return kb
+}
+
+// FetchTrackInfo 用于根据trackMid获取QQ音乐的track信息
+func FetchTrackInfo(trackMid string) (string, error) {
+	urlTemplate := "https://u.y.qq.com/cgi-bin/musicu.fcg?g_tk=2034008533&uin=0&format=json&data={\"comm\":{\"ct\":23,\"cv\":0},\"url_mid\":{\"module\":\"vkey.GetVkeyServer\",\"method\":\"CgiGetVkey\",\"param\":{\"guid\":\"4311206557\",\"songmid\":[\"%s\"],\"songtype\":[0],\"uin\":\"0\",\"loginflag\":1,\"platform\":\"23\"}}}&_=1599039471576"
+	url := fmt.Sprintf(urlTemplate, trackMid)
+
+	// 发送HTTP GET请求
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", fmt.Errorf("error making request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// 读取并解析响应体
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("error reading response body: %v", err)
+	}
+
+	var result interface{} // 使用interface{}来接收任意的JSON对象
+	if err := json.Unmarshal(body, &result); err != nil {
+		return "", fmt.Errorf("error parsing JSON: %v", err)
+	}
+
+	return string(body), nil
+}
+
+// FetchSongDetail 发送请求到QQ音乐API并获取歌曲详情
+func FetchSongDetail(songID string) (string, error) {
+	// 构建请求URL
+	url := fmt.Sprintf("https://u.y.qq.com/cgi-bin/musicu.fcg?format=json&inCharset=utf8&outCharset=utf-8&notice=0&platform=yqq.json&needNewCode=0&data={\"comm\":{\"ct\":24,\"cv\":0},\"songinfo\":{\"method\":\"get_song_detail_yqq\",\"param\":{\"song_type\":0,\"song_mid\":\"\",\"song_id\":%s},\"module\":\"music.pf_song_detail_svr\"}}", songID)
+
+	// 发送GET请求
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", fmt.Errorf("error making request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// 读取响应体
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("error reading response body: %v", err)
+	}
+
+	return string(body), nil
 }
