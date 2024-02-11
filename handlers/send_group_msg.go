@@ -323,7 +323,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
 				if !ok {
 					mylog.Printf("Error: Expected RichMediaMessage type for key %s.", key)
-					if key == "markdown" {
+					if key == "markdown" || key == "qqmusic" {
 						// 进行类型断言
 						groupMessage, ok := groupReply.(*dto.MessageToCreate)
 						if !ok {
@@ -913,6 +913,32 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 			Markdown: markdown,
 			Keyboard: keyboard,
 			MsgType:  2,
+		}
+	} else if qqmusic, ok := foundItems["qqmusic"]; ok && len(qqmusic) > 0 {
+		// 转换qq音乐id到一个md
+		music_id := qqmusic[0]
+		markdown, keyboard, err := parseQQMuiscMDData(music_id)
+		if err != nil {
+			mylog.Printf("failed to parseMDData: %v", err)
+			return nil
+		}
+		if markdown != nil {
+			return &dto.MessageToCreate{
+				Content:  "markdown",
+				MsgID:    id,
+				MsgSeq:   msgseq,
+				Markdown: markdown,
+				Keyboard: keyboard,
+				MsgType:  2,
+			}
+		} else {
+			return &dto.MessageToCreate{
+				Content:  "markdown",
+				MsgID:    id,
+				MsgSeq:   msgseq,
+				Keyboard: keyboard,
+				MsgType:  2,
+			}
 		}
 	} else {
 		// 返回文本信息
