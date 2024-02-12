@@ -140,6 +140,7 @@ type Settings struct {
 	LinkBots               []string             `yaml:"link_bots"`
 	LinkText               string               `yaml:"link_text"`
 	LinkPic                string               `yaml:"link_pic"`
+	MusicPrefix            string               `yaml:"music_prefix"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -1762,4 +1763,16 @@ func GetLinkPic() string {
 		return ""
 	}
 	return instance.Settings.LinkPic
+}
+
+// 获取 GetMusicPrefix
+func GetMusicPrefix() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get MusicPrefix.")
+		return ""
+	}
+	return instance.Settings.MusicPrefix
 }

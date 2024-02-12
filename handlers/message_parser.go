@@ -1123,9 +1123,25 @@ func createMusicKeyboard(jumpURL string, musicURL string) *keyboard.MessageKeybo
 	// 	},
 	// }
 
+	//自传播按钮
+	musicPrefix := config.GetMusicPrefix()
+	playNowButton := &keyboard.Button{
+		RenderData: &keyboard.RenderData{
+			Label:        "我也要点歌",
+			VisitedLabel: "再次点歌",
+			Style:        1, // 蓝色边缘
+		},
+		Action: &keyboard.Action{
+			Type:          2,                             // 链接类型
+			Permission:    &keyboard.Permission{Type: 2}, // 所有人可操作
+			Data:          musicPrefix + " ",
+			UnsupportTips: "请升级新版手机QQ",
+		},
+	}
+
 	// 将按钮添加到当前行
-	// currentRow.Buttons = append(currentRow.Buttons, songPageButton, playNowButton)
-	currentRow.Buttons = append(currentRow.Buttons, songPageButton)
+	currentRow.Buttons = append(currentRow.Buttons, songPageButton, playNowButton)
+	//currentRow.Buttons = append(currentRow.Buttons, songPageButton)
 
 	// 将当前行添加到自定义键盘
 	customKeyboard.Rows = append(customKeyboard.Rows, currentRow)
