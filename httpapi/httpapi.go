@@ -26,6 +26,10 @@ func CombinedMiddleware(api openapi.OpenAPI, apiV2 openapi.OpenAPI) gin.HandlerF
 			handleSendGuildChannelMessage(c, api, apiV2)
 			return
 		}
+		if c.Request.URL.Path == "/get_group_list" {
+			handleGetGroupList(c, api, apiV2)
+			return
+		}
 
 		// 调用c.Next()以继续处理请求链
 		c.Next()
@@ -196,4 +200,27 @@ func (c *HttpAPIClient) SendMessage(message map[string]interface{}) error {
 
 	// 返回nil占位符
 	return nil
+}
+
+// handleGetGroupList 处理获取群列表
+func handleGetGroupList(c *gin.Context, api openapi.OpenAPI, apiV2 openapi.OpenAPI) {
+	var retmsg string
+
+	// 使用解析后的参数处理请求
+	client := &HttpAPIClient{}
+	// 创建 ActionMessage 实例
+	message := callapi.ActionMessage{
+		Action: "get_group_list",
+	}
+
+	// 调用处理函数
+	retmsg, err := handlers.GetGroupList(client, api, apiV2, message)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 返回处理结果
+	c.Header("Content-Type", "application/json")
+	c.String(http.StatusOK, retmsg)
 }

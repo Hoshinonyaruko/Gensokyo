@@ -126,6 +126,7 @@ settings:
   url_pic_transfer : false          #把图片url(任意来源图链)变成你备案的白名单url 需要较高上下行+ssl+自备案域名+设置白名单域名(暂时不需要)
   idmap_pro : false                 #需开启hash_id配合,高级id转换增强,可以多个真实值bind到同一个虚拟值,对于每个用户,每个群\私聊\判断私聊\频道,都会产生新的虚拟值,但可以多次bind,bind到同一个数字.数据库负担会变大.
   send_delay : 300                  #单位 毫秒 默认300ms 可以视情况减少到100或者50
+  disable_webui: false              #禁用webui
 
   title : "Gensokyo © 2023 - Hoshinonyaruko"              #程序的标题 如果多个机器人 可根据标题区分
   custom_bot_name : "Gensokyo全域机器人"                   #自定义机器人名字,会在api调用中返回,默认Gensokyo全域机器人

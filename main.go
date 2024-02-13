@@ -298,7 +298,7 @@ func main() {
 	r.POST("/uploadpic", server.UploadBase64ImageHandler(rateLimiter))
 	r.POST("/uploadrecord", server.UploadBase64RecordHandler(rateLimiter))
 	r.Static("/channel_temp", "./channel_temp")
-	if config.GetFrpPort() == "0" {
+	if config.GetFrpPort() == "0" && !config.GetDisableWebui() {
 		//webui和它的api
 		webuiGroup := r.Group("/webui")
 		{
@@ -308,6 +308,8 @@ func main() {
 			webuiGroup.DELETE("/*filepath", webui.CombinedMiddleware(api, apiV2))
 			webuiGroup.PATCH("/*filepath", webui.CombinedMiddleware(api, apiV2))
 		}
+	} else {
+		mylog.Println("Either FRP port is set to '0' or WebUI is disabled.")
 	}
 	//正向http api
 	http_api_address := config.GetHttpAddress()
