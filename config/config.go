@@ -141,6 +141,7 @@ type Settings struct {
 	LinkText               string               `yaml:"link_text"`
 	LinkPic                string               `yaml:"link_pic"`
 	MusicPrefix            string               `yaml:"music_prefix"`
+	DisableWebui           bool                 `yaml:"disable_webui"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -1775,4 +1776,16 @@ func GetMusicPrefix() string {
 		return ""
 	}
 	return instance.Settings.MusicPrefix
+}
+
+// 获取 GetDisableWebui 的值
+func GetDisableWebui() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetDisableWebui value.")
+		return false
+	}
+	return instance.Settings.DisableWebui
 }

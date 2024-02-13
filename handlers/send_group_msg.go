@@ -1057,21 +1057,20 @@ func SendStackMessages(apiv2 openapi.OpenAPI, messageid string, GroupID string) 
 	mylog.Printf("取出数量: %v", count)
 	pairs := echo.PopGlobalStackMulti(count)
 	for i, pair := range pairs {
-		mylog.Printf("%v: %v", pair.Group, GroupID)
+		mylog.Printf("发送栈中的消息匹配 %v: %v", pair.Group, GroupID)
 		if pair.Group == GroupID {
 			// 发送消息
 			msgseq := echo.GetMappingSeq(messageid)
 			echo.AddMappingSeq(messageid, msgseq+1)
 			pair.GroupMessage.MsgSeq = msgseq + 1
 			pair.GroupMessage.MsgID = messageid
+			mylog.Printf("发送栈中的消息 使用MsgSeq[%v]使用MsgID[%v]", pair.GroupMessage.MsgSeq, pair.GroupMessage.MsgID)
 			_, err := apiv2.PostGroupMessage(context.TODO(), pair.Group, pair.GroupMessage)
 			if err != nil {
 				mylog.Printf("发送组合消息失败: %v", err)
-				continue
 			} else {
 				echo.RemoveFromGlobalStack(i)
 			}
-
 			// 检查错误码
 			if err != nil && strings.Contains(err.Error(), `"code":22009`) {
 				mylog.Printf("信息再次发送失败,加入到队列中,下次被动信息进行发送")
