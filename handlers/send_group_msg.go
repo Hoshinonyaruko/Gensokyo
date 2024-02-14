@@ -939,6 +939,26 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 				MsgType:  2,
 			}
 		}
+	} else if videoURL, ok := foundItems["url_video"]; ok && len(videoURL) > 0 {
+		newvideolink := "http://" + videoURL[0]
+		// 发链接视频 http
+		return &dto.RichMediaMessage{
+			EventID:    id,
+			FileType:   2,            // 2代表视频
+			URL:        newvideolink, // 新图片链接
+			Content:    "",           // 这个字段文档没有了
+			SrvSendMsg: false,
+		}
+	} else if videoURLs, ok := foundItems["url_videos"]; ok && len(videoURLs) > 0 {
+		newvideolink := "https://" + videoURLs[0]
+		// 发链接视频 https
+		return &dto.RichMediaMessage{
+			EventID:    id,
+			FileType:   2,            // 2代表视频
+			URL:        newvideolink, // 新图片链接
+			Content:    "",           // 这个字段文档没有了
+			SrvSendMsg: false,
+		}
 	} else {
 		// 返回文本信息
 		return &dto.MessageToCreate{
