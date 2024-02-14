@@ -250,6 +250,8 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 	base64RecordPattern := regexp.MustCompile(`\[CQ:record,file=base64://(.+?)\]`)
 	httpUrlRecordPattern := regexp.MustCompile(`\[CQ:record,file=http://(.+?)\]`)
 	httpsUrlRecordPattern := regexp.MustCompile(`\[CQ:record,file=https://(.+?)\]`)
+	httpUrlVideoPattern := regexp.MustCompile(`\[CQ:video,file=http://(.+?)\]`)
+	httpsUrlVideoPattern := regexp.MustCompile(`\[CQ:video,file=https://(.+?)\]`)
 	mdPattern := regexp.MustCompile(`\[CQ:markdown,data=base64://(.+?)\]`)
 	qqMusicPattern := regexp.MustCompile(`\[CQ:music,type=qq,id=(\d+)\]`)
 
@@ -267,6 +269,8 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 		{"url_records", httpsUrlRecordPattern},
 		{"markdown", mdPattern},
 		{"qqmusic", qqMusicPattern},
+		{"url_video", httpUrlVideoPattern},
+		{"url_videos", httpsUrlVideoPattern},
 	}
 
 	foundItems := make(map[string][]string)
