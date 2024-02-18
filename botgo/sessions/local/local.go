@@ -57,6 +57,36 @@ func (l *ChanManager) Start(apInfo *dto.WebsocketAP, token *token.Token, intents
 	return nil
 }
 
+// Start 启动指定的分片 session manager 适合想要手动指定目前分片的开发者（分片较少)
+func (l *ChanManager) StartSingle(apInfo *dto.WebsocketAPSingle, token *token.Token, intents *dto.Intent) error {
+	defer log.Sync()
+	if err := manager.CheckSessionLimitSingle(apInfo); err != nil {
+		log.Errorf("[ws/session/local] session limited apInfo: %+v", apInfo)
+		return err
+	}
+	startInterval := manager.CalcInterval(apInfo.SessionStartLimit.MaxConcurrency)
+	log.Infof("[ws/session/local] will start %d sessions and per session start interval is %s",
+		apInfo.ShardCount, startInterval)
+
+	// 只启动一个分片
+
+	session := dto.Session{
+		URL:     apInfo.URL,
+		Token:   *token,
+		Intent:  *intents,
+		LastSeq: 0,
+		Shards: dto.ShardConfig{
+			ShardID:    apInfo.ShardID,
+			ShardCount: apInfo.ShardCount,
+		},
+	}
+
+	time.Sleep(startInterval)
+	go l.newConnect(session)
+
+	return nil
+}
+
 // newConnect 启动一个新的连接，如果连接在监听过程中报错了，或者被远端关闭了链接，需要识别关闭的原因，能否继续 resume
 // 如果能够 resume，则往 sessionChan 中放入带有 sessionID 的 session
 // 如果不能，则清理掉 sessionID，将 session 放入 sessionChan 中

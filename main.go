@@ -184,6 +184,12 @@ func main() {
 			if err != nil {
 				log.Fatalln(err)
 			}
+			fmt.Printf("分片建议\n")
+			fmt.Printf("建议的分片数量:%d\n", wsInfo.Shards)
+			fmt.Printf("每 24 小时可创建 Session 数:%d\n", wsInfo.SessionStartLimit.Total)
+			fmt.Printf("目前还可以创建的 Session 数:%d\n", wsInfo.SessionStartLimit.Remaining)
+			fmt.Printf("重置计数的剩余时间(ms):%d\n", wsInfo.SessionStartLimit.ResetAfter)
+			fmt.Printf("每 5s 可以创建的 Session 数:%d\n", wsInfo.SessionStartLimit.MaxConcurrency)
 
 			// 定义和初始化intent变量
 			var intent dto.Intent = 0
@@ -204,12 +210,28 @@ func main() {
 
 			// 启动session manager以管理websocket连接
 			// 指定需要启动的分片数为 2 的话可以手动修改 wsInfo
-			go func() {
-				wsInfo.Shards = 1
-				if err = botgo.NewSessionManager().Start(wsInfo, token, &intent); err != nil {
-					log.Fatalln(err)
-				}
-			}()
+			if conf.Settings.ShardCount == 1 {
+				go func() {
+					wsInfo.Shards = 1
+					if err = botgo.NewSessionManager().Start(wsInfo, token, &intent); err != nil {
+						log.Fatalln(err)
+					}
+				}()
+				log.Printf("不使用分片,所有信息都由当前gensokyo处理...\n")
+			} else {
+				go func() {
+					wsInfoSingle := &dto.WebsocketAPSingle{
+						URL:               wsInfo.URL,
+						ShardCount:        uint32(conf.Settings.ShardCount),
+						ShardID:           uint32(conf.Settings.ShardID),
+						SessionStartLimit: wsInfo.SessionStartLimit,
+					}
+					if err = botgo.NewSessionManager().StartSingle(wsInfoSingle, token, &intent); err != nil {
+						log.Fatalln(err)
+					}
+				}()
+				log.Printf("使用%d个分片,当前是第%d个分片,比如：[0,4]，代表分为四个片，当前链接是第 0 个片,业务稍后应该继续多开gensokyo,可在不同的服务器和ip地址 shard 为[1,4],[2,4],[3,4]的链接，才能完整接收和处理事件。\n", conf.Settings.ShardCount, conf.Settings.ShardID)
+			}
 
 			// 启动多个WebSocket客户端的逻辑
 			if !allEmpty(conf.Settings.WsAddress) {
