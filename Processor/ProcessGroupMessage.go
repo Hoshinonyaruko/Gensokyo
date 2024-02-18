@@ -124,6 +124,8 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 		groupMsg.IsBindedGroupId = IsBindedGroupId
 		if IsBindedUserId {
 			groupMsg.Avatar, _ = GenerateAvatarURL(userid64)
+		} else {
+			groupMsg.Avatar, _ = GenerateAvatarURLV2(data.Author.ID)
 		}
 	}
 	//根据条件判断是否增加nick和card

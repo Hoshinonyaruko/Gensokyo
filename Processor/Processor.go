@@ -1039,6 +1039,14 @@ func GenerateAvatarURL(userID int64) (string, error) {
 	return fmt.Sprintf("http://q%d.qlogo.cn/g?b=qq&nk=%d&s=640", qNumber, userID), nil
 }
 
+// GenerateAvatarURLV2 生成根据32位ID 和 Appid 组合的 新QQ 头像 URL
+func GenerateAvatarURLV2(openid string) (string, error) {
+
+	appidstr := config.GetAppIDStr()
+	// 构建并返回 URL
+	return fmt.Sprintf("https://q.qlogo.cn/qqapp/%s/%s/640", appidstr, openid), nil
+}
+
 // 生成link卡片
 func generateMdByConfig() (md *dto.Markdown, kb *keyboard.MessageKeyboard) {
 	//相关配置获取
