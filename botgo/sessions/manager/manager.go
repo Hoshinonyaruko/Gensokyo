@@ -59,3 +59,11 @@ func CheckSessionLimit(apInfo *dto.WebsocketAP) error {
 	}
 	return nil
 }
+
+// CheckSessionLimit 检查链接数是否达到限制，如果达到限制需要等待重置
+func CheckSessionLimitSingle(apInfo *dto.WebsocketAPSingle) error {
+	if apInfo.ShardCount > apInfo.SessionStartLimit.Remaining {
+		return errs.ErrSessionLimit
+	}
+	return nil
+}

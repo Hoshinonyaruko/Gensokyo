@@ -142,6 +142,8 @@ type Settings struct {
 	LinkPic                string               `yaml:"link_pic"`
 	MusicPrefix            string               `yaml:"music_prefix"`
 	DisableWebui           bool                 `yaml:"disable_webui"`
+	ShardCount             int                  `yaml:"shard_count"`
+	ShardID                int                  `yaml:"shard_id"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
