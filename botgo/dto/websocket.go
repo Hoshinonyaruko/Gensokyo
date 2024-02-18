@@ -13,6 +13,14 @@ type WebsocketAP struct {
 	SessionStartLimit SessionStartLimit `json:"session_start_limit"`
 }
 
+// WebsocketAP wss 单个接入点信息
+type WebsocketAPSingle struct {
+	URL               string            `json:"url"`
+	ShardCount        uint32            `json:"shards"`   //最大值 比如是4个分片就是4
+	ShardID           uint32            `json:"shard_id"` //从0开始的 0 1 2 3 对应上面的
+	SessionStartLimit SessionStartLimit `json:"session_start_limit"`
+}
+
 // SessionStartLimit 链接频控信息
 type SessionStartLimit struct {
 	Total          uint32 `json:"total"`
