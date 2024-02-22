@@ -58,6 +58,13 @@ type MessageToCreate struct {
 	MsgSeq           int                       `json:"msg_seq,omitempty"`   //回复消息的序号，与 msg_id 联合使用，避免相同消息id回复重复发送，不填默认是1。相同的 msg_id + msg_seq 重复发送会失败。
 }
 
+// FourmToCreate 发送帖子结构体定义
+type FourmToCreate struct {
+	Title   string `json:"title,omitempty"`
+	Content string `json:"content,omitempty"`
+	Format  uint32 `json:"format,omitempty"` //消息类型: 1:文字消息 2:html信息 3: md消息 4:json信息
+}
+
 // GetEventID 事件ID
 func (msg MessageToCreate) GetEventID() string {
 	return msg.EventID

@@ -27,6 +27,7 @@ const (
 	channelRolesPermissionsURI uri = "/channels/{channel_id}/roles/{role_id}/permissions"
 
 	messagesURI       uri = "/channels/{channel_id}/messages"
+	fourmMessagesURI  uri = "/channels/{channel_id}/threads"
 	groupMessagesURI  uri = "/v2/groups/{group_id}/messages"
 	groupRichMediaURI uri = "/v2/groups/{group_id}/files"
 
