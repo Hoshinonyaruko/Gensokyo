@@ -1,6 +1,7 @@
 name: Cross Compile Go Project
 
 on:
+  workflow_dispatch:
   pull_request:
     types: [opened, synchronize]
   push:
