@@ -76,6 +76,19 @@ func ParseAndHandle(payload *dto.WSPayload) error {
 
 // ParseData 解析数据
 func ParseData(message []byte, target interface{}) error {
+	// 尝试检查target是否为*dto.WSThreadData类型
+	if threadData, ok := target.(*dto.WSThreadData); ok {
+		// 特殊处理dto.WSThreadData
+		data := gjson.Get(string(message), "d")
+		if err := json.Unmarshal([]byte(data.String()), &threadData); err != nil {
+			return err
+		}
+		// 设置ID字段
+		threadData.ID = gjson.Get(string(message), "id").String()
+		return nil
+	}
+
+	// 对于其他类型，继续原有逻辑
 	data := gjson.Get(string(message), "d")
 	return json.Unmarshal([]byte(data.String()), target)
 }

@@ -150,8 +150,13 @@ func HandleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 						if err != nil {
 							mylog.Printf("Base64 解码失败: %v", err)
 						} else {
+							// 压缩图片
+							compressedData, err := images.CompressSingleImage(fileImageData)
+							if err != nil {
+								mylog.Printf("Error compressing image: %v", err)
+							}
 							// 使用 Multipart 方法发送
-							if _, err = api.PostMessageMultipart(context.TODO(), channelID, newMessage, fileImageData); err != nil {
+							if _, err = api.PostMessageMultipart(context.TODO(), channelID, newMessage, compressedData); err != nil {
 								mylog.Printf("40003重试,使用 multipart 发送图文混合信息失败: %v message_id %v", err, messageID)
 							}
 						}
@@ -162,6 +167,11 @@ func HandleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 				fileImageData, err := base64.StdEncoding.DecodeString(Reply.Content)
 				if err != nil {
 					mylog.Printf("Base64 解码失败: %v", err)
+				}
+				// 压缩图片
+				compressedData, err := images.CompressSingleImage(fileImageData)
+				if err != nil {
+					mylog.Printf("Error compressing image: %v", err)
 				}
 				// 创建包含文本和图像信息的消息
 				msgseq = echo.GetMappingSeq(messageID)
@@ -174,7 +184,7 @@ func HandleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 				}
 				newMessage.Timestamp = time.Now().Unix() // 设置时间戳
 				// 使用Multipart方法发送
-				if _, err = api.PostMessageMultipart(context.TODO(), channelID, newMessage, fileImageData); err != nil {
+				if _, err = api.PostMessageMultipart(context.TODO(), channelID, newMessage, compressedData); err != nil {
 					mylog.Printf("使用multipart发送图文信息失败: %v message_id %v", err, messageID)
 				}
 			}
@@ -215,9 +225,13 @@ func HandleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 
 					// 清除reply的Content
 					reply.Content = ""
-
+					// 压缩图片
+					compressedData, err := images.CompressSingleImage(fileImageData)
+					if err != nil {
+						mylog.Printf("Error compressing image: %v", err)
+					}
 					// 使用Multipart方法发送
-					if _, err = api.PostMessageMultipart(context.TODO(), channelID, reply, fileImageData); err != nil {
+					if _, err = api.PostMessageMultipart(context.TODO(), channelID, reply, compressedData); err != nil {
 						mylog.Printf("使用multipart发送 %s 信息失败: %v message_id %v", key, err, messageID)
 					}
 					//发送成功回执
@@ -244,8 +258,13 @@ func HandleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 							if err != nil {
 								mylog.Printf("Base64 解码失败: %v", err)
 							} else {
+								// 压缩图片
+								compressedData, err := images.CompressSingleImage(fileImageData)
+								if err != nil {
+									mylog.Printf("Error compressing image: %v", err)
+								}
 								// 使用 Multipart 方法发送
-								if _, err = api.PostMessageMultipart(context.TODO(), channelID, reply, fileImageData); err != nil {
+								if _, err = api.PostMessageMultipart(context.TODO(), channelID, reply, compressedData); err != nil {
 									mylog.Printf("40003重试,使用 multipart 发送 %s 信息失败: %v message_id %v", key, err, messageID)
 								}
 							}
@@ -269,6 +288,9 @@ func HandleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 			mylog.Printf("error retrieving real UserID: %v", err)
 		}
 		retmsg, _ = HandleSendGuildChannelPrivateMsg(client, api, apiv2, message, &guildID, &RChannelID)
+	case "forum":
+		//api一样的 直接丢进去试试
+		retmsg, _ = HandleSendGuildChannelForum(client, api, apiv2, message)
 	default:
 		mylog.Printf("2Unknown message type: %s", msgType)
 	}

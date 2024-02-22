@@ -455,6 +455,25 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		//用userid还原出openid 这是虚拟成群的群聊私聊信息
 		message.Params.UserID = message.Params.GroupID.(string)
 		retmsg, _ = HandleSendPrivateMsg(client, api, apiv2, message)
+	case "forum":
+		//用GroupID给ChannelID赋值,因为我们是把频道虚拟成了群
+		message.Params.ChannelID = message.Params.GroupID.(string)
+		var RChannelID string
+		if message.Params.UserID != nil && config.GetIdmapPro() {
+			RChannelID, _, err = idmap.RetrieveRowByIDv2Pro(message.Params.ChannelID, message.Params.UserID.(string))
+			mylog.Printf("测试,通过Proid获取的RChannelID:%v", RChannelID)
+		}
+		if RChannelID == "" {
+			// 使用RetrieveRowByIDv2还原真实的ChannelID
+			RChannelID, err = idmap.RetrieveRowByIDv2(message.Params.ChannelID)
+		}
+		if err != nil {
+			mylog.Printf("error retrieving real RChannelID: %v", err)
+		}
+		message.Params.ChannelID = RChannelID
+		//这一句是group_private的逻辑,发频道信息用的是channelid
+		//message.Params.GroupID = value
+		retmsg, _ = HandleSendGuildChannelForum(client, api, apiv2, message)
 	default:
 		mylog.Printf("Unknown message type: %s", msgType)
 	}

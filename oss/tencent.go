@@ -95,3 +95,46 @@ func UploadAndAuditImage(base64Data string) (string, error) {
 	imageURL := bucketURL.String() + "/" + objectKey
 	return imageURL, nil
 }
+
+// 上传语音
+func UploadAndAuditRecord(base64Data string) (string, error) {
+	initClient()
+
+	// Decode base64 data
+	decodedData, err := base64.StdEncoding.DecodeString(base64Data)
+	if err != nil {
+		return "", err
+	}
+
+	// Create a temporary file to save decoded data
+	tmpFile, err := os.CreateTemp("", "upload-*.amr")
+	if err != nil {
+		return "", err
+	}
+	defer tmpFile.Close()
+
+	if _, err = tmpFile.Write(decodedData); err != nil {
+		return "", err
+	}
+
+	// 计算解码数据的 MD5
+	h := md5.New()
+	if _, err := h.Write(decodedData); err != nil {
+		return "", err
+	}
+	md5Hash := fmt.Sprintf("%x", h.Sum(nil))
+
+	// 使用 MD5 值作为对象键
+	objectKey := md5Hash + ".amr"
+
+	// 上传文件到 COS
+	_, err = client.Object.PutFromFile(context.Background(), objectKey, tmpFile.Name(), nil)
+	if err != nil {
+		return "", err
+	}
+
+	// 语音正常，返回语音 URL
+	bucketURL, _ := url.Parse(config.GetTencentBucketURL()) // 确保这里的 GetTencentBucketURL 是正确的函数调用
+	imageURL := bucketURL.String() + "/" + objectKey
+	return imageURL, nil
+}

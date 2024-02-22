@@ -55,21 +55,22 @@ type Sender struct {
 
 // 频道信息事件
 type OnebotChannelMessage struct {
-	ChannelID   string      `json:"channel_id"`
-	GuildID     string      `json:"guild_id"`
-	Message     interface{} `json:"message"`
-	MessageID   string      `json:"message_id"`
-	MessageType string      `json:"message_type"`
-	PostType    string      `json:"post_type"`
-	SelfID      int64       `json:"self_id"`
-	SelfTinyID  string      `json:"self_tiny_id"`
-	Sender      Sender      `json:"sender"`
-	SubType     string      `json:"sub_type"`
-	Time        int64       `json:"time"`
-	Avatar      string      `json:"avatar,omitempty"`
-	UserID      int64       `json:"user_id"`
-	RawMessage  string      `json:"raw_message"`
-	Echo        string      `json:"echo,omitempty"`
+	ChannelID       string      `json:"channel_id"`
+	GuildID         string      `json:"guild_id"`
+	Message         interface{} `json:"message"`
+	MessageID       string      `json:"message_id"`
+	MessageType     string      `json:"message_type"`
+	PostType        string      `json:"post_type"`
+	SelfID          int64       `json:"self_id"`
+	SelfTinyID      string      `json:"self_tiny_id"`
+	Sender          Sender      `json:"sender"`
+	SubType         string      `json:"sub_type"`
+	Time            int64       `json:"time"`
+	Avatar          string      `json:"avatar,omitempty"`
+	UserID          int64       `json:"user_id"`
+	RawMessage      string      `json:"raw_message"`
+	Echo            string      `json:"echo,omitempty"`
+	RealMessageType string      `json:"real_message_type,omitempty"` //当前信息的真实类型 表情表态
 }
 
 // 群信息事件
@@ -130,101 +131,6 @@ type PrivateSender struct {
 	Nickname string `json:"nickname"`
 	UserID   int64  `json:"user_id"` // Can be either string or int depending on logic
 }
-
-func FoxTimestamp() int64 {
-	return time.Now().Unix()
-}
-
-// ProcessInlineSearch 处理内联查询
-func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
-	// 转换appid
-	var userid64 int64
-	var GroupID64 int64
-	var err error
-	var fromgid, fromuid string
-	if data.GroupOpenID != "" {
-		fromgid = data.GroupOpenID
-		fromuid = data.GroupMemberOpenID
-	} else {
-		fromgid = data.ChannelID
-		fromuid = "0"
-	}
-	if config.GetIdmapPro() {
-		//将真实id转为int userid64
-		GroupID64, userid64, err = idmap.StoreIDv2Pro(fromgid, fromuid)
-		if err != nil {
-			mylog.Fatalf("Error storing ID: %v", err)
-		}
-		//当参数不全
-		_, _ = idmap.StoreIDv2(fromgid)
-		_, _ = idmap.StoreIDv2(fromuid)
-		if !config.GetHashIDValue() {
-			mylog.Fatalf("避坑日志:你开启了高级id转换,请设置hash_id为true,并且删除idmaps并重启")
-		}
-	} else {
-		// 映射str的GroupID到int
-		GroupID64, err = idmap.StoreIDv2(fromgid)
-		if err != nil {
-			mylog.Errorf("failed to convert ChannelID to int: %v", err)
-			return nil
-		}
-		// 映射str的userid到int
-		userid64, err = idmap.StoreIDv2(fromuid)
-		if err != nil {
-			mylog.Printf("Error storing ID: %v", err)
-			return nil
-		}
-	}
-	notice := &OnebotInteractionNotice{
-		GroupID:    GroupID64,
-		NoticeType: "interaction",
-		PostType:   "notice",
-		SelfID:     int64(p.Settings.AppID),
-		SubType:    "create",
-		Time:       time.Now().Unix(),
-		UserID:     userid64,
-		Data:       data,
-	}
-
-	//调试
-	PrintStructWithFieldNames(notice)
-
-	// Convert OnebotGroupMessage to map and send
-	noticeMap := structToMap(notice)
-
-	//上报信息到onebotv11应用端(正反ws)
-	p.BroadcastMessageToAll(noticeMap)
-	return nil
-}
-
-//return nil
-
-//下面是测试时候固定代码
-//发私信给机器人4条机器人不回,就不能继续发了
-
-// timestamp := time.Now().Unix() // 获取当前时间的int64类型的Unix时间戳
-// timestampStr := fmt.Sprintf("%d", timestamp)
-
-// dm := &dto.DirectMessage{
-// 	GuildID:    GuildID,
-// 	ChannelID:  ChannelID,
-// 	CreateTime: timestampStr,
-// }
-
-// PrintStructWithFieldNames(dm)
-
-// // 发送默认回复
-// toCreate := &dto.MessageToCreate{
-// 	Content: "默认私信回复",
-// 	MsgID:   data.ID,
-// }
-// _, err = p.Api.PostDirectMessage(
-// 	context.Background(), dm, toCreate,
-// )
-// if err != nil {
-// 	mylog.Println("Error sending default reply:", err)
-// 	return nil
-// }
 
 // 打印结构体的函数
 func PrintStructWithFieldNames(v interface{}) {

@@ -559,6 +559,14 @@ func InteractionHandler() event.InteractionEventHandler {
 	}
 }
 
+// ThreadEventHandler 处理帖子事件
+func ThreadEventHandler() event.ThreadEventHandler {
+	return func(event *dto.WSPayload, data *dto.WSThreadData) error {
+		mylog.Printf("收到帖子事件:%v", data)
+		return p.ProcessThreadMessage(data)
+	}
+}
+
 // GroupATMessageEventHandler 实现处理 群at 消息的回调
 func GroupATMessageEventHandler() event.GroupATMessageEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSGroupATMessageData) error {
@@ -607,9 +615,8 @@ func getHandlerByName(handlerName string) (interface{}, bool) {
 		return CreateMessageHandler(), true
 	case "InteractionHandler": //添加频道互动回应
 		return InteractionHandler(), true
-	case "ThreadEventHandler": //发帖事件 暂不支持 暂不支持
-		return nil, false
-		//return ThreadEventHandler(), true
+	case "ThreadEventHandler": //发帖事件
+		return ThreadEventHandler(), true
 	case "GroupATMessageEventHandler": //群at信息
 		return GroupATMessageEventHandler(), true
 	case "C2CMessageEventHandler": //群私聊
