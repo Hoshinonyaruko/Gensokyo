@@ -10,6 +10,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/images"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
+	"mvdan.cc/xurls"
 
 	"github.com/hoshinonyaruko/gensokyo/echo"
 
@@ -165,19 +166,38 @@ func GenerateForumMessage(foundItems map[string][]string, messageText string) (*
 		} `json:"paragraphs"`
 	}
 
-	// 处理文本消息
+	// 使用xurls正则表达式查找所有的URL
+	foundURLs := xurls.Relaxed.FindAllString(messageText, -1)
+
+	// 移除文本中的URL
+	messageText = xurls.Relaxed.ReplaceAllStringFunc(messageText, func(originalURL string) string {
+		return ""
+	})
+
+	// 处理文本消息，除了URL
 	if messageText != "" {
 		richText.Paragraphs = append(richText.Paragraphs, struct {
 			Elems []interface{} `json:"elems"`
 		}{
 			Elems: []interface{}{
 				map[string]interface{}{
-					"text": map[string]string{
+					"text": map[string]interface{}{
 						"text": messageText,
 					},
 					"type": 1,
 				},
 			},
+		})
+	}
+
+	// 为每个URL创建ELEM_TYPE_URL元素
+	for _, url := range foundURLs {
+		richText.Paragraphs[0].Elems = append(richText.Paragraphs[0].Elems, map[string]interface{}{
+			"url": map[string]interface{}{
+				"url":  url,
+				"desc": "点我跳转",
+			},
+			"type": 4,
 		})
 	}
 
@@ -187,6 +207,7 @@ func GenerateForumMessage(foundItems map[string][]string, messageText string) (*
 			Elems []interface{} "json:\"elems\""
 		}{})
 	}
+
 	// 处理图片链接
 	for _, url := range foundItems["url_image"] {
 		richText.Paragraphs[0].Elems = append(richText.Paragraphs[0].Elems, map[string]interface{}{

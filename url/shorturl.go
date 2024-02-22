@@ -169,6 +169,7 @@ func GenerateShortURL(longURL string) string {
 		// 处理响应
 		if resp.StatusCode != http.StatusOK {
 			mylog.Printf("Received non-200 status code: %d from server: %v", resp.StatusCode, requestURL)
+			mylog.Printf("返回码400请检查lotus密码是否正确!")
 			return ""
 		}
 

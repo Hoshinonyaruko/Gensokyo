@@ -365,6 +365,7 @@ func transformMessageTextUrl(messageText string, message callapi.ActionMessage, 
 			// 根据配置处理URL
 			if config.GetLotusValue() {
 				// 连接到另一个gensokyo
+				mylog.Printf("转换url:%v", originalURL)
 				shortURL := url.GenerateShortURL(originalURL)
 				return shortURL
 			} else {
