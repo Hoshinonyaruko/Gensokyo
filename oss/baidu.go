@@ -115,6 +115,20 @@ func UploadAndAuditImageB(base64Data string) (string, error) {
 	}
 }
 
+// UploadAndAuditRecordB 上传语音
+func UploadAndAuditRecordB(base64Data string) (string, error) {
+	initClientB()
+
+	// 解码base64数据
+	decodedData, err := base64.StdEncoding.DecodeString(base64Data)
+	if err != nil {
+		return "", err
+	}
+
+	return uploadRecordBOS(decodedData)
+
+}
+
 func originalUploadBehavior(base64Image string) (string, error) {
 	// 原有的UploadBase64ImageToServer函数的实现
 	protocol := "http"
@@ -205,6 +219,49 @@ func uploadImageBOS(data []byte) (string, error) {
 
 	// 创建临时文件
 	picname := fmt.Sprintf("qqbot-upload-%s-*.jpg", md5String)
+	tmpFile, err := os.CreateTemp("", picname)
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp file: %v", err)
+	}
+	defer func() {
+		tmpFile.Close()
+		os.Remove(tmpFile.Name()) // 清理临时文件
+	}()
+
+	// 写入数据到临时文件
+	if _, err = tmpFile.Write(data); err != nil {
+		return "", fmt.Errorf("failed to write to temp file: %v", err)
+	}
+
+	// 确保数据写入磁盘
+	if err = tmpFile.Sync(); err != nil {
+		return "", fmt.Errorf("failed to sync temp file: %v", err)
+	}
+
+	// 获取临时文件的实际文件名
+	actualFileName := filepath.Base(tmpFile.Name())
+
+	// 上传到BOS
+	bucketDomain := config.GetBaiduBOSBucketName() //bucket的域名
+	appid := config.GetAppIDStr()
+	_, err = clientBos.PutObjectFromFile(appid, actualFileName, tmpFile.Name(), nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to upload to BOS: %v", err)
+	}
+
+	// 返回图片URL
+	return fmt.Sprintf("https://%s/%s/%s", bucketDomain, appid, actualFileName), nil
+}
+
+// uploadRecordBOS 使用BOS进行语音上传
+func uploadRecordBOS(data []byte) (string, error) {
+	// 计算MD5以用作文件名
+	md5Hash := md5.New()
+	md5Hash.Write(data)
+	md5String := hex.EncodeToString(md5Hash.Sum(nil))
+
+	// 创建临时文件
+	picname := fmt.Sprintf("qqbot-upload-%s-*.amr", md5String)
 	tmpFile, err := os.CreateTemp("", picname)
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp file: %v", err)

@@ -43,6 +43,14 @@ type Message struct {
 	Ret int `json:"ret,omitempty"`
 }
 
+// Forum 消息结构体定义
+type Forum struct {
+	// 消息ID
+	TaskId string `json:"task_id"`
+	// 发送时间 秒级时间戳
+	CreateTime string `json:"create_time"`
+}
+
 // GroupAddBotEvent 表示群添加机器人事件的数据结构
 type GroupAddBotEvent struct {
 	GroupOpenID    string      `json:"group_openid"`

@@ -34,6 +34,26 @@ func UploadBase64ImageToServer(base64Image string) (string, error) {
 	}
 }
 
+// 将base64语音通过lotus转换成url
+func UploadBase64RecordToServer(base64Record string) (string, error) {
+	extraPicAuditingType := config.GetOssType()
+
+	// 根据不同的extraPicAuditingType值来调整函数行为
+	switch extraPicAuditingType {
+	case 0:
+		// 原有的函数行为
+		return originalUploadBehaviorRecord(base64Record)
+	case 1:
+		return oss.UploadAndAuditRecord(base64Record) //腾讯
+	case 2:
+		return oss.UploadAndAuditRecord(base64Record) //百度
+	case 3:
+		return oss.UploadAndAuditRecord(base64Record) //阿里
+	default:
+		return "", errors.New("invalid extraPicAuditingType")
+	}
+}
+
 func originalUploadBehavior(base64Image string) (string, error) {
 	// 原有的UploadBase64ImageToServer函数的实现
 	protocol := "http"
@@ -72,7 +92,7 @@ func originalUploadBehavior(base64Image string) (string, error) {
 }
 
 // 将base64语音通过lotus转换成url
-func UploadBase64RecordToServer(base64Image string) (string, error) {
+func originalUploadBehaviorRecord(base64Image string) (string, error) {
 	// 根据serverPort确定协议
 	protocol := "http"
 	serverPort := config.GetPortValue()

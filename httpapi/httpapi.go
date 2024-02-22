@@ -30,6 +30,10 @@ func CombinedMiddleware(api openapi.OpenAPI, apiV2 openapi.OpenAPI) gin.HandlerF
 			handleGetGroupList(c, api, apiV2)
 			return
 		}
+		if c.Request.URL.Path == "/put_interaction" {
+			handlePutInteraction(c, api, apiV2)
+			return
+		}
 
 		// 调用c.Next()以继续处理请求链
 		c.Next()
@@ -215,6 +219,48 @@ func handleGetGroupList(c *gin.Context, api openapi.OpenAPI, apiV2 openapi.OpenA
 
 	// 调用处理函数
 	retmsg, err := handlers.GetGroupList(client, api, apiV2, message)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 返回处理结果
+	c.Header("Content-Type", "application/json")
+	c.String(http.StatusOK, retmsg)
+}
+
+// handlePutInteraction 处理put_interaction的请求
+func handlePutInteraction(c *gin.Context, api openapi.OpenAPI, apiV2 openapi.OpenAPI) {
+	var req struct {
+		Echo     string `json:"echo" form:"echo"`           // Echo值用于标识interaction
+		PostType string `json:"post_type" form:"post_type"` // PostType用于设置code参数
+	}
+
+	// 根据请求方法解析参数
+	if c.Request.Method == http.MethodGet {
+		// 从URL查询参数解析
+		if err := c.ShouldBindQuery(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	} else {
+		// 从JSON或表单数据解析
+		if err := c.ShouldBind(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	// 创建 ActionMessage 实例
+	message := callapi.ActionMessage{
+		Action:   "put_interaction",
+		Echo:     req.Echo,
+		PostType: req.PostType,
+	}
+
+	// 调用处理函数
+	client := &HttpAPIClient{} // 假设HttpAPIClient实现了callapi.Client接口
+	retmsg, err := handlers.HandlePutInteraction(client, api, apiV2, message)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

@@ -94,6 +94,52 @@ func UploadAndAuditImageA(base64Data string) (string, error) {
 	return imageURL, nil
 }
 
+// 上传语音
+func UploadAndAuditRecordA(base64Data string) (string, error) {
+	initaliyunClient()
+
+	// Decode base64 data
+	decodedData, err := base64.StdEncoding.DecodeString(base64Data)
+	if err != nil {
+		return "", err
+	}
+
+	// Create a temporary file to save decoded data
+	tmpFile, err := os.CreateTemp("", "upload-*.amr")
+	if err != nil {
+		return "", err
+	}
+	defer tmpFile.Close()
+
+	if _, err = tmpFile.Write(decodedData); err != nil {
+		return "", err
+	}
+
+	// 计算解码数据的 MD5
+	h := md5.New()
+	if _, err := h.Write(decodedData); err != nil {
+		return "", err
+	}
+	md5Hash := fmt.Sprintf("%x", h.Sum(nil))
+
+	// 使用 MD5 值作为对象键
+	objectKey := md5Hash + ".amr"
+	// 上传文件到 OSS
+	bucket, err := aliyunclient.Bucket(config.GetAliyunBucketName())
+	if err != nil {
+		return "", err
+	}
+
+	err = bucket.PutObjectFromFile(objectKey, tmpFile.Name())
+	if err != nil {
+		return "", err
+	}
+
+	// 图片正常，返回语音 URL
+	imageURL := "https://" + config.GetAliyunBucketName() + ".oss-" + config.GetRegionID() + ".aliyuncs.com/" + objectKey
+	return imageURL, nil
+}
+
 // auditImage 审核图片
 func auditImage(client *green.Client, objectKey string) (bool, error) {
 	// 构造审核请求
