@@ -67,6 +67,8 @@ type MessageAPI interface {
 	Message(ctx context.Context, channelID string, messageID string) (*dto.Message, error)
 	Messages(ctx context.Context, channelID string, pager *dto.MessagesPager) ([]*dto.Message, error)
 	PostMessage(ctx context.Context, channelID string, msg *dto.MessageToCreate) (*dto.Message, error)
+	// 增加的新的接口,发频道帖子信息
+	PostFourm(ctx context.Context, channelID string, Fourm *dto.FourmToCreate) (*dto.Forum, error)
 	// 增加的新的接口,发频道multipart信息
 	PostMessageMultipart(ctx context.Context, channelID string, msg *dto.MessageToCreate, fileImageData []byte) (*dto.Message, error)
 	PatchMessage(ctx context.Context,

@@ -72,6 +72,20 @@ func (o *openAPI) PostMessage(ctx context.Context, channelID string, msg *dto.Me
 	return resp.Result().(*dto.Message), nil
 }
 
+// PostFourm 发帖子
+func (o *openAPI) PostFourm(ctx context.Context, channelID string, msg *dto.FourmToCreate) (*dto.Forum, error) {
+	resp, err := o.request(ctx).
+		SetResult(dto.Forum{}).
+		SetPathParam("channel_id", channelID).
+		SetBody(msg).
+		Put(o.getURL(fourmMessagesURI))
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Result().(*dto.Forum), nil
+}
+
 // PostMessageMultipart 发送消息使用multipart/form-data
 func (o *openAPI) PostMessageMultipart(ctx context.Context, channelID string, msg *dto.MessageToCreate, fileImageData []byte) (*dto.Message, error) {
 	request := o.request(ctx).SetResult(dto.Message{}).SetPathParam("channel_id", channelID)

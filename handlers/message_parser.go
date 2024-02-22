@@ -569,8 +569,8 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 				isSpecialType = true
 				originalPrefix = specialPrefixes[i] // 恢复原始前缀
 			}
-			// 检查 messageText 的长度是否大于 prefix 的长度
-			if len(messageText) > len(vp.Prefix) {
+			// 检查 messageText 的长度是否大于 prefix 的长度 忽略长度为0的初始 vp.Prefix
+			if len(vp.Prefix) > 0 && len(messageText) > len(vp.Prefix) {
 				// 移除找到的前缀 且messageText不为空
 				if messageText != "" {
 					messageText = strings.TrimPrefix(messageText, vp.Prefix)
@@ -727,6 +727,8 @@ func ConvertToSegmentedMessage(data interface{}) []map[string]interface{} {
 	var msg *dto.Message
 	var menumsg bool
 	switch v := data.(type) {
+	case *dto.Message:
+		msg = v // 直接赋值，因为v已经是*dto.Message类型
 	case *dto.WSGroupATMessageData:
 		msg = (*dto.Message)(v)
 	case *dto.WSATMessageData:
