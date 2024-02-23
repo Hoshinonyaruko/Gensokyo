@@ -67,6 +67,7 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 	}
 
 	switch msgType {
+	//这里是pr上来的,我也不明白为什么私聊会出现group类型 猜测是为了匹配包含了groupid的私聊?
 	case "group_private", "group":
 		//私聊信息
 		var UserID string
@@ -204,6 +205,8 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			_, err := apiv2.PostC2CMessage(context.TODO(), UserID, groupMessage)
 			if err != nil {
 				mylog.Printf("发送文本私聊信息失败: %v", err)
+				//如果失败 防止进入递归
+				return "", nil
 			}
 			//发送成功回执
 			retmsg, _ = SendResponse(client, err, &message)
@@ -269,6 +272,7 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 				retmsg, _ = SendResponse(client, err, &message)
 			}
 		}
+		//这里是pr上来的,我也不明白为什么私聊会出现guild类型
 	case "guild_private", "guild":
 		//当收到发私信调用 并且来源是频道
 		retmsg, _ = HandleSendGuildChannelPrivateMsg(client, api, apiv2, message, nil, nil)
