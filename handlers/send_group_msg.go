@@ -1324,8 +1324,25 @@ func auto_md(message callapi.ActionMessage, messageText string, richMediaMessage
 				currentRow.Buttons = append(currentRow.Buttons, button)
 				buttonCount++
 			}
-
 			// 在循环结束后，最后一行可能不满4个按钮，但已经被正确处理
+
+			// 在添加完所有按钮后，进行一次清理操作，如果按钮RenderData是空，不显示
+			for rowIndex := 0; rowIndex < len(customKeyboard.Rows); rowIndex++ {
+				row := customKeyboard.Rows[rowIndex]
+				// 临时存储有效按钮的切片
+				validButtons := []*keyboard.Button{}
+
+				// 遍历行中的所有按钮
+				for _, button := range row.Buttons {
+					// 检查按钮的RenderData是否为单个空格，这里可以根据需求调整条件
+					if button.RenderData.Label != " " {
+						validButtons = append(validButtons, button)
+					}
+				}
+
+				// 更新当前行的按钮为仅包含有效按钮的切片
+				customKeyboard.Rows[rowIndex].Buttons = validButtons
+			}
 
 			// 创建 MessageKeyboard 并设置其 Content
 			kb = &keyboard.MessageKeyboard{
