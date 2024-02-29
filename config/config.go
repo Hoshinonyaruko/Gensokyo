@@ -1857,3 +1857,4 @@ func GetImgUpApiVtv2() bool {
 	}
 	return instance.Settings.ImgUpApiVtv2
 }
+
