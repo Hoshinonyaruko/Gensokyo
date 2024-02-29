@@ -18,7 +18,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
+	"github.com/hoshinonyaruko/gensokyo/images"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
+	"github.com/tencent-connect/botgo/openapi"
 )
 
 const (
@@ -91,7 +93,7 @@ func UploadBase64ImageHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 		} else {
 			mylog.Println("File already exists, skipping save.")
 		}
-		
+
 		var serverPort string
 		serverAddress := config.GetServer_dir()
 		frpport := config.GetFrpPort()
@@ -119,6 +121,42 @@ func UploadBase64ImageHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 		}
 		c.JSON(http.StatusOK, gin.H{"url": imageURL})
 
+	}
+}
+
+func UploadBase64ImageHandlerV2(rateLimiter *RateLimiter, apiv2 openapi.OpenAPI) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ipAddress := c.ClientIP()
+		if !rateLimiter.CheckAndUpdateRateLimit(ipAddress) {
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "rate limit exceeded"})
+			return
+		}
+
+		// 从请求中获取必要的参数
+		base64Image := c.PostForm("base64Image")
+		msgid := c.DefaultPostForm("msgid", "") // msgid可以为空
+		groupID := c.PostForm("groupID")        // groupID是必需的
+
+		if groupID == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "groupID is required"})
+			return
+		}
+
+		// 调用函数上传图片
+		imageURL, groupid, width, height, err := images.UploadBase64ImageToServer(msgid, base64Image, groupID, apiv2)
+		if err != nil {
+			// 根据错误类型返回合适的HTTP状态码和错误信息
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		// 如果上传成功，则返回图片的URL，群组ID，宽度和高度
+		c.JSON(http.StatusOK, gin.H{
+			"url":     imageURL,
+			"groupid": groupid,
+			"width":   width,
+			"height":  height,
+		})
 	}
 }
 
@@ -152,7 +190,7 @@ func UploadBase64RecordHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error creating directory"})
 			return
 		}
-		
+
 		//如果文件存在则跳过
 		if _, err := os.Stat(savePath); os.IsNotExist(err) {
 			err = os.WriteFile(savePath, RecordBytes, 0644)

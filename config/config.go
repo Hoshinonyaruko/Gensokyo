@@ -149,6 +149,7 @@ type Settings struct {
 	GlobalInteractionToMessage bool                 `yaml:"global_interaction_to_message"`
 	AutoPutInteraction         bool                 `yaml:"auto_put_interaction"`
 	PutInteractionDelay        int                  `yaml:"put_interaction_delay"`
+	ImgUpApiVtv2               bool                 `yaml:"img_up_api_ntv2"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -183,7 +184,7 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	// 确保配置完整性
-	if err := ensureConfigComplete(conf, path); err != nil {
+	if err := ensureConfigComplete(path); err != nil {
 		return nil, err
 	}
 
@@ -193,7 +194,7 @@ func LoadConfig(path string) (*Config, error) {
 }
 
 // 确保配置完整性
-func ensureConfigComplete(conf *Config, path string) error {
+func ensureConfigComplete(path string) error {
 	// 读取配置文件到缓冲区
 	configData, err := os.ReadFile(path)
 	if err != nil {
@@ -1843,4 +1844,16 @@ func GetPutInteractionDelay() int {
 		return 0
 	}
 	return instance.Settings.PutInteractionDelay
+}
+
+// 获取ntv2转换开关
+func GetImgUpApiVtv2() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to ImgUpApiVtv2 value.")
+		return false
+	}
+	return instance.Settings.ImgUpApiVtv2
 }

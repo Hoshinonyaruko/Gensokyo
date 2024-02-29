@@ -147,7 +147,7 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			singleItem[imageType] = []string{imageUrl}
 			msgseq := echo.GetMappingSeq(messageID)
 			echo.AddMappingSeq(messageID, msgseq+1)
-			groupReply := generateGroupMessage(messageID, singleItem, "", msgseq+1)
+			groupReply := generateGroupMessage(messageID, singleItem, "", msgseq+1, apiv2, message.Params.GroupID.(string))
 			// 进行类型断言
 			richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
 			if !ok {
@@ -192,7 +192,7 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		if messageText != "" {
 			msgseq := echo.GetMappingSeq(messageID)
 			echo.AddMappingSeq(messageID, msgseq+1)
-			groupReply := generateGroupMessage(messageID, nil, messageText, msgseq+1)
+			groupReply := generateGroupMessage(messageID, nil, messageText, msgseq+1, apiv2, message.Params.GroupID.(string))
 
 			// 进行类型断言
 			groupMessage, ok := groupReply.(*dto.MessageToCreate)
@@ -220,7 +220,7 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 				//mylog.Println("singleItem:", singleItem)
 				msgseq := echo.GetMappingSeq(messageID)
 				echo.AddMappingSeq(messageID, msgseq+1)
-				groupReply := generateGroupMessage(messageID, singleItem, "", msgseq+1)
+				groupReply := generateGroupMessage(messageID, singleItem, "", msgseq+1, apiv2, message.Params.GroupID.(string))
 				// 进行类型断言
 				richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
 				if !ok {
@@ -233,7 +233,7 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 					if config.GetSendError() { //把报错当作文本发出去
 						msgseq := echo.GetMappingSeq(messageID)
 						echo.AddMappingSeq(messageID, msgseq+1)
-						groupReply := generateGroupMessage(messageID, nil, err.Error(), msgseq+1)
+						groupReply := generateGroupMessage(messageID, nil, err.Error(), msgseq+1, apiv2, message.Params.GroupID.(string))
 						// 进行类型断言
 						groupMessage, ok := groupReply.(*dto.MessageToCreate)
 						if !ok {

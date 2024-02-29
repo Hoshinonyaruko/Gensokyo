@@ -318,6 +318,7 @@ func main() {
 	r.GET("/getid", server.GetIDHandler)
 	r.GET("/updateport", server.HandleIpupdate)
 	r.POST("/uploadpic", server.UploadBase64ImageHandler(rateLimiter))
+	r.POST("/uploadpicv2", server.UploadBase64ImageHandlerV2(rateLimiter, apiV2))
 	r.POST("/uploadrecord", server.UploadBase64RecordHandler(rateLimiter))
 	r.Static("/channel_temp", "./channel_temp")
 	if config.GetFrpPort() == "0" && !config.GetDisableWebui() {
