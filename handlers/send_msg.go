@@ -42,11 +42,11 @@ func HandleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 	var err error
 
 	if message.Params.GroupID != "" {
-		idInt64, _ = ConvertToInt64(message.Params.GroupID)
-		idInt642, _ = ConvertToInt64(message.Params.UserID)
+		idInt64, err = ConvertToInt64(message.Params.GroupID)
+		idInt642, err = ConvertToInt64(message.Params.UserID)
 	} else if message.Params.UserID != "" {
-		idInt64, _ = ConvertToInt64(message.Params.UserID)
-		idInt642, _ = ConvertToInt64(message.Params.GroupID)
+		idInt64, err = ConvertToInt64(message.Params.UserID)
+		idInt642, err = ConvertToInt64(message.Params.GroupID)
 	}
 
 	//设置递归 对直接向gsk发送action时有效果

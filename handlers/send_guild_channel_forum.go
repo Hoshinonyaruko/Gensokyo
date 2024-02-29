@@ -57,7 +57,7 @@ func HandleSendGuildChannelForum(client callapi.Client, api openapi.OpenAPI, api
 
 		mylog.Println("频道发帖子messageText:", messageText)
 
-		Forum, err := GenerateForumMessage(foundItems, messageText)
+		Forum, err := GenerateForumMessage(foundItems, messageText, apiv2)
 		if err != nil {
 			mylog.Printf("组合帖子信息失败: %v", err)
 		}
@@ -152,7 +152,7 @@ func HandleSendGuildChannelForum(client callapi.Client, api openapi.OpenAPI, api
 // }
 
 // GenerateForumMessage 生成帖子消息
-func GenerateForumMessage(foundItems map[string][]string, messageText string) (*dto.FourmToCreate, error) {
+func GenerateForumMessage(foundItems map[string][]string, messageText string, apiv2 openapi.OpenAPI) (*dto.FourmToCreate, error) {
 	var forum dto.FourmToCreate
 
 	// 设置标题
@@ -231,7 +231,7 @@ func GenerateForumMessage(foundItems map[string][]string, messageText string) (*
 			mylog.Printf("Error compressing image: %v", err)
 			return nil, fmt.Errorf("error compressing image: %v", err)
 		}
-		imageURL, err := images.UploadBase64ImageToServer(base64.StdEncoding.EncodeToString(compressedData))
+		imageURL, _, _, _, err := images.UploadBase64ImageToServer("", base64.StdEncoding.EncodeToString(compressedData), "", apiv2)
 		if err != nil {
 			mylog.Printf("failed to upload base64 image: %v", err)
 			return nil, fmt.Errorf("failed to upload base64 image: %v", err)
