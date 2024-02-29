@@ -35,6 +35,17 @@ func uploadMedia(ctx context.Context, groupID string, richMediaMessage *dto.Rich
 	return messageReturn.MediaResponse.FileInfo, nil
 }
 
+// uploadMedia 上传媒体并返回FileInfo
+func uploadMediaPrivate(ctx context.Context, UserID string, richMediaMessage *dto.RichMediaMessage, apiv2 openapi.OpenAPI) (string, error) {
+	// 调用API来上传媒体
+	messageReturn, err := apiv2.PostC2CMessage(ctx, UserID, richMediaMessage)
+	if err != nil {
+		return "", err
+	}
+	// 返回上传后的FileInfo
+	return messageReturn.MediaResponse.FileInfo, nil
+}
+
 func isNumeric(s string) bool {
 	// 使用正则表达式检查字符串是否只包含数字
 	return regexp.MustCompile(`^\d+$`).MatchString(s)
@@ -68,11 +79,12 @@ func UploadBase64ImageToServer(msgid string, base64Image string, groupID string,
 			msgid = echo.GetLazyMessagesId(groupID)
 		}
 		if isNumeric(groupID) {
-			// 检查groupID是否为纯数字构成
+			// 检查groupID是否为纯数字构成 RetrieveRowByIDv2是通用逻辑，也可以将userid还原为32位数originaluserid
+			// 但没有私信权限，故没有测试
 			originalGroupID, err := idmap.RetrieveRowByIDv2(groupID)
 			if err != nil {
 				log.Printf("Error retrieving original GroupID: %v", err)
-				return "", 0, 0, 0, nil
+				return picURL, 0, 0, 0, nil
 			}
 			log.Printf("通过idmap获取的originalGroupID: %v", originalGroupID)
 
@@ -86,9 +98,16 @@ func UploadBase64ImageToServer(msgid string, base64Image string, groupID string,
 			Content:    "", // 这个字段文档没有了
 			SrvSendMsg: false,
 		}
-		fileInfo, err := uploadMedia(context.TODO(), groupID, richMediaMessage, apiv2)
+		var fileInfo string
+		//尝试群聊发图
+		fileInfo, err = uploadMedia(context.TODO(), groupID, richMediaMessage, apiv2)
 		if err != nil {
-			return "", 0, 0, 0, err
+			//尝试私信发图
+			fileInfo, err = uploadMediaPrivate(context.TODO(), groupID, richMediaMessage, apiv2)
+			if err != nil {
+				//返回原始图片url
+				return picURL, 0, 0, 0, nil
+			}
 		}
 
 		// 将Base64字符串解码为二进制
@@ -122,26 +141,6 @@ func UploadBase64ImageToServer(msgid string, base64Image string, groupID string,
 	}
 
 	return picURL, 0, 0, 0, nil
-}
-
-// 将base64语音通过lotus转换成url
-func UploadBase64RecordToServer(base64Record string) (string, error) {
-	extraPicAuditingType := config.GetOssType()
-
-	// 根据不同的extraPicAuditingType值来调整函数行为
-	switch extraPicAuditingType {
-	case 0:
-		// 原有的函数行为
-		return originalUploadBehaviorRecord(base64Record)
-	case 1:
-		return oss.UploadAndAuditRecord(base64Record) //腾讯
-	case 2:
-		return oss.UploadAndAuditRecord(base64Record) //百度
-	case 3:
-		return oss.UploadAndAuditRecord(base64Record) //阿里
-	default:
-		return "", errors.New("invalid extraPicAuditingType")
-	}
 }
 
 // 将base64语音通过lotus转换成url
