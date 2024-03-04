@@ -166,6 +166,7 @@ settings:
 
   #正向http
   http_address: ""                  #http监听地址 与websocket独立 示例:0.0.0.0:5700 为空代表不开启
+  http_access_token: ""             #http访问令牌
   http_version : 11                 #暂时只支持11
   http_timeout: 5                   #反向 HTTP 超时时间, 单位秒，<5 时将被忽略
 

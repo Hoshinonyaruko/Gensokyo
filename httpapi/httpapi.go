@@ -1,8 +1,10 @@
 package httpapi
 
 import (
+	"github.com/hoshinonyaruko/gensokyo/config"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hoshinonyaruko/gensokyo/callapi"
@@ -13,6 +15,15 @@ import (
 // CombinedMiddleware 创建并返回一个带有依赖的中间件闭包
 func CombinedMiddleware(api openapi.OpenAPI, apiV2 openapi.OpenAPI) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		accessToken := config.GetHTTPAccessToken()
+		if accessToken != "" {
+			tokenHeader := strings.Replace(c.GetHeader("Authorization"), "Bearer ", "", 1)
+			tokenQuery, _ := c.GetQuery("Authorization")
+			if (tokenHeader != "" && tokenHeader == accessToken) || (tokenQuery != "" && tokenQuery == accessToken) {
+				c.JSON(http.StatusForbidden, gin.H{"error": "鉴权失败"})
+				return
+			}
+		}
 		// 检查路径和处理对应的请求
 		if c.Request.URL.Path == "/send_group_msg" {
 			handleSendGroupMessage(c, api, apiV2)
