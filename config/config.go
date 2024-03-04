@@ -100,6 +100,7 @@ type Settings struct {
 	WhiteBypass                []int64              `yaml:"white_bypass"`
 	TransferUrl                bool                 `yaml:"transfer_url"`
 	HttpAddress                string               `yaml:"http_address"`
+	AccessToken                string               `yaml:"http_access_token"`
 	HttpVersion                int                  `yaml:"http_version"`
 	HttpTimeOut                int                  `yaml:"http_timeout"`
 	PostUrl                    []string             `yaml:"post_url"`
@@ -1215,6 +1216,18 @@ func GetHttpAddress() string {
 		return ""
 	}
 	return instance.Settings.HttpAddress
+}
+
+// 获取 HTTP 访问令牌
+func GetHTTPAccessToken() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get HTTP access token.")
+		return ""
+	}
+	return instance.Settings.AccessToken
 }
 
 // 获取 HTTP 版本
