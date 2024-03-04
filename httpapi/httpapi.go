@@ -18,7 +18,7 @@ func CombinedMiddleware(api openapi.OpenAPI, apiV2 openapi.OpenAPI) gin.HandlerF
 		accessToken := config.GetHTTPAccessToken()
 		if accessToken != "" {
 			tokenHeader := strings.Replace(c.GetHeader("Authorization"), "Bearer ", "", 1)
-			tokenQuery, _ := c.GetQuery("Authorization")
+			tokenQuery, _ := c.GetQuery("access_token")
 			if (tokenHeader == "" || tokenHeader != accessToken) && (tokenQuery == "" || tokenQuery != accessToken) {
 				c.JSON(http.StatusForbidden, gin.H{"error": "鉴权失败"})
 				return
