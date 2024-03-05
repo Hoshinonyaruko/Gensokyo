@@ -155,8 +155,9 @@ func main() {
 		}
 
 		configURL := config.GetDevelop_Acdir()
+		fix11300 := config.GetFix11300()
 		var me *dto.User
-		if configURL == "" { // 执行API请求 显示机器人信息
+		if configURL == "" && !fix11300 { // 执行API请求 显示机器人信息
 			me, err = api.Me(ctx) // Adjusted to pass only the context
 			if err != nil {
 				log.Printf("Error fetching bot details: %v\n", err)
@@ -168,7 +169,7 @@ func main() {
 			log.Printf("自定义ac地址模式...请从日志手动获取bot的真实id并设置,不然at会不正常")
 		}
 		if !nologin {
-			if configURL == "" { //初始化handlers
+			if configURL == "" && !fix11300 { //初始化handlers
 				handlers.BotID = me.ID
 			} else { //初始化handlers
 				handlers.BotID = config.GetDevBotid()
