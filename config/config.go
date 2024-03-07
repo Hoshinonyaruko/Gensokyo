@@ -152,6 +152,7 @@ type Settings struct {
 	PutInteractionDelay        int                  `yaml:"put_interaction_delay"`
 	ImgUpApiVtv2               bool                 `yaml:"img_up_api_ntv2"`
 	Fix11300                   bool                 `yaml:"fix_11300"`
+	LotusWithoutIdmaps         bool                 `yaml:"lotus_without_idmaps"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -1882,4 +1883,16 @@ func GetFix11300() bool {
 		return false
 	}
 	return instance.Settings.Fix11300
+}
+
+// 获取LotusWithoutIdmaps开关
+func GetLotusWithoutIdmaps() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to LotusWithoutIdmaps value.")
+		return false
+	}
+	return instance.Settings.LotusWithoutIdmaps
 }
