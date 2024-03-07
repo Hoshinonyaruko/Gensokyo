@@ -2,6 +2,7 @@
 package Processor
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/hoshinonyaruko/gensokyo/config"
@@ -50,6 +51,8 @@ func (p *Processors) ProcessGroupDelBot(data *dto.GroupAddBotEvent) error {
 		return nil
 	}
 	mylog.Printf("Bot被[%v]从群[%v]移出", userid64, GroupID64)
+	//从数据库删除群数据(仅删除类型缓存,再次加入会刷新)
+	idmap.DeleteConfigv2(fmt.Sprint(GroupID64), "type")
 	Notice = GroupNoticeEvent{
 		GroupID:    GroupID64,
 		NoticeType: "group_decrease",

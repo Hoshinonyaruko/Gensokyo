@@ -221,8 +221,23 @@ func GetIDHandler(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-
 		c.JSON(http.StatusOK, gin.H{"keys": keys})
+	case 15:
+		// 删除
+		// 从请求中获取参数
+		section := c.Query("id")
+		subtype := c.Query("subtype")
+
+		// 调用DeleteConfigv2来删除配置
+		err := idmap.DeleteConfigv2(section, subtype)
+		if err != nil {
+			// 如果有错误，记录并返回错误信息
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		// 如果删除成功，返回成功响应
+		c.JSON(http.StatusOK, gin.H{"status": "success"})
 	}
 
 }
