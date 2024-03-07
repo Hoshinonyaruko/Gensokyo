@@ -36,18 +36,47 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		// 当 message.Echo 是字符串类型时执行此块
 		msgType = echo.GetMsgTypeByKey(echoStr)
 	}
-	if msgType == "" {
+	// 检查GroupID是否为0
+	checkZeroGroupID := func(id interface{}) bool {
+		switch v := id.(type) {
+		case int:
+			return v != 0
+		case int64:
+			return v != 0
+		case string:
+			return v != "0" // 检查字符串形式的0
+		default:
+			return true // 如果不是int、int64或string，假定它不为0
+		}
+	}
+
+	// 检查UserID是否为0
+	checkZeroUserID := func(id interface{}) bool {
+		switch v := id.(type) {
+		case int:
+			return v != 0
+		case int64:
+			return v != 0
+		case string:
+			return v != "0" // 同样检查字符串形式的0
+		default:
+			return true // 如果不是int、int64或string，假定它不为0
+		}
+	}
+
+	if msgType == "" && message.Params.GroupID != nil && checkZeroGroupID(message.Params.GroupID) {
 		msgType = GetMessageTypeByGroupid(config.GetAppIDStr(), message.Params.GroupID)
 	}
-	if msgType == "" {
+	if msgType == "" && message.Params.UserID != nil && checkZeroUserID(message.Params.UserID) {
 		msgType = GetMessageTypeByUserid(config.GetAppIDStr(), message.Params.UserID)
 	}
-	if msgType == "" {
+	if msgType == "" && message.Params.GroupID != nil && checkZeroGroupID(message.Params.GroupID) {
 		msgType = GetMessageTypeByGroupidV2(message.Params.GroupID)
 	}
-	if msgType == "" {
+	if msgType == "" && message.Params.UserID != nil && checkZeroUserID(message.Params.UserID) {
 		msgType = GetMessageTypeByUseridV2(message.Params.UserID)
 	}
+
 	mylog.Printf("send_group_msg获取到信息类型:%v", msgType)
 	var idInt64 int64
 	var err error
@@ -493,7 +522,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		echo.AddMsgType(config.GetAppIDStr(), idInt64, tryMessageTypes[echo.GetMapping(idInt64)-1])
 		delay := config.GetSendDelay()
 		time.Sleep(time.Duration(delay) * time.Millisecond)
-		HandleSendGroupMsg(client, api, apiv2, messageCopy)
+		retmsg, _ = HandleSendGroupMsg(client, api, apiv2, messageCopy)
 	}
 	return retmsg, nil
 }

@@ -217,7 +217,7 @@ func SimplifiedStoreID(id string) (int64, error) {
 
 // SimplifiedStoreID 根据a储存b 储存一半
 func SimplifiedStoreIDv2(id string) (int64, error) {
-	if config.GetLotusValue() {
+	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
@@ -253,7 +253,7 @@ func SimplifiedStoreIDv2(id string) (int64, error) {
 		return int64(rowValue), nil
 	}
 
-	// 如果lotus为假,就保持原来的store的方法
+	// 如果lotus为假,或不走idmaps是真,就保持原来的store的方法
 	return SimplifiedStoreID(id)
 }
 
@@ -305,7 +305,7 @@ func StoreIDPro(id string, subid string) (int64, int64, error) {
 
 // StoreIDv2 根据a储存b
 func StoreIDv2(id string) (int64, error) {
-	if config.GetLotusValue() {
+	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
@@ -347,7 +347,7 @@ func StoreIDv2(id string) (int64, error) {
 
 // 群号 然后 用户号
 func StoreIDv2Pro(id string, subid string) (int64, int64, error) {
-	if config.GetLotusValue() {
+	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
@@ -413,7 +413,7 @@ func RetrieveRowByID(rowid string) (string, error) {
 
 // 群号 然后 用户号
 func RetrieveRowByIDv2Pro(newRowID string, newSubRowID string) (string, string, error) {
-	if config.GetLotusValue() {
+	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
@@ -495,7 +495,7 @@ func RetrieveRowByIDv2(rowid string) (string, error) {
 		protocol = "https"
 	}
 
-	if config.GetLotusValue() {
+	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 
@@ -550,7 +550,7 @@ func WriteConfig(sectionName, keyName, value string) error {
 
 // WriteConfigv2 根据a以b为类别储存c
 func WriteConfigv2(sectionName, keyName, value string) error {
-	if config.GetLotusValue() {
+	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
@@ -610,6 +610,65 @@ func ReadConfig(sectionName, keyName string) (string, error) {
 	return result, err
 }
 
+// DeleteConfig根据sectionName和keyName删除指定的键值对
+func DeleteConfig(sectionName, keyName string) error {
+	return db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(ConfigBucket))
+		if b == nil {
+			return fmt.Errorf("bucket %s does not exist", ConfigBucket)
+		}
+
+		key := joinSectionAndKey(sectionName, keyName)
+		err := b.Delete(key)
+		if err != nil {
+			return fmt.Errorf("failed to delete data with key %s: %w", key, err)
+		}
+
+		return nil
+	})
+}
+
+// DeleteConfigv2 根据sectionName和keyName远程删除配置
+func DeleteConfigv2(sectionName, keyName string) error {
+	// 根据portValue确定协议
+	protocol := "http"
+	portValue := config.GetPortValue()
+	if portValue == "443" {
+		protocol = "https"
+	}
+
+	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
+		// 使用网络请求方式
+		serverDir := config.GetServer_dir()
+
+		// 构建请求URL和参数
+		baseURL := fmt.Sprintf("%s://%s:%s/getid", protocol, serverDir, portValue)
+		params := url.Values{}
+		params.Add("type", "15") // type 15是用于删除操作的
+		params.Add("id", sectionName)
+		params.Add("subtype", keyName)
+		url := baseURL + "?" + params.Encode()
+
+		resp, err := http.Get(url)
+		if err != nil {
+			return fmt.Errorf("failed to send request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		// 如果HTTP状态码是200 OK，表示操作成功完成
+		if resp.StatusCode == http.StatusOK {
+			// 成功，可以返回nil或者根据需要返回具体的成功消息
+			return nil
+		} else {
+			// 如果状态码不是200 OK，返回错误信息
+			return fmt.Errorf("error response from server: %s", resp.Status)
+		}
+	}
+
+	// 如果lotus为假,则使用原始方法在本地删除配置
+	return DeleteConfig(sectionName, keyName) // 假设你已经有了一个本地删除的方法
+}
+
 // ReadConfigv2 根据a和b取出c
 func ReadConfigv2(sectionName, keyName string) (string, error) {
 	// 根据portValue确定协议
@@ -619,7 +678,7 @@ func ReadConfigv2(sectionName, keyName string) (string, error) {
 		protocol = "https"
 	}
 
-	if config.GetLotusValue() {
+	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 
@@ -756,7 +815,7 @@ func RetrieveVirtualValue(realValue string) (string, string, error) {
 
 // 更新真实值对应的虚拟值
 func UpdateVirtualValuev2(oldRowValue, newRowValue int64) error {
-	if config.GetLotusValue() {
+	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 构建请求URL
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
@@ -783,7 +842,7 @@ func UpdateVirtualValuev2(oldRowValue, newRowValue int64) error {
 
 // RetrieveRealValuev2 根据虚拟值获取真实值
 func RetrieveRealValuev2(virtualValue int64) (string, string, error) {
-	if config.GetLotusValue() {
+	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
 		protocol := "http"
@@ -818,7 +877,7 @@ func RetrieveRealValuev2(virtualValue int64) (string, string, error) {
 
 // RetrieveVirtualValuev2 根据真实值获取虚拟值
 func RetrieveVirtualValuev2(realValue string) (string, string, error) {
-	if config.GetLotusValue() {
+	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
@@ -860,7 +919,7 @@ func RetrieveVirtualValuev2(realValue string) (string, string, error) {
 
 // 根据2个真实值 获取2个虚拟值 群号 然后 用户号
 func RetrieveVirtualValuev2Pro(realValue string, realValueSub string) (string, string, error) {
-	if config.GetLotusValue() {
+	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
@@ -974,7 +1033,7 @@ func RetrieveRealValuePro(virtualValue1, virtualValue2 int64) (string, string, e
 
 // RetrieveRealValuesv2Pro 根据两个虚拟值获取两个真实值 群号 然后 用户号
 func RetrieveRealValuesv2Pro(virtualValue int64, virtualValueSub int64) (string, string, error) {
-	if config.GetLotusValue() {
+	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
@@ -1057,7 +1116,7 @@ func UpdateVirtualValuePro(oldVirtualValue1, newVirtualValue1, oldVirtualValue2,
 
 // UpdateVirtualValuev2Pro 根据配置更新两对虚拟值 旧群 新群 旧用户 新用户
 func UpdateVirtualValuev2Pro(oldVirtualValue1, newVirtualValue1, oldVirtualValue2, newVirtualValue2 int64) error {
-	if config.GetLotusValue() {
+	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 构建请求URL
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
@@ -1147,7 +1206,7 @@ func FindSubKeysById(id string) ([]string, error) {
 
 // FindSubKeysByIdPro 根据1个值获取key中的k:v给出k获取所有v，通过网络调用
 func FindSubKeysByIdPro(id string) ([]string, error) {
-	if config.GetLotusValue() {
+	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
