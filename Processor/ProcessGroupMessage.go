@@ -114,10 +114,10 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 			Area:   "0",
 			Level:  "0",
 		},
-		SubType: "normal",
-		Time:    time.Now().Unix(),
-		GroupOpenID: data.GroupID,
-		SenderOpenID:data.Author.ID,
+		SubType:      "normal",
+		Time:         time.Now().Unix(),
+		GroupOpenID:  data.GroupID,
+		SenderOpenID: data.Author.ID,
 	}
 	//增强配置
 	if !config.GetNativeOb11() {

@@ -360,10 +360,10 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 					Area:     "",
 					Level:    "0",
 				},
-				SubType: "normal",
-				Time:    time.Now().Unix(),
-				GroupOpenID: data.GroupID,
-				SenderOpenID:data.Author.ID,
+				SubType:      "normal",
+				Time:         time.Now().Unix(),
+				GroupOpenID:  data.ChannelID,
+				SenderOpenID: data.Author.ID,
 			}
 			//增强字段
 			if !config.GetNativeOb11() {

@@ -217,10 +217,10 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 				Area:     "",
 				Level:    "0",
 			},
-			SubType: "normal",
-			Time:    time.Now().Unix(),
-			GroupOpenID: data.GroupID,
-			SenderOpenID:data.Author.ID,
+			SubType:      "normal",
+			Time:         time.Now().Unix(),
+			GroupOpenID:  data.ChannelID,
+			SenderOpenID: data.Author.ID,
 		}
 		//增强配置
 		if !config.GetNativeOb11() {
