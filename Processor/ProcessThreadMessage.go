@@ -329,8 +329,8 @@ func (p *Processors) ProcessThreadMessage(data *dto.WSThreadData) error {
 				},
 				SubType: "normal",
 				Time:    time.Now().Unix(),
-				GroupOpenID: data.ChannelID,
-				SenderOpenID:data.AuthorID,
+				GroupOpenID: ChannelID64,
+				SenderOpenID:userid64,
 			}
 			//增强配置
 			if !config.GetNativeOb11() {
