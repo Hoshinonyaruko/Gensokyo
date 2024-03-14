@@ -111,10 +111,10 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 					Area:   "0",
 					Level:  "0",
 				},
-				SubType: "normal",
-				Time:    time.Now().Unix(),
-				GroupOpenID: fromgid,
-				SenderOpenID:data.fromuid,
+				SubType:      "normal",
+				Time:         time.Now().Unix(),
+				GroupOpenID:  fromgid,
+				SenderOpenID: fromuid,
 			}
 			//增强配置
 			if !config.GetNativeOb11() {

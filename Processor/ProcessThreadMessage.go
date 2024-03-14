@@ -308,16 +308,20 @@ func (p *Processors) ProcessThreadMessage(data *dto.WSThreadData) error {
 			} else {
 				IsBindedUserId = idmap.CheckValuev2(userid64)
 				IsBindedGroupId = idmap.CheckValuev2(ChannelID64)
-			}, 
+			}
 			groupMsg := OnebotGroupMessage{
-				RawMessage:  messageText,
-				Message:     segmentedMessages,
-				MessageID:   messageID,
-				GroupID:     ChannelID64,
-				MessageType: "group",
-				PostType:    "message",
-				SelfID:      int64(p.Settings.AppID),
-				UserID:      userid64,
+				RawMessage:   messageText,
+				Message:      segmentedMessages,
+				MessageID:    messageID,
+				GroupID:      ChannelID64,
+				MessageType:  "group",
+				PostType:     "message",
+				SelfID:       int64(p.Settings.AppID),
+				UserID:       userid64,
+				SubType:      "normal",
+				Time:         time.Now().Unix(),
+				GroupOpenID:  string(ChannelID64),
+				SenderOpenID: string(userid64),
 				Sender: Sender{
 					Nickname: "发帖人昵称",
 					UserID:   userid64,
@@ -327,10 +331,6 @@ func (p *Processors) ProcessThreadMessage(data *dto.WSThreadData) error {
 					Area:     "",
 					Level:    "0",
 				},
-				SubType: "normal",
-				Time:    time.Now().Unix(),
-				GroupOpenID: ChannelID64,
-				SenderOpenID:userid64,
 			}
 			//增强配置
 			if !config.GetNativeOb11() {
