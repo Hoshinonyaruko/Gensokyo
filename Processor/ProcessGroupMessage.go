@@ -103,6 +103,8 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 		Message:     segmentedMessages,
 		MessageID:   messageID,
 		GroupID:     GroupID64,
+		GroupOpenID: data.GroupID
+		SenderOpenID:data.Author.ID
 		MessageType: "group",
 		PostType:    "message",
 		SelfID:      int64(p.Settings.AppID),
