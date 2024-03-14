@@ -223,6 +223,8 @@ func (p *Processors) ProcessGuildATMessage(data *dto.WSATMessageData) error {
 			RealMessageType: "guild",
 			IsBindedUserId:  IsBindedUserId,
 			IsBindedGroupId: IsBindedGroupId,
+			GroupOpenID: data.GroupID,
+			SenderOpenID:data.Author.ID,
 		}
 		//增强配置
 		if !config.GetNativeOb11() {

@@ -212,6 +212,8 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 			Avatar:          "",
 			RealMessageType: "group_private",
 			IsBindedUserId:  IsBindedUserId,
+			GroupOpenID: data.GroupID,
+			SenderOpenID:data.Author.ID,
 		}
 		//根据条件判断是否增加nick和card
 		var CaN = config.GetCardAndNick()
