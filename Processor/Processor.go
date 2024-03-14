@@ -94,7 +94,7 @@ type OnebotGroupMessage struct {
 	IsBindedGroupId bool        `json:"is_binded_group_id,omitempty"` //当前群号是否是binded后的
 	IsBindedUserId  bool        `json:"is_binded_user_id,omitempty"`  //当前用户号号是否是binded后的
 	GroupOpenID     string      `json:"group_open_id"`
-	SenderOpenID    string      `json:"group_open_id"`
+	SenderOpenID    string      `json:"sender_open_id"`
 }
 
 // 私聊信息事件
