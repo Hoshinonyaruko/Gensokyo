@@ -100,6 +100,7 @@ type Settings struct {
 	WhiteBypass                []int64              `yaml:"white_bypass"`
 	TransferUrl                bool                 `yaml:"transfer_url"`
 	HttpAddress                string               `yaml:"http_address"`
+	AccessToken                string               `yaml:"http_access_token"`
 	HttpVersion                int                  `yaml:"http_version"`
 	HttpTimeOut                int                  `yaml:"http_timeout"`
 	PostUrl                    []string             `yaml:"post_url"`
@@ -149,6 +150,9 @@ type Settings struct {
 	GlobalInteractionToMessage bool                 `yaml:"global_interaction_to_message"`
 	AutoPutInteraction         bool                 `yaml:"auto_put_interaction"`
 	PutInteractionDelay        int                  `yaml:"put_interaction_delay"`
+	ImgUpApiVtv2               bool                 `yaml:"img_up_api_ntv2"`
+	Fix11300                   bool                 `yaml:"fix_11300"`
+	LotusWithoutIdmaps         bool                 `yaml:"lotus_without_idmaps"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -183,7 +187,7 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	// 确保配置完整性
-	if err := ensureConfigComplete(conf, path); err != nil {
+	if err := ensureConfigComplete(path); err != nil {
 		return nil, err
 	}
 
@@ -193,7 +197,7 @@ func LoadConfig(path string) (*Config, error) {
 }
 
 // 确保配置完整性
-func ensureConfigComplete(conf *Config, path string) error {
+func ensureConfigComplete(path string) error {
 	// 读取配置文件到缓冲区
 	configData, err := os.ReadFile(path)
 	if err != nil {
@@ -1216,6 +1220,18 @@ func GetHttpAddress() string {
 	return instance.Settings.HttpAddress
 }
 
+// 获取 HTTP 访问令牌
+func GetHTTPAccessToken() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get HTTP access token.")
+		return ""
+	}
+	return instance.Settings.AccessToken
+}
+
 // 获取 HTTP 版本
 func GetHttpVersion() int {
 	mu.Lock()
@@ -1843,4 +1859,40 @@ func GetPutInteractionDelay() int {
 		return 0
 	}
 	return instance.Settings.PutInteractionDelay
+}
+
+// 获取ntv2转换开关
+func GetImgUpApiVtv2() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to ImgUpApiVtv2 value.")
+		return false
+	}
+	return instance.Settings.ImgUpApiVtv2
+}
+
+// 获取Fix11300开关
+func GetFix11300() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to Fix11300 value.")
+		return false
+	}
+	return instance.Settings.Fix11300
+}
+
+// 获取LotusWithoutIdmaps开关
+func GetLotusWithoutIdmaps() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to LotusWithoutIdmaps value.")
+		return false
+	}
+	return instance.Settings.LotusWithoutIdmaps
 }

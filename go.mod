@@ -22,6 +22,7 @@ require (
 require (
 	github.com/clbanning/mxj v1.8.4 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
+	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -69,6 +70,6 @@ require (
 	golang.org/x/net v0.10.0
 	golang.org/x/sys v0.13.0
 	golang.org/x/text v0.9.0 // indirect
-	google.golang.org/protobuf v1.30.0 // indirect
+	google.golang.org/protobuf v1.32.0 // indirect
 	mvdan.cc/xurls v1.1.0
 )

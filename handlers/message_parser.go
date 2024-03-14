@@ -365,6 +365,7 @@ func transformMessageTextUrl(messageText string, message callapi.ActionMessage, 
 			// 根据配置处理URL
 			if config.GetLotusValue() {
 				// 连接到另一个gensokyo
+				mylog.Printf("转换url:%v", originalURL)
 				shortURL := url.GenerateShortURL(originalURL)
 				return shortURL
 			} else {
@@ -1037,7 +1038,7 @@ func parseQQMuiscMDData(musicid string) (*dto.Markdown, *keyboard.MessageKeyboar
 		return nil, nil, errors.New("song not found")
 	}
 	albumMid := info.Get("track_info.album.mid").String()
-	pinfo, _ := FetchTrackInfo(info.Get("track_info.mid").Str)
+	//pinfo, _ := FetchTrackInfo(info.Get("track_info.mid").Str)
 	jumpURL := "https://i.y.qq.com/v8/playsong.html?platform=11&appshare=android_qq&appversion=10030010&hosteuin=oKnlNenz7i-s7c**&songmid=" + info.Get("track_info.mid").Str + "&type=0&appsongtype=1&_wv=1&source=qq&ADTAG=qfshare"
 	content := info.Get("track_info.singer.0.name").String()
 
@@ -1076,9 +1077,10 @@ func parseQQMuiscMDData(musicid string) (*dto.Markdown, *keyboard.MessageKeyboar
 		Params:           mdParams,
 	}
 	// 使用gjson获取musicUrl
-	musicUrl := gjson.Get(pinfo, "url_mid.data.midurlinfo.0.purl").String()
+	//musicUrl := gjson.Get(pinfo, "url_mid.data.midurlinfo.0.purl").String()
 	// 处理 Keyboard
-	kb := createMusicKeyboard(jumpURL, musicUrl)
+	//kb := createMusicKeyboard(jumpURL, musicUrl)
+	kb := createMusicKeyboard(jumpURL)
 
 	return md, kb, nil
 }
@@ -1092,7 +1094,8 @@ func QQMusicSongInfo(id string) (gjson.Result, error) {
 	return gjson.Get(d, "songinfo.data"), nil
 }
 
-func createMusicKeyboard(jumpURL string, musicURL string) *keyboard.MessageKeyboard {
+// func createMusicKeyboard(jumpURL string, musicURL string) *keyboard.MessageKeyboard {
+func createMusicKeyboard(jumpURL string) *keyboard.MessageKeyboard {
 	// 初始化自定义键盘
 	customKeyboard := &keyboard.CustomKeyboard{}
 	currentRow := &keyboard.Row{} // 创建一个新行

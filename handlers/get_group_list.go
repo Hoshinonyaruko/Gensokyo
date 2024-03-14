@@ -110,20 +110,28 @@ func GetGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 		}
 		// 将channel信息转换为Group对象并添加到groups
 		for _, channel := range channels {
-			//转换ChannelID64
+			// 转换ChannelID64
 			ChannelID64, err := idmap.StoreIDv2(channel.ID)
 			if err != nil {
 				mylog.Printf("Error storing ID: %v", err)
 			}
+
+			// 根据channel.Type添加前缀
+			groupName := channel.Name
+			if channel.Type == dto.ChannelTypeText {
+				groupName = "&" + groupName
+			}
+
 			channelGroup := Group{
 				GroupCreateTime: 0, // 频道没有直接对应的创建时间字段
 				GroupID:         ChannelID64,
 				GroupLevel:      0,  // 频道没有直接对应的级别字段
 				GroupMemo:       "", // 频道没有直接对应的描述字段
-				GroupName:       channel.Name,
+				GroupName:       groupName,
 				MaxMemberCount:  0, // 频道没有直接对应的最大成员数字段
 				MemberCount:     0, // 频道没有直接对应的成员数字段
 			}
+
 			groupList.Data = append(groupList.Data, channelGroup)
 		}
 	}

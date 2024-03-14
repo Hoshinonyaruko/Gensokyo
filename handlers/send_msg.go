@@ -25,28 +25,72 @@ func HandleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 		// 当 message.Echo 是字符串类型时执行此块
 		msgType = echo.GetMsgTypeByKey(echoStr)
 	}
-	if msgType == "" {
+	// 检查GroupID是否为0
+	checkZeroGroupID := func(id interface{}) bool {
+		switch v := id.(type) {
+		case int:
+			return v != 0
+		case int64:
+			return v != 0
+		case string:
+			return v != "0" // 检查字符串形式的0
+		default:
+			return true // 如果不是int、int64或string，假定它不为0
+		}
+	}
+
+	// 检查UserID是否为0
+	checkZeroUserID := func(id interface{}) bool {
+		switch v := id.(type) {
+		case int:
+			return v != 0
+		case int64:
+			return v != 0
+		case string:
+			return v != "0" // 同样检查字符串形式的0
+		default:
+			return true // 如果不是int、int64或string，假定它不为0
+		}
+	}
+
+	if msgType == "" && message.Params.GroupID != nil && checkZeroGroupID(message.Params.GroupID) {
 		msgType = GetMessageTypeByGroupid(config.GetAppIDStr(), message.Params.GroupID)
 	}
-	if msgType == "" {
+	if msgType == "" && message.Params.UserID != nil && checkZeroUserID(message.Params.UserID) {
 		msgType = GetMessageTypeByUserid(config.GetAppIDStr(), message.Params.UserID)
 	}
-	if msgType == "" {
+	if msgType == "" && message.Params.GroupID != nil && checkZeroGroupID(message.Params.GroupID) {
 		msgType = GetMessageTypeByGroupidV2(message.Params.GroupID)
 	}
-	if msgType == "" {
+	if msgType == "" && message.Params.UserID != nil && checkZeroUserID(message.Params.UserID) {
 		msgType = GetMessageTypeByUseridV2(message.Params.UserID)
 	}
 
 	var idInt64, idInt642 int64
 	var err error
 
+	var tempErr error
+
 	if message.Params.GroupID != "" {
-		idInt64, _ = ConvertToInt64(message.Params.GroupID)
-		idInt642, _ = ConvertToInt64(message.Params.UserID)
+		idInt64, tempErr = ConvertToInt64(message.Params.GroupID)
+		if tempErr != nil {
+			err = tempErr
+		}
+		idInt642, tempErr = ConvertToInt64(message.Params.UserID)
+		if tempErr != nil {
+			err = tempErr
+		}
+
 	} else if message.Params.UserID != "" {
-		idInt64, _ = ConvertToInt64(message.Params.UserID)
-		idInt642, _ = ConvertToInt64(message.Params.GroupID)
+		idInt64, tempErr = ConvertToInt64(message.Params.UserID)
+		if tempErr != nil {
+			err = tempErr
+		}
+		idInt642, tempErr = ConvertToInt64(message.Params.GroupID)
+		if tempErr != nil {
+			err = tempErr
+		}
+
 	}
 
 	//设置递归 对直接向gsk发送action时有效果
