@@ -234,6 +234,11 @@ func (o *openAPIv2) PostGroupMessage(ctx context.Context, groupID string, msg dt
 	switch msgType {
 	case dto.RichMedia:
 		result.MediaResponse = resp.Result().(*dto.MediaResponse)
+		resp, err = o.request(ctx).
+			SetResult(dto.MediaResponse{}). // 设置为媒体响应类型
+			SetPathParam("group_id", groupID).
+			SetBody(msg).
+			Post(o.getURL(getGroupURLBySendType(msgType)))
 	default:
 		result.Message = resp.Result().(*dto.Message)
 	}
