@@ -276,8 +276,8 @@ func main() {
 					// 所有客户端都成功初始化
 					p = Processor.NewProcessor(api, apiV2, &conf.Settings, wsClients)
 				}
-			} else if conf.Settings.EnableWsServer {
-				log.Println("只启动正向ws")
+			} else {
+				log.Println("提示,目前只启动了正向ws或httpapi")
 				p = Processor.NewProcessorV2(api, apiV2, &conf.Settings)
 			}
 		} else {
