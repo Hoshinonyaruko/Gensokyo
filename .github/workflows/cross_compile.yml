@@ -101,14 +101,14 @@ jobs:
         fi
 
     - name: Compress executable files with UPX
-          run: |
-            sudo apt-get update
-            sudo apt-get install -y upx
-            if [ "$GOOS" = "windows" ]; then
-              upx --best --lzma output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}.exe
-            else
-              upx --best --lzma output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}
-            fi
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y upx
+        if [ "$GOOS" = "windows" ]; then
+          upx --best --lzma output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}.exe
+        else
+          upx --best --lzma output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}
+        fi
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
