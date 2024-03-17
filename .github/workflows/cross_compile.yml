@@ -95,10 +95,20 @@ jobs:
         CGO_ENABLED: 0
       run: |
         if [ "$GOOS" = "windows" ]; then
-          go build -o output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}.exe
+          go build -ldflags="-s -w" -o output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}.exe
         else
-          go build -o output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}
+          go build -ldflags="-s -w" -o output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}
         fi
+
+    - name: Compress executable files with UPX
+          run: |
+            sudo apt-get update
+            sudo apt-get install -y upx
+            if [ "$GOOS" = "windows" ]; then
+              upx --best --lzma output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}.exe
+            else
+              upx --best --lzma output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}
+            fi
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
