@@ -153,6 +153,11 @@ type Settings struct {
 	ImgUpApiVtv2               bool                 `yaml:"img_up_api_ntv2"`
 	Fix11300                   bool                 `yaml:"fix_11300"`
 	LotusWithoutIdmaps         bool                 `yaml:"lotus_without_idmaps"`
+	GetGroupListAllGuilds      bool                 `yaml:"get_g_list_all_guilds"`
+	GetGroupListGuilds         string               `yaml:"get_g_list_guilds"`
+	GetGroupListReturnGuilds   bool                 `yaml:"get_g_list_return_guilds"`
+	GetGroupListGuidsType      int                  `yaml:"get_g_list_guilds_type"`
+	GetGroupListDelay          int                  `yaml:"get_g_list_delay"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -1895,4 +1900,64 @@ func GetLotusWithoutIdmaps() bool {
 		return false
 	}
 	return instance.Settings.LotusWithoutIdmaps
+}
+
+// 获取GetGroupListAllGuilds开关
+func GetGroupListAllGuilds() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetGroupListAllGuilds value.")
+		return false
+	}
+	return instance.Settings.GetGroupListAllGuilds
+}
+
+// 获取 GetGroupListGuilds  数量
+func GetGetGroupListGuilds() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get GetGroupListGuilds.")
+		return "10"
+	}
+	return instance.Settings.GetGroupListGuilds
+}
+
+// 获取GetGroupListReturnGuilds开关
+func GetGroupListReturnGuilds() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetGroupListReturnGuilds value.")
+		return false
+	}
+	return instance.Settings.GetGroupListReturnGuilds
+}
+
+// 获取 GetGroupListGuidsType  数量
+func GetGroupListGuidsType() int {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get GetGroupListGuidsType.")
+		return 0
+	}
+	return instance.Settings.GetGroupListGuidsType
+}
+
+// 获取 GetGroupListDelay  数量
+func GetGroupListDelay() int {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get GetGroupListDelay.")
+		return 0
+	}
+	return instance.Settings.GetGroupListDelay
 }
