@@ -138,6 +138,12 @@ settings:
   fix_11300: false                  #修复11300报错,需要在develop_bot_id填入自己机器人的appid. 11300原因暂时未知,临时修复方案.
   lotus_without_idmaps: false       #lotus只通过url,图片上传,语音,不通过id转换,在本地当前gsk维护idmaps转换.
 
+  get_g_list_all_guilds : false     #在获取群列表api时,轮询获取全部的频道列表(api一次只能获取100个),建议仅在广播公告通知等特别场景时开启.
+  get_g_list_delay : 500            #轮询时的延迟时间,毫秒数.
+  get_g_list_guilds_type : 0        #0=全部返回,1=获取第1个子频道.以此类推.可以缩减返回值的大小.
+  get_g_list_guilds : "10"          #在获取群列表api时,一次返回的频道数量.这里是string,不要去掉引号.最大100(5分钟内连续请求=翻页),获取全部请开启get_g_list_return_guilds.
+  get_g_list_return_guilds : true   #获取群列表时是否返回频道列表.
+
   title : "Gensokyo © 2023 - Hoshinonyaruko"              #程序的标题 如果多个机器人 可根据标题区分
   custom_bot_name : "Gensokyo全域机器人"                   #自定义机器人名字,会在api调用中返回,默认Gensokyo全域机器人
  
