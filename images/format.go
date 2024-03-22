@@ -12,6 +12,7 @@ import (
 
 // 宽度 高度
 func GetImageDimensions(url string) (int, int, error) {
+	// 原有的后缀判断逻辑
 	if strings.HasSuffix(url, ".png") {
 		return getPNGDimensions(url)
 	} else if strings.HasSuffix(url, ".jpg") || strings.HasSuffix(url, ".jpeg") {
@@ -19,7 +20,17 @@ func GetImageDimensions(url string) (int, int, error) {
 	} else if strings.HasSuffix(url, ".gif") {
 		return getGIFDimensions(url)
 	}
-	return 0, 0, fmt.Errorf("unsupported image format")
+
+	// 如果图片格式不受支持，则尝试其他方法
+	methods := []func(string) (int, int, error){getPNGDimensions, getJpegDimensions, getGIFDimensions}
+	for _, method := range methods {
+		width, height, err := method(url)
+		if err == nil && (width != 0 || height != 0) {
+			return width, height, nil
+		}
+	}
+
+	return 0, 0, fmt.Errorf("unsupported image format or failed to get dimensions")
 }
 
 func getPNGDimensions(url string) (int, int, error) {
