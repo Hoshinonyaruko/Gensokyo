@@ -204,7 +204,6 @@ func UploadBase64ImageHandlerV3(rateLimiter *RateLimiter, apiv1 openapi.OpenAPI)
 		}
 
 		// 计算压缩数据的MD5值
-		// 计算压缩数据的MD5值
 		md5Hash := md5.Sum(compressedData)
 		md5String := strings.ToUpper(hex.EncodeToString(md5Hash[:]))
 		imageURL := fmt.Sprintf("https://gchat.qpic.cn/qmeetpic/0/0-0-%s/0", md5String)
