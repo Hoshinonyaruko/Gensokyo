@@ -74,6 +74,8 @@ type MessageAPI interface {
 	PatchMessage(ctx context.Context,
 		channelID string, messageID string, msg *dto.MessageToCreate) (*dto.Message, error)
 	RetractMessage(ctx context.Context, channelID, msgID string, options ...RetractMessageOption) error
+	RetractGroupMessage(ctx context.Context, groupID, msgID string, options ...RetractMessageOption) error
+	RetractC2CMessage(ctx context.Context, userID, msgID string, options ...RetractMessageOption) error
 	// PostSettingGuide 发送设置引导
 	PostSettingGuide(ctx context.Context, channelID string, atUserIDs []string) (*dto.Message, error)
 

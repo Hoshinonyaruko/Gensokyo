@@ -196,17 +196,17 @@ func HandleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 		ChannelID:  channelID,
 		CreateTime: timestampStr,
 	}
-
+	var resp *dto.Message
 	// 优先发送文本信息
 	if messageText != "" {
 		msgseq := echo.GetMappingSeq(messageID)
 		echo.AddMappingSeq(messageID, msgseq+1)
 		textMsg, _ := GenerateReplyMessage(messageID, nil, messageText, msgseq+1)
-		if _, err = apiv2.PostDirectMessage(context.TODO(), dm, textMsg); err != nil {
+		if resp, err = apiv2.PostDirectMessage(context.TODO(), dm, textMsg); err != nil {
 			mylog.Printf("发送文本信息失败: %v", err)
 		}
 		//发送成功回执
-		retmsg, _ = SendResponse(client, err, &message)
+		retmsg, _ = SendGuildPrivateResponse(client, err, &message, resp, guildID)
 	}
 
 	// 遍历foundItems并发送每种信息
@@ -232,16 +232,16 @@ func HandleSendGuildChannelPrivateMsg(client callapi.Client, api openapi.OpenAPI
 				if err != nil {
 					mylog.Printf("Error compressing image: %v", err)
 				}
-				if _, err = api.PostDirectMessageMultipart(context.TODO(), dm, reply, compressedData); err != nil {
+				if resp, err = api.PostDirectMessageMultipart(context.TODO(), dm, reply, compressedData); err != nil {
 					mylog.Printf("使用multipart发送 %s 信息失败: %v message_id %v", key, err, messageID)
 				}
-				retmsg, _ = SendResponse(client, err, &message)
+				retmsg, _ = SendGuildResponse(client, err, &message, resp)
 			} else {
 				// 处理非 Base64 图片的逻辑
 				if _, err = api.PostDirectMessage(context.TODO(), dm, reply); err != nil {
 					mylog.Printf("发送 %s 信息失败: %v", key, err)
 				}
-				retmsg, _ = SendResponse(client, err, &message)
+				retmsg, _ = SendGuildPrivateResponse(client, err, &message, resp, guildID)
 			}
 		}
 	}

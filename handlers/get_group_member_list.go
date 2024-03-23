@@ -123,7 +123,7 @@ func GetGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		//用group_id还原出channelid 这是虚拟成群的私聊信息
 		message.Params.ChannelID = message.Params.GroupID.(string)
 		// 使用RetrieveRowByIDv2还原真实的ChannelID
-		RChannelID, err := idmap.RetrieveRowByIDv2(message.Params.ChannelID)
+		RChannelID, err := idmap.RetrieveRowByIDv2(message.Params.ChannelID.(string))
 		if err != nil {
 			mylog.Printf("error retrieving real ChannelID: %v", err)
 		}
@@ -147,7 +147,7 @@ func GetGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			var members []MemberList
 			var userIDInt, groupIDInt uint64
 			// 使用 message.Params.ChannelID  作为 id 来调用 FindSubKeysById
-			userIDs, err := idmap.FindSubKeysByIdPro(message.Params.ChannelID)
+			userIDs, err := idmap.FindSubKeysByIdPro(message.Params.ChannelID.(string))
 			if err != nil {
 				mylog.Printf("Error retrieving user IDs: %v", err)
 				return "", nil // 或者处理错误
@@ -254,7 +254,7 @@ func GetGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 					//用GroupID给ChannelID赋值,因为是把频道虚拟成了群
 					message.Params.ChannelID = message.Params.GroupID.(string)
 					//将真实id转为int userid64
-					_, userIDInt64, err = idmap.StoreIDv2Pro(message.Params.ChannelID, memberFromAPI.User.ID)
+					_, userIDInt64, err = idmap.StoreIDv2Pro(message.Params.ChannelID.(string), memberFromAPI.User.ID)
 					if err != nil {
 						mylog.Fatalf("Error storing ID: %v", err)
 					}
@@ -277,14 +277,14 @@ func GetGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				var RChannelID string
 				//根据api调用中的参数,还原真实的频道号
 				if memberFromAPI.User.ID != "" && config.GetIdmapPro() {
-					RChannelID, _, err = idmap.RetrieveRowByIDv2Pro(message.Params.ChannelID, memberFromAPI.User.ID)
+					RChannelID, _, err = idmap.RetrieveRowByIDv2Pro(message.Params.ChannelID.(string), memberFromAPI.User.ID)
 					if err != nil {
 						mylog.Printf("测试,通过Proid获取的RChannelID出错232:%v", err)
 					}
 				}
 				if RChannelID == "" {
 					// 使用RetrieveRowByIDv2还原真实的ChannelID
-					RChannelID, err = idmap.RetrieveRowByIDv2(message.Params.ChannelID)
+					RChannelID, err = idmap.RetrieveRowByIDv2(message.Params.ChannelID.(string))
 					if err != nil {
 						mylog.Printf("测试,通过idmap.RetrieveRowByIDv2获取的RChannelID出错241:%v", err)
 					}
@@ -303,9 +303,9 @@ func GetGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				GroupID:         uint64(groupIDInt),
 				Nickname:        memberFromAPI.Nick,
 				Card:            memberFromAPI.Nick, // 使用昵称作为默认值(TODO: 将来可能发生变更)
-				Sex:             "0",  // 使用默认值
-				Age:             0,    // 使用默认值
-				Area:            "0",  // 使用默认值
+				Sex:             "0",                // 使用默认值
+				Age:             0,                  // 使用默认值
+				Area:            "0",                // 使用默认值
 				JoinTime:        joinTimeInt,
 				LastSentTime:    0,        // 使用默认值
 				Level:           "0",      // 0

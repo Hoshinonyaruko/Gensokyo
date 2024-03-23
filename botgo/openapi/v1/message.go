@@ -175,6 +175,36 @@ func (o *openAPI) RetractMessage(ctx context.Context,
 	return err
 }
 
+// RetractMessage 撤回群消息
+func (o *openAPI) RetractGroupMessage(ctx context.Context,
+	groupID, msgID string, options ...openapi.RetractMessageOption) error {
+	request := o.request(ctx).
+		SetPathParam("group_id", groupID).
+		SetPathParam("message_id", string(msgID))
+	for _, option := range options {
+		if option == openapi.RetractMessageOptionHidetip {
+			request = request.SetQueryParam("hidetip", "true")
+		}
+	}
+	_, err := request.Delete(o.getURL(groupMessagesURL))
+	return err
+}
+
+// RetractMessage 撤回私聊消息
+func (o *openAPI) RetractC2CMessage(ctx context.Context,
+	UserID, msgID string, options ...openapi.RetractMessageOption) error {
+	request := o.request(ctx).
+		SetPathParam("user_id", UserID).
+		SetPathParam("message_id", string(msgID))
+	for _, option := range options {
+		if option == openapi.RetractMessageOptionHidetip {
+			request = request.SetQueryParam("hidetip", "true")
+		}
+	}
+	_, err := request.Delete(o.getURL(c2cMessageURI))
+	return err
+}
+
 // PostSettingGuide 发送设置引导消息, atUserID为要at的用户
 func (o *openAPI) PostSettingGuide(ctx context.Context,
 	channelID string, atUserIDs []string) (*dto.Message, error) {
