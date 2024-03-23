@@ -96,7 +96,7 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			HandleSendPrivateMsg(client, api, apiv2, messageCopy)
 		}
 	}
-
+	var resp *dto.C2CMessageResponse
 	switch msgType {
 	//这里是pr上来的,我也不明白为什么私聊会出现group类型 猜测是为了匹配包含了groupid的私聊?
 	case "group_private", "group":
@@ -206,14 +206,14 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
 
 			// 发送组合消息
-			_, err = apiv2.PostC2CMessage(context.TODO(), UserID, groupMessage)
+			resp, err = apiv2.PostC2CMessage(context.TODO(), UserID, groupMessage)
 			if err != nil {
 				mylog.Printf("发送组合消息失败: %v", err)
 				return "", nil // 或其他错误处理
 			}
 
 			// 发送成功回执
-			retmsg, _ = SendResponse(client, err, &message)
+			retmsg, _ = SendC2CResponse(client, err, &message, resp)
 
 			delete(foundItems, imageType) // 从foundItems中删除已处理的图片项
 			messageText = ""
@@ -233,14 +233,14 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			}
 
 			groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
-			_, err := apiv2.PostC2CMessage(context.TODO(), UserID, groupMessage)
+			resp, err := apiv2.PostC2CMessage(context.TODO(), UserID, groupMessage)
 			if err != nil {
 				mylog.Printf("发送文本私聊信息失败: %v", err)
 				//如果失败 防止进入递归
 				return "", nil
 			}
 			//发送成功回执
-			retmsg, _ = SendResponse(client, err, &message)
+			retmsg, _ = SendC2CResponse(client, err, &message, resp)
 		}
 
 		// 遍历foundItems并发送每种信息
@@ -294,13 +294,13 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 					}
 					groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
 					//重新为err赋值
-					_, err = apiv2.PostC2CMessage(context.TODO(), UserID, groupMessage)
+					resp, err = apiv2.PostC2CMessage(context.TODO(), UserID, groupMessage)
 					if err != nil {
 						mylog.Printf("发送 %s 私聊信息失败: %v", key, err)
 					}
 				}
 				//发送成功回执
-				retmsg, _ = SendResponse(client, err, &message)
+				retmsg, _ = SendC2CResponse(client, err, &message, resp)
 			}
 		}
 		//这里是pr上来的,我也不明白为什么私聊会出现guild类型

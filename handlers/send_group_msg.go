@@ -297,7 +297,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 
 			}
 			// 发送组合消息
-			_, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
+			resp, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 			if err != nil {
 				mylog.Printf("发送组合消息失败: %v", err)
 			}
@@ -310,7 +310,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			}
 
 			// 发送成功回执
-			retmsg, _ = SendResponse(client, err, &message)
+			retmsg, _ = SendResponse(client, err, &message, resp)
 
 			delete(foundItems, imageType) // 从foundItems中删除已处理的图片项
 			messageText = ""
@@ -331,7 +331,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 
 			groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
 			//重新为err赋值
-			_, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
+			resp, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 			if err != nil {
 				mylog.Printf("发送文本群组信息失败: %v", err)
 			}
@@ -343,9 +343,9 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				echo.PushGlobalStack(pair)
 			}
 			//发送成功回执
-			retmsg, _ = SendResponse(client, err, &message)
+			retmsg, _ = SendResponse(client, err, &message, resp)
 		}
-
+		var resp *dto.GroupMessageResponse
 		// 遍历foundItems并发送每种信息
 		for key, urls := range foundItems {
 			for _, url := range urls {
@@ -367,7 +367,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 							return "", nil // 或其他错误处理
 						}
 						//重新为err赋值
-						_, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
+						resp, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 						if err != nil {
 							mylog.Printf("发送md信息失败: %v", err)
 						}
@@ -379,7 +379,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 							echo.PushGlobalStack(pair)
 						}
 						//发送成功回执
-						retmsg, _ = SendResponse(client, err, &message)
+						retmsg, _ = SendResponse(client, err, &message, resp)
 					}
 					continue // 跳过这个项，继续下一个
 				}
@@ -398,7 +398,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 						}
 						groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
 						//重新为err赋值
-						_, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
+						resp, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 						if err != nil {
 							mylog.Printf("发送文本报错信息失败: %v", err)
 						}
@@ -426,7 +426,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 					}
 					groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
 					//重新为err赋值
-					_, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
+					resp, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 					if err != nil {
 						mylog.Printf("发送图片失败: %v", err)
 					}
@@ -439,7 +439,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 					}
 				}
 				//发送成功回执
-				retmsg, _ = SendResponse(client, err, &message)
+				retmsg, _ = SendResponse(client, err, &message, resp)
 			}
 		}
 	case "guild":
@@ -447,12 +447,12 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		message.Params.ChannelID = message.Params.GroupID.(string)
 		var RChannelID string
 		if message.Params.UserID != nil && config.GetIdmapPro() {
-			RChannelID, _, err = idmap.RetrieveRowByIDv2Pro(message.Params.ChannelID, message.Params.UserID.(string))
+			RChannelID, _, err = idmap.RetrieveRowByIDv2Pro(message.Params.ChannelID.(string), message.Params.UserID.(string))
 			mylog.Printf("测试,通过Proid获取的RChannelID:%v", RChannelID)
 		}
 		if RChannelID == "" {
 			// 使用RetrieveRowByIDv2还原真实的ChannelID
-			RChannelID, err = idmap.RetrieveRowByIDv2(message.Params.ChannelID)
+			RChannelID, err = idmap.RetrieveRowByIDv2(message.Params.ChannelID.(string))
 		}
 		if err != nil {
 			mylog.Printf("error retrieving real RChannelID: %v", err)
@@ -472,11 +472,11 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			return "", nil
 		}
 		if Vuserid != "" && config.GetIdmapPro() {
-			RChannelID, _, err = idmap.RetrieveRowByIDv2Pro(message.Params.ChannelID, Vuserid)
+			RChannelID, _, err = idmap.RetrieveRowByIDv2Pro(message.Params.ChannelID.(string), Vuserid)
 			mylog.Printf("测试,通过Proid获取的RChannelID:%v", RChannelID)
 		} else {
 			// 使用RetrieveRowByIDv2还原真实的ChannelID
-			RChannelID, err = idmap.RetrieveRowByIDv2(message.Params.ChannelID)
+			RChannelID, err = idmap.RetrieveRowByIDv2(message.Params.ChannelID.(string))
 		}
 		if err != nil {
 			mylog.Printf("error retrieving real ChannelID: %v", err)
@@ -497,12 +497,12 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		message.Params.ChannelID = message.Params.GroupID.(string)
 		var RChannelID string
 		if message.Params.UserID != nil && config.GetIdmapPro() {
-			RChannelID, _, err = idmap.RetrieveRowByIDv2Pro(message.Params.ChannelID, message.Params.UserID.(string))
+			RChannelID, _, err = idmap.RetrieveRowByIDv2Pro(message.Params.ChannelID.(string), message.Params.UserID.(string))
 			mylog.Printf("测试,通过Proid获取的RChannelID:%v", RChannelID)
 		}
 		if RChannelID == "" {
 			// 使用RetrieveRowByIDv2还原真实的ChannelID
-			RChannelID, err = idmap.RetrieveRowByIDv2(message.Params.ChannelID)
+			RChannelID, err = idmap.RetrieveRowByIDv2(message.Params.ChannelID.(string))
 		}
 		if err != nil {
 			mylog.Printf("error retrieving real RChannelID: %v", err)

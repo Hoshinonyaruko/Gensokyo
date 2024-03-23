@@ -70,6 +70,12 @@ func HandleSendGuildChannelForum(client callapi.Client, api openapi.OpenAPI, api
 	if msgType == "" && message.Params.UserID != nil && checkZeroUserID(message.Params.UserID) {
 		msgType = GetMessageTypeByUseridV2(message.Params.UserID)
 	}
+	// New checks for UserID and GroupID being nil or 0
+	if (message.Params.UserID == nil || !checkZeroUserID(message.Params.UserID)) &&
+		(message.Params.GroupID == nil || !checkZeroGroupID(message.Params.GroupID)) {
+		mylog.Printf("send_group_msgs接收到错误action: %v", message)
+		return "", nil
+	}
 
 	//当不转换频道信息时(不支持频道私聊)
 	if msgType == "" {
@@ -90,12 +96,12 @@ func HandleSendGuildChannelForum(client callapi.Client, api openapi.OpenAPI, api
 		if err != nil {
 			mylog.Printf("组合帖子信息失败: %v", err)
 		}
-		if _, err = api.PostFourm(context.TODO(), channelID, Forum); err != nil {
+		if _, err = api.PostFourm(context.TODO(), channelID.(string), Forum); err != nil {
 			mylog.Printf("发送帖子信息失败: %v", err)
 		}
 
 		//发送成功回执
-		retmsg, _ = SendResponse(client, err, &message)
+		retmsg, _ = SendResponse(client, err, &message, nil)
 
 	default:
 		mylog.Printf("2Unknown message type: %s", msgType)
