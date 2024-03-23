@@ -158,6 +158,9 @@ type Settings struct {
 	GetGroupListReturnGuilds   bool                 `yaml:"get_g_list_return_guilds"`
 	GetGroupListGuidsType      int                  `yaml:"get_g_list_guilds_type"`
 	GetGroupListDelay          int                  `yaml:"get_g_list_delay"`
+	GlobalServerTempQQguild    bool                 `yaml:"global_server_temp_qqguild"`
+	ServerTempQQguild          string               `yaml:"server_temp_qqguild"`
+	ServerTempQQguildPool      []string             `yaml:"server_temp_qqguild_pool"`
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -1960,4 +1963,38 @@ func GetGroupListDelay() int {
 		return 0
 	}
 	return instance.Settings.GetGroupListDelay
+}
+
+// 获取GetGlobalServerTempQQguild开关
+func GetGlobalServerTempQQguild() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GlobalServerTempQQguild value.")
+		return false
+	}
+	return instance.Settings.GlobalServerTempQQguild
+}
+
+// 获取ServerTempQQguild
+func GetServerTempQQguild() string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to ServerTempQQguild value.")
+		return "0"
+	}
+	return instance.Settings.ServerTempQQguild
+}
+
+// 获取ServerTempQQguildPool
+func GetServerTempQQguildPool() []string {
+	mu.Lock()
+	defer mu.Unlock()
+	if instance != nil {
+		return instance.Settings.ServerTempQQguildPool
+	}
+	return nil // 返回nil，如果instance为nil
 }
