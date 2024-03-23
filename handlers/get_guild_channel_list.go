@@ -28,7 +28,7 @@ func GetGuildChannelList(client callapi.Client, api openapi.OpenAPI, apiv2 opena
 	guildID := message.Params.GuildID
 
 	// 根据请求参数调用API
-	channels, err := api.Channels(context.TODO(), guildID)
+	channels, err := api.Channels(context.TODO(), guildID.(string))
 	if err != nil {
 		// 如果发生错误，记录日志并返回null
 		mylog.Printf("Error fetching channels: %v", err)

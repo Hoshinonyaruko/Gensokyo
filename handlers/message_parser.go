@@ -40,18 +40,202 @@ type ServerResponse struct {
 	Data struct {
 		MessageID int `json:"message_id"`
 	} `json:"data"`
-	Message string      `json:"message"`
-	RetCode int         `json:"retcode"`
-	Status  string      `json:"status"`
-	Echo    interface{} `json:"echo"`
+	Message   string      `json:"message"`
+	GroupID   int64       `json:"group_id,omitempty"`
+	UserID    int64       `json:"user_id,omitempty"`
+	ChannelID int64       `json:"channel_id,omitempty"`
+	GuildID   string      `json:"guild_id,omitempty"`
+	RetCode   int         `json:"retcode"`
+	Status    string      `json:"status"`
+	Echo      interface{} `json:"echo"`
+}
+
+// 发送成功回执 todo 返回可互转的messageid 实现群撤回api
+func SendResponse(client callapi.Client, err error, message *callapi.ActionMessage, resp *dto.GroupMessageResponse) (string, error) {
+	var messageID64 int64
+	var mapErr error
+	// 设置响应值
+	response := ServerResponse{}
+	if resp != nil {
+		messageID64, mapErr = idmap.StoreIDv2(resp.Message.ID)
+		if mapErr != nil {
+			mylog.Printf("Error storing ID: %v", mapErr)
+			return "", nil
+		}
+		response.Data.MessageID = int(messageID64)
+	} else {
+		// Default ID handling
+		response.Data.MessageID = 123
+	}
+	// 映射str的GroupID到int
+	GroupID64, errr := idmap.StoreIDv2(message.Params.GroupID.(string))
+	if errr != nil {
+		mylog.Errorf("failed to convert ChannelID to int: %v", err)
+		return "", nil
+	}
+	response.GroupID = GroupID64
+	response.Echo = message.Echo
+	if err != nil {
+		response.Message = err.Error() // 可选：在响应中添加错误消息
+		//response.RetCode = -1          // 可以是任何非零值，表示出错
+		//response.Status = "failed"
+		response.RetCode = 0 //官方api审核异步的 审核中默认返回失败,但其实信息发送成功了
+		response.Status = "ok"
+	} else {
+		response.Message = ""
+		response.RetCode = 0
+		response.Status = "ok"
+	}
+
+	// 转化为map并发送
+	outputMap := structToMap(response)
+	// 将map转换为JSON字符串
+	jsonResponse, jsonErr := json.Marshal(outputMap)
+	if jsonErr != nil {
+		log.Printf("Error marshaling response to JSON: %v", jsonErr)
+		return "", jsonErr
+	}
+	//发送给ws 客户端
+	sendErr := client.SendMessage(outputMap)
+	if sendErr != nil {
+		mylog.Printf("Error sending message via client: %v", sendErr)
+		return "", sendErr
+	}
+
+	mylog.Printf("发送成功回执: %+v", string(jsonResponse))
+	return string(jsonResponse), nil
 }
 
 // 发送成功回执 todo 返回可互转的messageid 实现频道撤回api
-func SendResponse(client callapi.Client, err error, message *callapi.ActionMessage) (string, error) {
+func SendGuildResponse(client callapi.Client, err error, message *callapi.ActionMessage, resp *dto.Message) (string, error) {
+	var messageID64 int64
+	var mapErr error
 	// 设置响应值
 	response := ServerResponse{}
-	response.Data.MessageID = 123 // todo 实现messageid转换
+	if resp != nil {
+		messageID64, mapErr = idmap.StoreIDv2(resp.ID)
+		if mapErr != nil {
+			mylog.Printf("Error storing ID: %v", mapErr)
+			return "", nil
+		}
+		response.Data.MessageID = int(messageID64)
+	} else {
+		// Default ID handling
+		response.Data.MessageID = 123
+	}
+	//转换成int
+	ChannelID64, errr := idmap.StoreIDv2(message.Params.ChannelID.(string))
+	if errr != nil {
+		mylog.Printf("Error storing ID: %v", err)
+		return "", nil
+	}
+	response.ChannelID = ChannelID64
 	response.Echo = message.Echo
+	if err != nil {
+		response.Message = err.Error() // 可选：在响应中添加错误消息
+		//response.RetCode = -1          // 可以是任何非零值，表示出错
+		//response.Status = "failed"
+		response.RetCode = 0 //官方api审核异步的 审核中默认返回失败,但其实信息发送成功了
+		response.Status = "ok"
+	} else {
+		response.Message = ""
+		response.RetCode = 0
+		response.Status = "ok"
+	}
+
+	// 转化为map并发送
+	outputMap := structToMap(response)
+	// 将map转换为JSON字符串
+	jsonResponse, jsonErr := json.Marshal(outputMap)
+	if jsonErr != nil {
+		log.Printf("Error marshaling response to JSON: %v", jsonErr)
+		return "", jsonErr
+	}
+	//发送给ws 客户端
+	sendErr := client.SendMessage(outputMap)
+	if sendErr != nil {
+		mylog.Printf("Error sending message via client: %v", sendErr)
+		return "", sendErr
+	}
+
+	mylog.Printf("发送成功回执: %+v", string(jsonResponse))
+	return string(jsonResponse), nil
+}
+
+// 发送成功回执 todo 返回可互转的messageid 实现C2C撤回api
+func SendC2CResponse(client callapi.Client, err error, message *callapi.ActionMessage, resp *dto.C2CMessageResponse) (string, error) {
+	var messageID64 int64
+	var mapErr error
+	// 设置响应值
+	response := ServerResponse{}
+	if resp != nil {
+		messageID64, mapErr = idmap.StoreIDv2(resp.Message.ID)
+		if mapErr != nil {
+			mylog.Printf("Error storing ID: %v", mapErr)
+			return "", nil
+		}
+		response.Data.MessageID = int(messageID64)
+	} else {
+		// Default ID handling
+		response.Data.MessageID = 123
+	}
+	//将真实id转为int userid64
+	userid64, errr := idmap.StoreIDv2(message.Params.UserID.(string))
+	if errr != nil {
+		mylog.Fatalf("Error storing ID: %v", err)
+	}
+	response.UserID = userid64
+	response.Echo = message.Echo
+	if err != nil {
+		response.Message = err.Error() // 可选：在响应中添加错误消息
+		//response.RetCode = -1          // 可以是任何非零值，表示出错
+		//response.Status = "failed"
+		response.RetCode = 0 //官方api审核异步的 审核中默认返回失败,但其实信息发送成功了
+		response.Status = "ok"
+	} else {
+		response.Message = ""
+		response.RetCode = 0
+		response.Status = "ok"
+	}
+
+	// 转化为map并发送
+	outputMap := structToMap(response)
+	// 将map转换为JSON字符串
+	jsonResponse, jsonErr := json.Marshal(outputMap)
+	if jsonErr != nil {
+		log.Printf("Error marshaling response to JSON: %v", jsonErr)
+		return "", jsonErr
+	}
+	//发送给ws 客户端
+	sendErr := client.SendMessage(outputMap)
+	if sendErr != nil {
+		mylog.Printf("Error sending message via client: %v", sendErr)
+		return "", sendErr
+	}
+
+	mylog.Printf("发送成功回执: %+v", string(jsonResponse))
+	return string(jsonResponse), nil
+}
+
+// 会返回guildid的频道私信专用SendGuildPrivateResponse
+func SendGuildPrivateResponse(client callapi.Client, err error, message *callapi.ActionMessage, resp *dto.Message, guildID string) (string, error) {
+	var messageID64 int64
+	var mapErr error
+	// 设置响应值
+	response := ServerResponse{}
+	if resp != nil {
+		messageID64, mapErr = idmap.StoreIDv2(resp.ID)
+		if mapErr != nil {
+			mylog.Printf("Error storing ID: %v", mapErr)
+			return "", nil
+		}
+		response.Data.MessageID = int(messageID64)
+	} else {
+		// Default ID handling
+		response.Data.MessageID = 123
+	}
+	response.Echo = message.Echo
+	response.GuildID = guildID
 	if err != nil {
 		response.Message = err.Error() // 可选：在响应中添加错误消息
 		//response.RetCode = -1          // 可以是任何非零值，表示出错
