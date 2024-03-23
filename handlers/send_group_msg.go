@@ -76,7 +76,12 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 	if msgType == "" && message.Params.UserID != nil && checkZeroUserID(message.Params.UserID) {
 		msgType = GetMessageTypeByUseridV2(message.Params.UserID)
 	}
-
+	// New checks for UserID and GroupID being nil or 0
+	if (message.Params.UserID == nil || !checkZeroUserID(message.Params.UserID)) &&
+		(message.Params.GroupID == nil || !checkZeroGroupID(message.Params.GroupID)) {
+		mylog.Printf("send_group_msgs接收到错误action: %v", message)
+		return "", nil
+	}
 	mylog.Printf("send_group_msg获取到信息类型:%v", msgType)
 	var idInt64 int64
 	var err error
@@ -1116,7 +1121,7 @@ func SendStackMessages(apiv2 openapi.OpenAPI, messageid string, GroupID string) 
 	mylog.Printf("取出数量: %v", count)
 	pairs := echo.PopGlobalStackMulti(count)
 	for i, pair := range pairs {
-		mylog.Printf("发送栈中的消息匹配 %v: %v", pair.Group, GroupID)
+		//mylog.Printf("发送栈中的消息匹配 %v: %v", pair.Group, GroupID)
 		if pair.Group == GroupID {
 			// 发送消息
 			msgseq := echo.GetMappingSeq(messageid)

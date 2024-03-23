@@ -65,6 +65,12 @@ func HandleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 	if msgType == "" && message.Params.UserID != nil && checkZeroUserID(message.Params.UserID) {
 		msgType = GetMessageTypeByUseridV2(message.Params.UserID)
 	}
+	// New checks for UserID and GroupID being nil or 0
+	if (message.Params.UserID == nil || !checkZeroUserID(message.Params.UserID)) &&
+		(message.Params.GroupID == nil || !checkZeroGroupID(message.Params.GroupID)) {
+		mylog.Printf("send_group_msgs接收到错误action: %v", message)
+		return "", nil
+	}
 
 	var idInt64, idInt642 int64
 	var err error
