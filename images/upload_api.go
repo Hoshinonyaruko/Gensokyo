@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/echo"
@@ -22,6 +23,12 @@ import (
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/openapi"
 	"google.golang.org/protobuf/proto"
+)
+
+// 包级私有变量，用于存储当前URL索引
+var (
+	currentURLIndex int
+	urlsMutex       sync.Mutex
 )
 
 // uploadMedia 上传媒体并返回FileInfo
@@ -55,6 +62,17 @@ func isNumeric(s string) bool {
 func UploadBase64ImageToServer(msgid string, base64Image string, groupID string, apiv2 openapi.OpenAPI) (string, uint64, uint32, uint32, error) {
 	var picURL string
 	var err error
+	// 检查是否应该使用全局服务器临时QQ群的特殊上传行为
+	if config.GetGlobalServerTempQQguild() {
+		// 直接调用UploadBehaviorV3
+		downloadURL, width, height, err := UploadBehaviorV3(base64Image)
+		if err != nil {
+			log.Printf("Error UploadBehaviorV3: %v", err)
+			return "", 0, 0, 0, nil
+		}
+		return downloadURL, 0, width, height, nil
+	}
+
 	extraPicAuditingType := config.GetOssType()
 
 	switch extraPicAuditingType {
@@ -200,6 +218,51 @@ func originalUploadBehavior(base64Image string) (string, error) {
 	return "", errors.New("local server uses a private address; image upload failed")
 }
 
+func UploadBehaviorV3(base64Image string) (string, uint32, uint32, error) {
+	urls := config.GetServerTempQQguildPool()
+	if len(urls) > 0 {
+		urlsMutex.Lock()
+		url := urls[currentURLIndex]
+		currentURLIndex = (currentURLIndex + 1) % len(urls)
+		urlsMutex.Unlock()
+
+		resp, width, height, err := postImageToServerV3(base64Image, url)
+		if err != nil {
+			return "", 0, 0, err
+		}
+		return resp, width, height, nil
+	} else {
+		protocol := "http"
+		serverPort := config.GetPortValue()
+		if serverPort == "443" {
+			protocol = "https"
+		}
+
+		serverDir := config.GetServer_dir()
+		url := fmt.Sprintf("%s://%s:%s/uploadpicv3", protocol, serverDir, serverPort)
+
+		if config.GetLotusValue() {
+			resp, width, height, err := postImageToServerV3(base64Image, url)
+			if err != nil {
+				return "", 0, 0, err
+			}
+			return resp, width, height, nil
+		} else {
+			if serverPort == "443" {
+				protocol = "http"
+				serverPort = "444"
+			}
+			url = fmt.Sprintf("%s://127.0.0.1:%s/uploadpicv3", protocol, serverPort)
+
+			resp, width, height, err := postImageToServerV3(base64Image, url)
+			if err != nil {
+				return "", 0, 0, err
+			}
+			return resp, width, height, nil
+		}
+	}
+}
+
 // 将base64语音通过lotus转换成url
 func originalUploadBehaviorRecord(base64Image string) (string, error) {
 	// 根据serverPort确定协议
@@ -269,6 +332,46 @@ func postImageToServer(base64Image, targetURL string) (string, error) {
 	}
 
 	return "", fmt.Errorf("URL not found in response")
+}
+
+// 请求图床api(图床就是lolus为false的gensokyo)
+func postImageToServerV3(base64Image, targetURL string) (string, uint32, uint32, error) {
+	data := url.Values{}
+	channelID := config.GetServerTempQQguild()
+	data.Set("base64Image", base64Image) // 修改字段名以与服务器匹配
+	data.Set("channelID", channelID)     // 修改字段名以与服务器匹配
+
+	resp, err := http.PostForm(targetURL, data)
+	if err != nil {
+		return "", 0, 0, fmt.Errorf("failed to send request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", 0, 0, fmt.Errorf("error response from server: %s", resp.Status)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", 0, 0, fmt.Errorf("failed to read response body: %v", err)
+	}
+
+	var responseMap map[string]interface{}
+	if err := json.Unmarshal(body, &responseMap); err != nil {
+		return "", 0, 0, fmt.Errorf("failed to unmarshal response: %v", err)
+	}
+
+	url, okURL := responseMap["url"].(string)
+	width, okWidth := responseMap["width"].(float64) // JSON numbers are decoded as float64
+	height, okHeight := responseMap["height"].(float64)
+	if !okURL {
+		return "", 0, 0, fmt.Errorf("uRL not found in response")
+	}
+	if !okWidth || !okHeight {
+		return "", 0, 0, fmt.Errorf("width or Height not found in response")
+	}
+
+	return url, uint32(width), uint32(height), nil
 }
 
 // 请求语音床api(图床就是lolus为false的gensokyo)
