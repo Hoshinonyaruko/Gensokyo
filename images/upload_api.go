@@ -73,26 +73,27 @@ func UploadBase64ImageToServer(msgid string, base64Image string, groupID string,
 		return downloadURL, 0, width, height, nil
 	}
 
-	extraPicAuditingType := config.GetOssType()
-
-	switch extraPicAuditingType {
-	case 0:
-		picURL, err = originalUploadBehavior(base64Image)
-	case 1:
-		picURL, err = oss.UploadAndAuditImage(base64Image) // 腾讯
-	case 2:
-		picURL, err = oss.UploadAndAuditImageB(base64Image) // 百度
-	case 3:
-		picURL, err = oss.UploadAndAuditImageA(base64Image) // 阿里
-	default:
-		return "", 0, 0, 0, errors.New("invalid extraPicAuditingType")
-	}
-	if err != nil {
-		return "", 0, 0, 0, err
+	//v2接口是否使用base64
+	if !config.GetUploadPicV2Base64() {
+		extraPicAuditingType := config.GetOssType()
+		switch extraPicAuditingType {
+		case 0:
+			picURL, err = originalUploadBehavior(base64Image)
+		case 1:
+			picURL, err = oss.UploadAndAuditImage(base64Image) // 腾讯
+		case 2:
+			picURL, err = oss.UploadAndAuditImageB(base64Image) // 百度
+		case 3:
+			picURL, err = oss.UploadAndAuditImageA(base64Image) // 阿里
+		default:
+			return "", 0, 0, 0, errors.New("invalid extraPicAuditingType")
+		}
+		if err != nil {
+			return "", 0, 0, 0, err
+		}
 	}
 
 	if config.GetImgUpApiVtv2() && groupID != "" {
-
 		if msgid == "" {
 			msgid = echo.GetLazyMessagesId(groupID)
 		}
@@ -109,13 +110,25 @@ func UploadBase64ImageToServer(msgid string, base64Image string, groupID string,
 			// 用originalGroupID更新groupID
 			groupID = originalGroupID
 		}
-		richMediaMessage := &dto.RichMediaMessage{
-			EventID:    msgid,
-			FileType:   1, // 1代表图片
-			URL:        picURL,
-			Content:    "", // 这个字段文档没有了
-			SrvSendMsg: false,
+		var richMediaMessage *dto.RichMediaMessage
+		if !config.GetUploadPicV2Base64() {
+			richMediaMessage = &dto.RichMediaMessage{
+				EventID:    msgid,
+				FileType:   1, // 1代表图片
+				URL:        picURL,
+				Content:    "", // 这个字段文档没有了
+				SrvSendMsg: false,
+			}
+		} else {
+			richMediaMessage = &dto.RichMediaMessage{
+				EventID:    msgid,
+				FileType:   1, // 1代表图片
+				FileData:   base64Image,
+				Content:    "", // 这个字段文档没有了
+				SrvSendMsg: false,
+			}
 		}
+
 		var fileInfo string
 		//尝试群聊发图
 		fileInfo, err = uploadMedia(context.TODO(), groupID, richMediaMessage, apiv2)
@@ -146,6 +159,7 @@ func UploadBase64ImageToServer(msgid string, base64Image string, groupID string,
 		// 从Proto消息中读取值
 		realGroupID := mainMessage.GetA().GetB().GetInfo().GetDetail().GetGroupInfo().GetGroupNumber()
 		downloadURL := mainMessage.GetA().GetImageData().GetImageInfo().GetUrl()
+		downloadURL = "https://multimedia.nt.qq.com.cn" + downloadURL
 		width := mainMessage.GetA().GetImageData().GetWidth()
 		height := mainMessage.GetA().GetImageData().GetHeight()
 
