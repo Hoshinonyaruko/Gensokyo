@@ -174,7 +174,11 @@ func UploadBase64ImageToServer(msgid string, base64Image string, groupID string,
 		// 从Proto消息中读取值
 		realGroupID := mainMessage.GetA().GetB().GetInfo().GetDetail().GetGroupInfo().GetGroupNumber()
 		downloadURL := mainMessage.GetA().GetImageData().GetImageInfo().GetUrl()
-		downloadURL = "https://multimedia.nt.qq.com.cn" + downloadURL
+		//https的地址不能放到md里
+		//downloadURL = "https://multimedia.nt.qq.com.cn" + downloadURL
+		// 将 downloadURL 中的所有下划线 "_" 替换为 "%5f"
+		downloadURL = strings.Replace(downloadURL, "_", "%5f", -1)
+		downloadURL = "http://multimedia.nt.qq.com" + downloadURL
 		width := mainMessage.GetA().GetImageData().GetWidth()
 		height := mainMessage.GetA().GetImageData().GetHeight()
 
