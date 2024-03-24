@@ -44,6 +44,7 @@ var p *Processor.Processors
 func main() {
 	// 定义faststart命令行标志。默认为false。
 	fastStart := flag.Bool("faststart", false, "start without initialization if set")
+	tidy := flag.Bool("tidy", false, "backup and tidy your config.yml")
 
 	// 解析命令行参数到定义的标志。
 	flag.Parse()
@@ -51,6 +52,12 @@ func main() {
 	// 检查是否使用了-faststart参数
 	if !*fastStart {
 		sys.InitBase() // 如果不是faststart模式，则执行初始化
+	}
+	if *tidy {
+		//备份配置 并刷新
+		config.CreateAndWriteConfigTemp()
+		log.Println("配置文件已更新为新版,当前配置文件已备份.如产生问题请到群196173384反馈开发者。")
+		return
 	}
 	if _, err := os.Stat("config.yml"); os.IsNotExist(err) {
 		var ip string

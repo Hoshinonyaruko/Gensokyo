@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/hoshinonyaruko/gensokyo/sys"
@@ -31,136 +32,170 @@ type VisualPrefixConfig struct {
 	NoWhiteResponse string   `yaml:"No_White_Response"`
 }
 type Settings struct {
-	WsAddress                  []string             `yaml:"ws_address"`
-	AppID                      uint64               `yaml:"app_id"`
-	Token                      string               `yaml:"token"`
-	ClientSecret               string               `yaml:"client_secret"`
-	TextIntent                 []string             `yaml:"text_intent"`
-	GlobalChannelToGroup       bool                 `yaml:"global_channel_to_group"`
-	GlobalPrivateToChannel     bool                 `yaml:"global_private_to_channel"`
-	GlobalForumToChannel       bool                 `yaml:"global_forum_to_channel"`
-	Array                      bool                 `yaml:"array"`
-	Server_dir                 string               `yaml:"server_dir"`
-	Lotus                      bool                 `yaml:"lotus"`
-	Port                       string               `yaml:"port"`
-	WsToken                    []string             `yaml:"ws_token,omitempty"`         // 连接wss时使用,不是wss可留空 一一对应
-	MasterID                   []string             `yaml:"master_id,omitempty"`        // 如果需要在群权限判断是管理员是,将user_id填入这里,master_id是一个文本数组
-	EnableWsServer             bool                 `yaml:"enable_ws_server,omitempty"` //正向ws开关
-	WsServerToken              string               `yaml:"ws_server_token,omitempty"`  //正向ws token
-	IdentifyFile               bool                 `yaml:"identify_file"`              // 域名校验文件
-	Crt                        string               `yaml:"crt"`
-	Key                        string               `yaml:"key"`
-	DeveloperLog               bool                 `yaml:"developer_log"`
-	Username                   string               `yaml:"server_user_name"`
-	Password                   string               `yaml:"server_user_password"`
-	ImageLimit                 int                  `yaml:"image_sizelimit"`
-	RemovePrefix               bool                 `yaml:"remove_prefix"`
-	BackupPort                 string               `yaml:"backup_port"`
-	DevlopAcDir                string               `yaml:"develop_access_token_dir"`
-	RemoveAt                   bool                 `yaml:"remove_at"`
-	DevBotid                   string               `yaml:"develop_bot_id"`
-	SandBoxMode                bool                 `yaml:"sandbox_mode"`
-	Title                      string               `yaml:"title"`
-	HashID                     bool                 `yaml:"hash_id"`
-	TwoWayEcho                 bool                 `yaml:"twoway_echo"`
-	LazyMessageId              bool                 `yaml:"lazy_message_id"`
-	WhitePrefixMode            bool                 `yaml:"white_prefix_mode"`
-	WhitePrefixs               []string             `yaml:"white_prefixs"`
-	BlackPrefixMode            bool                 `yaml:"black_prefix_mode"`
-	BlackPrefixs               []string             `yaml:"black_prefixs"`
-	VisualPrefixs              []VisualPrefixConfig `yaml:"visual_prefixs"`
-	VisibleIp                  bool                 `yaml:"visible_ip"`
-	ForwardMsgLimit            int                  `yaml:"forward_msg_limit"`
-	DevMessgeID                bool                 `yaml:"dev_message_id"`
-	LogLevel                   int                  `yaml:"log_level"`
-	SaveLogs                   bool                 `yaml:"save_logs"`
-	BindPrefix                 string               `yaml:"bind_prefix"`
-	MePrefix                   string               `yaml:"me_prefix"`
-	FrpPort                    string               `yaml:"frp_port"`
-	RemoveBotAtGroup           bool                 `yaml:"remove_bot_at_group"`
-	ImageLimitB                int                  `yaml:"image_limit"`
-	RecordSampleRate           int                  `yaml:"record_sampleRate"`
-	RecordBitRate              int                  `yaml:"record_bitRate"`
-	NoWhiteResponse            string               `yaml:"No_White_Response"`
-	SendError                  bool                 `yaml:"send_error"`
-	AddAtGroup                 bool                 `yaml:"add_at_group"`
-	UrlPicTransfer             bool                 `yaml:"url_pic_transfer"`
-	LotusPassword              string               `yaml:"lotus_password"`
-	WsServerPath               string               `yaml:"ws_server_path"`
-	IdmapPro                   bool                 `yaml:"idmap_pro"`
-	CardAndNick                string               `yaml:"card_nick"`
-	AutoBind                   bool                 `yaml:"auto_bind"`
-	CustomBotName              string               `yaml:"custom_bot_name"`
-	SendDelay                  int                  `yaml:"send_delay"`
-	AtoPCount                  int                  `yaml:"AMsgRetryAsPMsg_Count"`
-	ReconnecTimes              int                  `yaml:"reconnect_times"`
-	HeartBeatInterval          int                  `yaml:"heart_beat_interval"`
-	LaunchReconectTimes        int                  `yaml:"launch_reconnect_times"`
-	UnlockPrefix               string               `yaml:"unlock_prefix"`
-	WhiteBypass                []int64              `yaml:"white_bypass"`
-	TransferUrl                bool                 `yaml:"transfer_url"`
-	HttpAddress                string               `yaml:"http_address"`
-	AccessToken                string               `yaml:"http_access_token"`
-	HttpVersion                int                  `yaml:"http_version"`
-	HttpTimeOut                int                  `yaml:"http_timeout"`
-	PostUrl                    []string             `yaml:"post_url"`
-	PostSecret                 []string             `yaml:"post_secret"`
-	PostMaxRetries             []int                `yaml:"post_max_retries"`
-	PostRetriesInterval        []int                `yaml:"post_retries_interval"`
-	NativeOb11                 bool                 `yaml:"native_ob11"`
-	RamDomSeq                  bool                 `yaml:"ramdom_seq"`
-	UrlToQrimage               bool                 `yaml:"url_to_qrimage"`
-	QrSize                     int                  `yaml:"qr_size"`
-	WhiteBypassRevers          bool                 `yaml:"white_bypass_reverse"`
-	GuildUrlImageToBase64      bool                 `yaml:"guild_url_image_to_base64"`
-	TencentBucketName          string               `yaml:"t_COS_BUCKETNAME"`
-	TencentBucketRegion        string               `yaml:"t_COS_REGION"`
-	TencentCosSecretid         string               `yaml:"t_COS_SECRETID"`
-	TencentSecretKey           string               `yaml:"t_COS_SECRETKEY"`
-	TencentAudit               bool                 `yaml:"t_audit"`
-	OssType                    int                  `yaml:"oss_type"`
-	BaiduBOSBucketName         string               `yaml:"b_BOS_BUCKETNAME"`
-	BaiduBCEAK                 string               `yaml:"b_BCE_AK"`
-	BaiduBCESK                 string               `yaml:"b_BCE_SK"`
-	BaiduAudit                 int                  `yaml:"b_audit"`
-	AliyunEndpoint             string               `yaml:"a_OSS_EndPoint"`
-	AliyunAccessKeyId          string               `yaml:"a_OSS_AccessKeyId"`
-	AliyunAccessKeySecret      string               `yaml:"a_OSS_AccessKeySecret"`
-	AliyunBucketName           string               `yaml:"a_OSS_BucketName"`
-	AliyunAudit                bool                 `yaml:"a_audit"`
-	Alias                      []string             `yaml:"alias"`
-	SelfIntroduce              []string             `yaml:"self_introduce"`
-	WhiteEnable                []bool               `yaml:"white_enable"`
-	IdentifyAppids             []int64              `yaml:"identify_appids"`
-	TransFormApiIds            bool                 `yaml:"transform_api_ids"`
-	CustomTemplateID           string               `yaml:"custom_template_id"`
-	KeyBoardID                 string               `yaml:"keyboard_id"`
-	Uin                        int64                `yaml:"uin"`
-	VwhitePrefixMode           bool                 `yaml:"v_white_prefix_mode"`
-	Enters                     []string             `yaml:"enters"`
-	LinkPrefix                 string               `yaml:"link_prefix"`
-	LinkBots                   []string             `yaml:"link_bots"`
-	LinkText                   string               `yaml:"link_text"`
-	LinkPic                    string               `yaml:"link_pic"`
-	MusicPrefix                string               `yaml:"music_prefix"`
-	DisableWebui               bool                 `yaml:"disable_webui"`
-	ShardCount                 int                  `yaml:"shard_count"`
-	ShardID                    int                  `yaml:"shard_id"`
-	BotForumTitle              string               `yaml:"bot_forum_title"`
-	GlobalInteractionToMessage bool                 `yaml:"global_interaction_to_message"`
-	AutoPutInteraction         bool                 `yaml:"auto_put_interaction"`
-	PutInteractionDelay        int                  `yaml:"put_interaction_delay"`
-	ImgUpApiVtv2               bool                 `yaml:"img_up_api_ntv2"`
-	Fix11300                   bool                 `yaml:"fix_11300"`
-	LotusWithoutIdmaps         bool                 `yaml:"lotus_without_idmaps"`
-	GetGroupListAllGuilds      bool                 `yaml:"get_g_list_all_guilds"`
-	GetGroupListGuilds         string               `yaml:"get_g_list_guilds"`
-	GetGroupListReturnGuilds   bool                 `yaml:"get_g_list_return_guilds"`
-	GetGroupListGuidsType      int                  `yaml:"get_g_list_guilds_type"`
-	GetGroupListDelay          int                  `yaml:"get_g_list_delay"`
-	GlobalServerTempQQguild    bool                 `yaml:"global_server_temp_qqguild"`
-	ServerTempQQguild          string               `yaml:"server_temp_qqguild"`
-	ServerTempQQguildPool      []string             `yaml:"server_temp_qqguild_pool"`
+	//反向ws设置
+	WsAddress           []string `yaml:"ws_address"`
+	WsToken             []string `yaml:"ws_token,omitempty"`
+	ReconnecTimes       int      `yaml:"reconnect_times"`
+	HeartBeatInterval   int      `yaml:"heart_beat_interval"`
+	LaunchReconectTimes int      `yaml:"launch_reconnect_times"`
+	//基础配置
+	AppID        uint64 `yaml:"app_id"`
+	Uin          int64  `yaml:"uin"`
+	Token        string `yaml:"token"`
+	ClientSecret string `yaml:"client_secret"`
+	ShardCount   int    `yaml:"shard_count"`
+	ShardID      int    `yaml:"shard_id"`
+	//事件订阅类
+	TextIntent []string `yaml:"text_intent"`
+	//转换类
+	GlobalChannelToGroup       bool `yaml:"global_channel_to_group"`
+	GlobalPrivateToChannel     bool `yaml:"global_private_to_channel"`
+	GlobalForumToChannel       bool `yaml:"global_forum_to_channel"`
+	GlobalInteractionToMessage bool `yaml:"global_interaction_to_message"`
+	HashID                     bool `yaml:"hash_id"`
+	IdmapPro                   bool `yaml:"idmap_pro"`
+	//gensokyo互联类
+	Server_dir         string `yaml:"server_dir"`
+	Port               string `yaml:"port"`
+	BackupPort         string `yaml:"backup_port"`
+	Lotus              bool   `yaml:"lotus"`
+	LotusPassword      string `yaml:"lotus_password"`
+	LotusWithoutIdmaps bool   `yaml:"lotus_without_idmaps"`
+	//增强配置
+	MasterID         []string `yaml:"master_id,omitempty"`
+	RecordSampleRate int      `yaml:"record_sampleRate"`
+	RecordBitRate    int      `yaml:"record_bitRate"`
+	CardAndNick      string   `yaml:"card_nick"`
+	AutoBind         bool     `yaml:"auto_bind"`
+	//发图相关
+	OssType                 int      `yaml:"oss_type"`
+	ImageLimit              int      `yaml:"image_sizelimit"`
+	ImageLimitB             int      `yaml:"image_limit"`
+	GuildUrlImageToBase64   bool     `yaml:"guild_url_image_to_base64"`
+	UrlPicTransfer          bool     `yaml:"url_pic_transfer"`
+	ImgUpApiVtv2            bool     `yaml:"img_up_api_ntv2"`
+	UploadPicV2Base64       bool     `yaml:"uploadpicv2_b64"`
+	GlobalServerTempQQguild bool     `yaml:"global_server_temp_qqguild"`
+	ServerTempQQguild       string   `yaml:"server_temp_qqguild"`
+	ServerTempQQguildPool   []string `yaml:"server_temp_qqguild_pool"`
+	//正向ws设置
+	WsServerPath   string `yaml:"ws_server_path"`
+	EnableWsServer bool   `yaml:"enable_ws_server,omitempty"`
+	WsServerToken  string `yaml:"ws_server_token,omitempty"`
+	//ssl和链接转换类
+	IdentifyFile   bool    `yaml:"identify_file"`
+	IdentifyAppids []int64 `yaml:"identify_appids"`
+	Crt            string  `yaml:"crt"`
+	Key            string  `yaml:"key"`
+	//日志类
+	DeveloperLog bool `yaml:"developer_log"`
+	LogLevel     int  `yaml:"log_level"`
+	SaveLogs     bool `yaml:"save_logs"`
+	//webui相关
+	DisableWebui bool   `yaml:"disable_webui"`
+	Username     string `yaml:"server_user_name"`
+	Password     string `yaml:"server_user_password"`
+	//指令魔法类
+	RemovePrefix      bool                 `yaml:"remove_prefix"`
+	RemoveAt          bool                 `yaml:"remove_at"`
+	RemoveBotAtGroup  bool                 `yaml:"remove_bot_at_group"`
+	AddAtGroup        bool                 `yaml:"add_at_group"`
+	WhitePrefixMode   bool                 `yaml:"white_prefix_mode"`
+	VwhitePrefixMode  bool                 `yaml:"v_white_prefix_mode"`
+	WhitePrefixs      []string             `yaml:"white_prefixs"`
+	WhiteBypass       []int64              `yaml:"white_bypass"`
+	WhiteEnable       []bool               `yaml:"white_enable"`
+	WhiteBypassRevers bool                 `yaml:"white_bypass_reverse"`
+	NoWhiteResponse   string               `yaml:"No_White_Response"`
+	BlackPrefixMode   bool                 `yaml:"black_prefix_mode"`
+	BlackPrefixs      []string             `yaml:"black_prefixs"`
+	Alias             []string             `yaml:"alias"`
+	Enters            []string             `yaml:"enters"`
+	VisualPrefixs     []VisualPrefixConfig `yaml:"visual_prefixs"`
+	//开发增强类
+	DevlopAcDir string `yaml:"develop_access_token_dir"`
+	DevBotid    string `yaml:"develop_bot_id"`
+	SandBoxMode bool   `yaml:"sandbox_mode"`
+	DevMessgeID bool   `yaml:"dev_message_id"`
+	SendError   bool   `yaml:"send_error"`
+	//增长营销类
+	SelfIntroduce []string `yaml:"self_introduce"`
+	//api修改
+	GetGroupListAllGuilds    bool   `yaml:"get_g_list_all_guilds"`
+	GetGroupListGuilds       string `yaml:"get_g_list_guilds"`
+	GetGroupListReturnGuilds bool   `yaml:"get_g_list_return_guilds"`
+	GetGroupListGuidsType    int    `yaml:"get_g_list_guilds_type"`
+	GetGroupListDelay        int    `yaml:"get_g_list_delay"`
+	ForwardMsgLimit          int    `yaml:"forward_msg_limit"`
+	CustomBotName            string `yaml:"custom_bot_name"`
+	TransFormApiIds          bool   `yaml:"transform_api_ids"`
+	AutoPutInteraction       bool   `yaml:"auto_put_interaction"`
+	PutInteractionDelay      int    `yaml:"put_interaction_delay"`
+	//onebot修改
+	TwoWayEcho bool `yaml:"twoway_echo"`
+	Array      bool `yaml:"array"`
+	NativeOb11 bool `yaml:"native_ob11"`
+	//url相关
+	VisibleIp    bool `yaml:"visible_ip"`
+	UrlToQrimage bool `yaml:"url_to_qrimage"`
+	QrSize       int  `yaml:"qr_size"`
+	TransferUrl  bool `yaml:"transfer_url"`
+	//框架修改
+	Title   string `yaml:"title"`
+	FrpPort string `yaml:"frp_port"`
+	//MD相关
+	CustomTemplateID string `yaml:"custom_template_id"`
+	KeyBoardID       string `yaml:"keyboard_id"`
+	//发送行为修改
+	LazyMessageId bool   `yaml:"lazy_message_id"`
+	RamDomSeq     bool   `yaml:"ramdom_seq"`
+	BotForumTitle string `yaml:"bot_forum_title"`
+	AtoPCount     int    `yaml:"AMsgRetryAsPMsg_Count"`
+	SendDelay     int    `yaml:"send_delay"`
+	//错误临时修复类
+	Fix11300 bool `yaml:"fix_11300"`
+	//内置指令
+	BindPrefix   string   `yaml:"bind_prefix"`
+	MePrefix     string   `yaml:"me_prefix"`
+	UnlockPrefix string   `yaml:"unlock_prefix"`
+	LinkPrefix   string   `yaml:"link_prefix"`
+	MusicPrefix  string   `yaml:"music_prefix"`
+	LinkBots     []string `yaml:"link_bots"`
+	LinkText     string   `yaml:"link_text"`
+	LinkPic      string   `yaml:"link_pic"`
+	//HTTP API配置
+	HttpAddress         string   `yaml:"http_address"`
+	AccessToken         string   `yaml:"http_access_token"`
+	HttpVersion         int      `yaml:"http_version"`
+	HttpTimeOut         int      `yaml:"http_timeout"`
+	PostUrl             []string `yaml:"post_url"`
+	PostSecret          []string `yaml:"post_secret"`
+	PostMaxRetries      []int    `yaml:"post_max_retries"`
+	PostRetriesInterval []int    `yaml:"post_retries_interval"`
+	//腾讯云
+	TencentBucketName   string `yaml:"t_COS_BUCKETNAME"`
+	TencentBucketRegion string `yaml:"t_COS_REGION"`
+	TencentCosSecretid  string `yaml:"t_COS_SECRETID"`
+	TencentSecretKey    string `yaml:"t_COS_SECRETKEY"`
+	TencentAudit        bool   `yaml:"t_audit"`
+	//百度云
+	BaiduBOSBucketName string `yaml:"b_BOS_BUCKETNAME"`
+	BaiduBCEAK         string `yaml:"b_BCE_AK"`
+	BaiduBCESK         string `yaml:"b_BCE_SK"`
+	BaiduAudit         int    `yaml:"b_audit"`
+	//阿里云
+	AliyunEndpoint        string `yaml:"a_OSS_EndPoint"`
+	AliyunAccessKeyId     string `yaml:"a_OSS_AccessKeyId"`
+	AliyunAccessKeySecret string `yaml:"a_OSS_AccessKeySecret"`
+	AliyunBucketName      string `yaml:"a_OSS_BucketName"`
+	AliyunAudit           bool   `yaml:"a_audit"`
+}
+
+// CommentInfo 用于存储注释及其定位信息
+type CommentBlock struct {
+	Comments  []string // 一个或多个连续的注释
+	TargetKey string   // 注释所指向的键（如果有）
+	Offset    int      // 注释与目标键之间的行数
 }
 
 // LoadConfig 从文件中加载配置并初始化单例配置
@@ -202,6 +237,169 @@ func LoadConfig(path string) (*Config, error) {
 	// 设置单例实例
 	instance = conf
 	return instance, nil
+}
+
+func CreateAndWriteConfigTemp() error {
+	// 读取config.yml
+	configFile, err := os.ReadFile("config.yml")
+	if err != nil {
+		return err
+	}
+
+	// 获取当前日期
+	currentDate := time.Now().Format("2006-1-2")
+	// 重命名原始config.yml文件
+	err = os.Rename("config.yml", "config"+currentDate+".yml")
+	if err != nil {
+		return err
+	}
+
+	var config Config
+	err = yaml.Unmarshal(configFile, &config)
+	if err != nil {
+		return err
+	}
+
+	// 创建config_temp.yml文件
+	tempFile, err := os.Create("config.yml")
+	if err != nil {
+		return err
+	}
+	defer tempFile.Close()
+
+	// 使用yaml.Encoder写入，以保留注释
+	encoder := yaml.NewEncoder(tempFile)
+	encoder.SetIndent(2) // 设置缩进
+	err = encoder.Encode(config)
+	if err != nil {
+		return err
+	}
+
+	// 处理注释并重命名文件
+	err = addCommentsToConfigTemp(template.ConfigTemplate, "config.yml")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func parseTemplate(template string) ([]CommentBlock, map[string]string) {
+	var blocks []CommentBlock
+	lines := strings.Split(template, "\n")
+
+	var currentBlock CommentBlock
+	var lastKey string
+
+	directComments := make(map[string]string)
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "#") {
+			currentBlock.Comments = append(currentBlock.Comments, trimmed) // 收集注释行
+		} else {
+			if containsKey(trimmed) {
+				key := strings.SplitN(trimmed, ":", 2)[0]
+				trimmedKey := strings.TrimSpace(key)
+
+				if len(currentBlock.Comments) > 0 {
+					currentBlock.TargetKey = lastKey // 关联到上一个找到的键
+					blocks = append(blocks, currentBlock)
+					currentBlock = CommentBlock{} // 重置为新的注释块
+				}
+
+				// 如果当前行包含注释，则单独处理
+				if parts := strings.SplitN(trimmed, "#", 2); len(parts) > 1 {
+					directComments[trimmedKey] = "#" + parts[1]
+				}
+				lastKey = trimmedKey // 更新最后一个键
+			} else if len(currentBlock.Comments) > 0 {
+				// 如果当前行不是注释行且存在挂起的注释，但并没有新的键出现，将其作为独立的注释块
+				blocks = append(blocks, currentBlock)
+				currentBlock = CommentBlock{} // 重置为新的注释块
+			}
+		}
+	}
+
+	// 处理文件末尾的挂起注释块
+	if len(currentBlock.Comments) > 0 {
+		blocks = append(blocks, currentBlock)
+	}
+
+	return blocks, directComments
+}
+
+func addCommentsToConfigTemp(template, tempFilePath string) error {
+	commentBlocks, directComments := parseTemplate(template)
+	//fmt.Printf("%v\n", directComments)
+
+	// 读取并分割新生成的配置文件内容
+	content, err := os.ReadFile(tempFilePath)
+	if err != nil {
+		return err
+	}
+	lines := strings.Split(string(content), "\n")
+
+	// 处理并插入注释
+	for _, block := range commentBlocks {
+		// 根据注释块的目标键，找到插入位置并插入注释
+		for i, line := range lines {
+			if containsKey(line) {
+				key := strings.SplitN(line, ":", 2)[0]
+				if strings.TrimSpace(key) == block.TargetKey {
+					// 在目标键之前插入注释
+					insertionPoint := i + block.Offset
+					if insertionPoint >= len(lines) {
+						lines = append(lines, block.Comments...)
+					} else {
+						lines = append(lines[:insertionPoint], append(block.Comments, lines[insertionPoint:]...)...)
+					}
+					break
+				}
+			}
+		}
+	}
+
+	// 处理直接跟在键后面的注释
+	// 接着处理直接跟在键后面的注释
+	for i, line := range lines {
+		if containsKey(line) {
+			key := strings.SplitN(line, ":", 2)[0]
+			trimmedKey := strings.TrimSpace(key)
+			//fmt.Printf("%v\n", trimmedKey)
+			if comment, exists := directComments[trimmedKey]; exists {
+				// 如果这个键有直接的注释
+				lines[i] = line + " " + comment
+			}
+		}
+	}
+
+	// 重新组合lines为一个字符串，准备写回文件
+	updatedContent := strings.Join(lines, "\n")
+
+	// 写回更新后的内容到原配置文件
+	err = os.WriteFile(tempFilePath, []byte(updatedContent), 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// containsKey 检查给定的字符串行是否可能包含YAML键。
+// 它尝试排除注释行和冒号用于其他目的的行（例如，在URLs中）。
+func containsKey(line string) bool {
+	// 去除行首和行尾的空格
+	trimmedLine := strings.TrimSpace(line)
+
+	// 如果行是注释，直接返回false
+	if strings.HasPrefix(trimmedLine, "#") {
+		return false
+	}
+
+	// 检查是否存在冒号，如果不存在，则直接返回false
+	colonIndex := strings.Index(trimmedLine, ":")
+	return colonIndex != -1
 }
 
 // 确保配置完整性
@@ -1997,4 +2195,16 @@ func GetServerTempQQguildPool() []string {
 		return instance.Settings.ServerTempQQguildPool
 	}
 	return nil // 返回nil，如果instance为nil
+}
+
+// 获取UploadPicV2Base64开关
+func GetUploadPicV2Base64() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to UploadPicV2 value.")
+		return false
+	}
+	return instance.Settings.UploadPicV2Base64
 }
