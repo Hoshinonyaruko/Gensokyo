@@ -21,6 +21,7 @@ type RichMediaMessage struct {
 	EventID    string `json:"event_id,omitempty"`  // 要回复的事件id, 逻辑同MsgID
 	FileType   uint64 `json:"file_type,omitempty"` // 业务类型，图片，文件，语音，视频 文件类型，取值:1图片,2视频,3语音(目前语音只支持silk格式)
 	URL        string `json:"url,omitempty"`
+	FileData   string `json:"file_data,omitempty"` //没有base64头的base64
 	SrvSendMsg bool   `json:"srv_send_msg,omitempty"`
 	Content    string `json:"content,omitempty"`
 }
