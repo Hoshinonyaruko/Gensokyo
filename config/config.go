@@ -34,7 +34,7 @@ type VisualPrefixConfig struct {
 type Settings struct {
 	//反向ws设置
 	WsAddress           []string `yaml:"ws_address"`
-	WsToken             []string `yaml:"ws_token,omitempty"`
+	WsToken             []string `yaml:"ws_token"`
 	ReconnecTimes       int      `yaml:"reconnect_times"`
 	HeartBeatInterval   int      `yaml:"heart_beat_interval"`
 	LaunchReconectTimes int      `yaml:"launch_reconnect_times"`
@@ -62,7 +62,7 @@ type Settings struct {
 	LotusPassword      string `yaml:"lotus_password"`
 	LotusWithoutIdmaps bool   `yaml:"lotus_without_idmaps"`
 	//增强配置
-	MasterID         []string `yaml:"master_id,omitempty"`
+	MasterID         []string `yaml:"master_id"`
 	RecordSampleRate int      `yaml:"record_sampleRate"`
 	RecordBitRate    int      `yaml:"record_bitRate"`
 	CardAndNick      string   `yaml:"card_nick"`
@@ -80,8 +80,8 @@ type Settings struct {
 	ServerTempQQguildPool   []string `yaml:"server_temp_qqguild_pool"`
 	//正向ws设置
 	WsServerPath   string `yaml:"ws_server_path"`
-	EnableWsServer bool   `yaml:"enable_ws_server,omitempty"`
-	WsServerToken  string `yaml:"ws_server_token,omitempty"`
+	EnableWsServer bool   `yaml:"enable_ws_server"`
+	WsServerToken  string `yaml:"ws_server_token"`
 	//ssl和链接转换类
 	IdentifyFile   bool    `yaml:"identify_file"`
 	IdentifyAppids []int64 `yaml:"identify_appids"`
