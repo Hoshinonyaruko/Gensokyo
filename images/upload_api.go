@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -94,10 +95,12 @@ func UploadBase64ImageToServer(msgid string, base64Image string, groupID string,
 	}
 
 	if config.GetImgUpApiVtv2() && groupID != "" {
-		if msgid == "" {
-			msgid = echo.GetLazyMessagesId(groupID)
-		}
+
 		if isNumeric(groupID) {
+			//用转换前的群号获取msgid
+			if msgid == "" {
+				msgid = echo.GetLazyMessagesId(groupID)
+			}
 			// 检查groupID是否为纯数字构成 RetrieveRowByIDv2是通用逻辑，也可以将userid还原为32位数originaluserid
 			// 但没有私信权限，故没有测试
 			originalGroupID, err := idmap.RetrieveRowByIDv2(groupID)
@@ -109,6 +112,18 @@ func UploadBase64ImageToServer(msgid string, base64Image string, groupID string,
 
 			// 用originalGroupID更新groupID
 			groupID = originalGroupID
+		} else {
+			// 映射str的GroupID到int
+			GroupID64, err := idmap.StoreIDv2(groupID)
+			if err != nil {
+				log.Printf("failed to convert ChannelID to int: %v", err)
+				return picURL, 0, 0, 0, nil
+			}
+			groupIDTemp := strconv.FormatInt(GroupID64, 10)
+			//用数字的群号获取msgid
+			if msgid == "" {
+				msgid = echo.GetLazyMessagesId(groupIDTemp)
+			}
 		}
 		var richMediaMessage *dto.RichMediaMessage
 		if !config.GetUploadPicV2Base64() {
