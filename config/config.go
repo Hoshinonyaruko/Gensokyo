@@ -347,11 +347,19 @@ func addCommentsToConfigTemp(template, tempFilePath string) error {
 			if containsKey(line) {
 				key := strings.SplitN(line, ":", 2)[0]
 				if strings.TrimSpace(key) == block.TargetKey {
-					// 在目标键之前插入注释
-					insertionPoint := i + block.Offset
+					// 计算基本插入点：在目标键之后
+					insertionPoint := i + block.Offset + 1
+
+					// 向下移动插入点直到找到键行或到达文件末尾
+					for insertionPoint < len(lines) && !containsKey(lines[insertionPoint]) {
+						insertionPoint++
+					}
+
+					// 在计算出的插入点插入注释
 					if insertionPoint >= len(lines) {
-						lines = append(lines, block.Comments...)
+						lines = append(lines, block.Comments...) // 如果到达文件末尾，直接追加注释
 					} else {
+						// 插入注释到计算出的位置
 						lines = append(lines[:insertionPoint], append(block.Comments, lines[insertionPoint:]...)...)
 					}
 					break
