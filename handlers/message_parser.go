@@ -78,12 +78,12 @@ func SendResponse(client callapi.Client, err error, message *callapi.ActionMessa
 		}
 	} else {
 		// 映射str的GroupID到int
-		GroupID64, err = idmap.StoreIDv2(message.Params.GroupID.(string))
-		if err != nil {
+		GroupID64, errr = idmap.StoreIDv2(message.Params.GroupID.(string))
+		if errr != nil {
 			mylog.Errorf("failed to convert GroupID64 to int: %v", err)
 		}
 	}
-
+	//mylog.Printf("convert GroupID64 to int: %v", GroupID64) 测试
 	response.GroupID = GroupID64
 	response.Echo = message.Echo
 	if err != nil {
