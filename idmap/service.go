@@ -140,22 +140,21 @@ func StoreID(id string) (int64, error) {
 		} else {
 			// 生成新的行号
 			var err error
-			newRow, err = GenerateRowID(id, 9)
-			if err != nil {
-				return err
-			}
-			// 检查新生成的行号是否重复
-			rowKey := fmt.Sprintf("row-%d", newRow)
-			if b.Get([]byte(rowKey)) != nil {
-				// 如果行号重复，使用10位数字生成行号
-				newRow, err = GenerateRowID(id, 10)
+			maxDigits := 18 // int64的位数上限-1
+			for digits := 9; digits <= maxDigits; digits++ {
+				newRow, err = GenerateRowID(id, digits)
 				if err != nil {
 					return err
 				}
-				rowKey = fmt.Sprintf("row-%d", newRow)
-				// 再次检查重复性，如果还是重复，则返回错误
-				if b.Get([]byte(rowKey)) != nil {
-					return fmt.Errorf("unable to find a unique row ID")
+				// 检查新生成的行号是否重复
+				rowKey := fmt.Sprintf("row-%d", newRow)
+				if b.Get([]byte(rowKey)) == nil {
+					// 找到了一个唯一的行号，可以跳出循环
+					break
+				}
+				// 如果到达了最大尝试次数还没有找到唯一的行号，则返回错误
+				if digits == maxDigits {
+					return fmt.Errorf("unable to find a unique row ID after %d attempts", maxDigits-8)
 				}
 			}
 		}

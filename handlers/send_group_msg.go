@@ -1314,6 +1314,17 @@ func auto_md(message callapi.ActionMessage, messageText string, richMediaMessage
 							Type: 2, // 所有人可操作
 						}
 					}
+				case strings.HasPrefix(whiteLabel, "^"):
+					// 分割whiteLabel来获取显示内容和URL
+					parts := strings.SplitN(whiteLabel[1:], " ", 2) // [1:] 用于去除白名单标签开头的'^'
+					if len(parts) == 2 {
+						whiteLabel = parts[0] // 显示内容
+						actiondata = parts[1] // 发送给服务端内容
+						actiontype = 1        // 回调类型
+						permission = &keyboard.Permission{
+							Type: 2, // 所有人可操作
+						}
+					}
 				default:
 					actiontype = 2         //帮用户输入指令 用户自己回车发送
 					actiondata = dataLabel //从虚拟前缀的二级指令组合md按钮
