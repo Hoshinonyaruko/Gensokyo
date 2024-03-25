@@ -344,21 +344,23 @@ func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}
 
 	// 获取MasterID数组
 	masterIDs := config.GetMasterID()
-	// 根据realid获取new(用户id)
-	now, new, err = idmap.RetrieveVirtualValuev2(realid)
-	if err != nil {
-		mylog.Printf("根据realid获取new(用户id) 错误:%v", err)
-	}
-	// 根据realid获取new(群id)
-	nowgroup, newgroup, err = idmap.RetrieveVirtualValuev2(realid2)
-	if err != nil {
-		mylog.Printf("根据realid获取new(群id)错误:%v", err)
-	}
+
 	// idmaps-pro获取群和用户id
 	if config.GetIdmapPro() {
 		newpro1, newpro2, err = idmap.RetrieveVirtualValuev2Pro(realid2, realid)
 		if err != nil {
 			mylog.Printf("idmaps-pro获取群和用户id 错误:%v", err)
+		}
+	} else {
+		// 根据realid获取new(用户id)
+		now, new, err = idmap.RetrieveVirtualValuev2(realid)
+		if err != nil {
+			mylog.Printf("根据realid获取new(用户id) 错误:%v", err)
+		}
+		// 根据realid获取new(群id)
+		nowgroup, newgroup, err = idmap.RetrieveVirtualValuev2(realid2)
+		if err != nil {
+			mylog.Printf("根据realid获取new(群id)错误:%v", err)
 		}
 	}
 	// 检查真实值或虚拟值是否在数组中

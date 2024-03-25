@@ -51,7 +51,7 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 		// 映射str的GroupID到int
 		GroupID64, err = idmap.StoreIDv2(data.GroupID)
 		if err != nil {
-			mylog.Errorf("failed to convert ChannelID to int: %v", err)
+			mylog.Errorf("failed to convert GroupID64 to int: %v", err)
 			return nil
 		}
 		// 映射str的userid到int

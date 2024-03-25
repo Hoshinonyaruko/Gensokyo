@@ -67,12 +67,23 @@ func SendResponse(client callapi.Client, err error, message *callapi.ActionMessa
 		// Default ID handling
 		response.Data.MessageID = 123
 	}
-	// 映射str的GroupID到int
-	GroupID64, errr := idmap.StoreIDv2(message.Params.GroupID.(string))
-	if errr != nil {
-		mylog.Errorf("failed to convert ChannelID to int: %v", err)
-		return "", nil
+
+	var errr error
+	var GroupID64 int64
+	if config.GetIdmapPro() {
+		//将真实id转为int userid64
+		GroupID64, _, errr = idmap.StoreIDv2Pro(message.Params.GroupID.(string), message.Params.UserID.(string))
+		if errr != nil {
+			mylog.Fatalf("Error storing ID: %v", err)
+		}
+	} else {
+		// 映射str的GroupID到int
+		GroupID64, err = idmap.StoreIDv2(message.Params.GroupID.(string))
+		if err != nil {
+			mylog.Errorf("failed to convert GroupID64 to int: %v", err)
+		}
 	}
+
 	response.GroupID = GroupID64
 	response.Echo = message.Echo
 	if err != nil {
