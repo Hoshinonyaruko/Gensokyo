@@ -117,3 +117,70 @@ type SettingGuide struct {
 	// 频道ID, 当通过私信发送设置引导消息时，需要指定guild_id
 	GuildID string `json:"guild_id"`
 }
+
+// 仅供测试
+
+type MessageSSE struct {
+	MsgType        int              `json:"msg_type,omitempty"`
+	Markdown       *MarkdownSSE     `json:"markdown,omitempty"`
+	MsgID          string           `json:"msg_id,omitempty"`
+	MsgSeq         int              `json:"msg_seq,omitempty"`
+	Stream         *StreamSSE       `json:"stream,omitempty"`
+	PromptKeyboard *KeyboardSSE     `json:"prompt_keyboard,omitempty"`
+	ActionButton   *ActionButtonSSE `json:"action_button,omitempty"`
+}
+
+// GetEventID 事件ID
+func (msg MessageSSE) GetEventID() string {
+	return ""
+}
+
+// GetSendType 消息类型
+func (msg MessageSSE) GetSendType() SendType {
+	return 1
+}
+
+type MarkdownSSE struct {
+	Content string `json:"content"`
+}
+
+type StreamSSE struct {
+	State int    `json:"state"`
+	Index int    `json:"index"`
+	ID    string `json:"id,omitempty"`
+}
+
+type KeyboardSSE struct {
+	KeyboardContentSSE `json:"keyboard"`
+}
+
+type KeyboardContentSSE struct {
+	Content ContentSSE `json:"content"`
+}
+
+type ContentSSE struct {
+	Rows []RowSSE `json:"rows"`
+}
+
+type RowSSE struct {
+	Buttons []ButtonSSE `json:"buttons"`
+}
+
+type ButtonSSE struct {
+	RenderData RenderDataSSE `json:"render_data"`
+	Action     ActionSSE     `json:"action"`
+}
+
+type RenderDataSSE struct {
+	Label string `json:"label"`
+	Style int    `json:"style"`
+}
+
+type ActionSSE struct {
+	Type int `json:"type"`
+}
+
+type ActionButtonSSE struct {
+	TemplateID   int    `json:"template_id"`
+	CallbackData string `json:"callback_data"`
+}
