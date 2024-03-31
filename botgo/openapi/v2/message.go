@@ -315,3 +315,24 @@ func (o *openAPIv2) PostC2CMessage(ctx context.Context, userID string, msg dto.A
 
 	return result, nil
 }
+
+// PostC2CMessage 回复C2CSSE消息
+func (o *openAPIv2) PostC2CMessageSSE(ctx context.Context, userID string, msg dto.APIMessage) (*dto.C2CMessageResponse, error) {
+	var resp *resty.Response
+	var err error
+
+	resp, err = o.request(ctx).
+		SetResult(dto.Message{}). // 设置为消息类型
+		SetPathParam("user_id", userID).
+		SetBody(msg).
+		Post(o.getURL("/v2/users/{user_id}/messages"))
+
+	if err != nil {
+		return nil, err
+	}
+
+	result := &dto.C2CMessageResponse{}
+	result.Message = resp.Result().(*dto.Message)
+
+	return result, nil
+}
