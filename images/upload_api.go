@@ -194,6 +194,95 @@ func UploadBase64ImageToServer(msgid string, base64Image string, groupID string,
 	return picURL, 0, 0, 0, nil
 }
 
+// TransferUrlToServerUrlr 将url转化为ntv2链接
+func TransferUrlToServerUrl(msgid string, url string, groupID string, apiv2 openapi.OpenAPI) (string, uint64, uint32, uint32, error) {
+	var err error
+
+	if isNumeric(groupID) {
+		//用转换前的群号获取msgid
+		if msgid == "" {
+			msgid = echo.GetLazyMessagesId(groupID)
+		}
+		// 检查groupID是否为纯数字构成 RetrieveRowByIDv2是通用逻辑，也可以将userid还原为32位数originaluserid
+		// 但没有私信权限，故没有测试
+		originalGroupID, err := idmap.RetrieveRowByIDv2(groupID)
+		if err != nil {
+			log.Printf("Error retrieving original GroupID: %v", err)
+			return url, 0, 0, 0, nil
+		}
+		log.Printf("通过idmap获取的originalGroupID: %v", originalGroupID)
+
+		// 用originalGroupID更新groupID
+		groupID = originalGroupID
+	} else {
+		// 映射str的GroupID到int
+		GroupID64, err := idmap.StoreIDv2(groupID)
+		if err != nil {
+			log.Printf("failed to convert ChannelID to int: %v", err)
+			return url, 0, 0, 0, nil
+		}
+		groupIDTemp := strconv.FormatInt(GroupID64, 10)
+		//用数字的群号获取msgid
+		if msgid == "" {
+			msgid = echo.GetLazyMessagesId(groupIDTemp)
+		}
+	}
+
+	richMediaMessage := &dto.RichMediaMessage{
+		EventID:    msgid,
+		FileType:   1, // 1代表图片
+		URL:        url,
+		Content:    "", // 这个字段文档没有了
+		SrvSendMsg: false,
+	}
+
+	var fileInfo string
+	//尝试群聊发图
+	fileInfo, err = uploadMedia(context.TODO(), groupID, richMediaMessage, apiv2)
+	if err != nil {
+		//尝试私信发图
+		fileInfo, err = uploadMediaPrivate(context.TODO(), groupID, richMediaMessage, apiv2)
+		if err != nil {
+			//返回原始图片url
+			return url, 0, 0, 0, nil
+		}
+	}
+
+	// 将Base64字符串解码为二进制
+	fileInfoBytes, err := base64.StdEncoding.DecodeString(fileInfo)
+	if err != nil {
+		log.Fatalf("Failed to decode Base64 string: %v", err)
+	}
+
+	// 初始化Proto消息类型
+	var mainMessage protobuf.Main
+
+	// 解析二进制数据到Proto消息
+	err = proto.Unmarshal(fileInfoBytes, &mainMessage)
+	if err != nil {
+		log.Fatalf("Failed to unmarshal Proto message: %v", err)
+	}
+
+	// 从Proto消息中读取值
+	realGroupID := mainMessage.GetA().GetB().GetInfo().GetDetail().GetGroupInfo().GetGroupNumber()
+	downloadURL := mainMessage.GetA().GetImageData().GetImageInfo().GetUrl()
+	//https的地址不能放到md里
+	//downloadURL = "https://multimedia.nt.qq.com.cn" + downloadURL
+	// 将 downloadURL 中的所有下划线 "_" 替换为 "%5f"
+	downloadURL = strings.Replace(downloadURL, "_", "%5f", -1)
+	downloadURL = "http://multimedia.nt.qq.com" + downloadURL
+	width := mainMessage.GetA().GetImageData().GetWidth()
+	height := mainMessage.GetA().GetImageData().GetHeight()
+
+	// 打印读取的值
+	log.Printf("RealGroup ID: %d\n", realGroupID)
+	log.Printf("Download URL: %s, Width: %d, Height: %d\n", downloadURL, width, height)
+
+	// 根据需要返回适当的值
+	return downloadURL, realGroupID, width, height, nil
+
+}
+
 // 将base64语音通过lotus转换成url
 func UploadBase64RecordToServer(base64Record string) (string, error) {
 	extraPicAuditingType := config.GetOssType()

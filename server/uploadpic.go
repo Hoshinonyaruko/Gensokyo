@@ -126,7 +126,6 @@ func UploadBase64ImageHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 
 	}
 }
-
 func UploadBase64ImageHandlerV2(rateLimiter *RateLimiter, apiv2 openapi.OpenAPI) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ipAddress := c.ClientIP()
@@ -137,18 +136,31 @@ func UploadBase64ImageHandlerV2(rateLimiter *RateLimiter, apiv2 openapi.OpenAPI)
 
 		// 从请求中获取必要的参数
 		base64Image := c.PostForm("base64Image")
-		msgid := c.DefaultPostForm("msgid", "") // msgid可以为空
-		groupID := c.PostForm("groupID")        // groupID是必需的
+		imageUrl := c.PostForm("url") // 新增的url参数
+		msgid := c.DefaultPostForm("msgid", "")
+		groupID := c.PostForm("groupID")
 
 		if groupID == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "groupID is required"})
 			return
 		}
 
-		// 调用函数上传图片
-		imageURL, groupid, width, height, err := images.UploadBase64ImageToServer(msgid, base64Image, groupID, apiv2)
+		var imageURL string
+		var groupid uint64
+		var width, height uint32
+		var err error
+
+		// 根据参数调用不同的处理逻辑
+		if base64Image != "" {
+			imageURL, groupid, width, height, err = images.UploadBase64ImageToServer(msgid, base64Image, groupID, apiv2)
+		} else if imageUrl != "" {
+			imageURL, groupid, width, height, err = images.TransferUrlToServerUrl(msgid, imageUrl, groupID, apiv2)
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "either base64Image or url is required"})
+			return
+		}
+
 		if err != nil {
-			// 根据错误类型返回合适的HTTP状态码和错误信息
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}

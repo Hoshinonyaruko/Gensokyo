@@ -6,8 +6,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/boltdb/bolt"
 	"github.com/google/uuid"
+	"go.etcd.io/bbolt"
 )
 
 const (
@@ -17,18 +17,18 @@ const (
 	ExpirationHours = 24 // Cookie 有效期为24小时
 )
 
-var db *bolt.DB
+var db *bbolt.DB
 var ErrCookieNotFound = errors.New("cookie not found")
 var ErrCookieExpired = errors.New("cookie has expired")
 
 func InitializeDB() {
 	var err error
-	db, err = bolt.Open(DBName, 0600, nil)
+	db, err = bbolt.Open(DBName, 0600, nil)
 	if err != nil {
 		log.Fatalf("Error opening DB: %v", err)
 	}
 
-	db.Update(func(tx *bolt.Tx) error {
+	db.Update(func(tx *bbolt.Tx) error {
 		_, err := tx.CreateBucketIfNotExists([]byte(CookieBucket))
 		return err
 	})
@@ -42,7 +42,7 @@ func GenerateCookie() (string, error) {
 	cookie := uuid.New().String()
 	expiration := time.Now().Add(ExpirationHours * time.Hour).Unix()
 
-	err := db.Update(func(tx *bolt.Tx) error {
+	err := db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(CookieBucket))
 		if err := bucket.Put([]byte(cookie), intToBytes(expiration)); err != nil {
 			return err
@@ -59,7 +59,7 @@ func GenerateCookie() (string, error) {
 
 func ValidateCookie(cookie string) (bool, error) {
 	isValid := false
-	err := db.View(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(CookieBucket))
 		expBytes := bucket.Get([]byte(cookie))
 		if expBytes == nil {

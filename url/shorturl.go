@@ -14,10 +14,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/boltdb/bolt"
 	"github.com/gin-gonic/gin"
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
+	"go.etcd.io/bbolt"
 )
 
 const (
@@ -25,7 +25,7 @@ const (
 )
 
 var (
-	db *bolt.DB
+	db *bbolt.DB
 )
 
 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -48,13 +48,13 @@ func generateHashedString(url string) string {
 // 这里的数据库是在init创建的
 func init() {
 	var err error
-	db, err = bolt.Open("gensokyo.db", 0600, nil)
+	db, err = bbolt.Open("gensokyo.db", 0600, nil)
 	if err != nil {
 		panic(err)
 	}
 
 	// Ensure bucket exists
-	err = db.Update(func(tx *bolt.Tx) error {
+	err = db.Update(func(tx *bbolt.Tx) error {
 		_, err := tx.CreateBucketIfNotExists([]byte(bucketName))
 		if err != nil {
 			return fmt.Errorf("failed to create or get the bucket: %v", err)
@@ -222,7 +222,7 @@ func GenerateShortURL(longURL string) string {
 
 func existsInDB(shortURL string) (bool, error) {
 	exists := false
-	err := db.View(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(bucketName))
 		v := b.Get([]byte(shortURL))
 		if v != nil {
@@ -269,7 +269,7 @@ func getLongURLFromDB(shortURL string) (string, error) {
 		return response["longURL"].(string), nil
 	} else {
 		var longURL string
-		err := db.View(func(tx *bolt.Tx) error {
+		err := db.View(func(tx *bbolt.Tx) error {
 			b := tx.Bucket([]byte(bucketName))
 			v := b.Get([]byte(shortURL))
 			if v == nil {
@@ -284,7 +284,7 @@ func getLongURLFromDB(shortURL string) (string, error) {
 
 // storeURL 存储长URL和对应的短URL
 func storeURL(shortURL, longURL string) error {
-	return db.Update(func(tx *bolt.Tx) error {
+	return db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(bucketName))
 		return b.Put([]byte(shortURL), []byte(longURL))
 	})
