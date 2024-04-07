@@ -122,11 +122,9 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 		groupMsg.RealMessageType = "group"
 		groupMsg.IsBindedUserId = IsBindedUserId
 		groupMsg.IsBindedGroupId = IsBindedGroupId
-		if IsBindedUserId {
-			groupMsg.Avatar, _ = GenerateAvatarURL(userid64)
-		} else {
-			groupMsg.Avatar, _ = GenerateAvatarURLV2(data.Author.ID)
-		}
+		groupMsg.RealGroupID = data.GroupID
+		groupMsg.RealUserID = data.Author.ID
+		groupMsg.Avatar, _ = GenerateAvatarURLV2(data.Author.ID)
 	}
 	//根据条件判断是否增加nick和card
 	var CaN = config.GetCardAndNick()

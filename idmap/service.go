@@ -16,9 +16,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/boltdb/bolt"
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
+	"go.etcd.io/bbolt"
 )
 
 var (
@@ -35,18 +35,18 @@ const (
 	CounterKey   = "currentRow"
 )
 
-var db *bolt.DB
+var db *bbolt.DB
 
 var ErrKeyNotFound = errors.New("key not found")
 
 func InitializeDB() {
 	var err error
-	db, err = bolt.Open(DBName, 0600, nil)
+	db, err = bbolt.Open(DBName, 0600, nil)
 	if err != nil {
 		log.Fatalf("Error opening DB: %v", err)
 	}
 
-	db.Update(func(tx *bolt.Tx) error {
+	db.Update(func(tx *bbolt.Tx) error {
 		_, err := tx.CreateBucketIfNotExists([]byte(BucketName))
 		return err
 	})
@@ -118,7 +118,7 @@ func CheckValuev2(value int64) bool {
 func StoreID(id string) (int64, error) {
 	var newRow int64
 
-	err := db.Update(func(tx *bolt.Tx) error {
+	err := db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(BucketName))
 
 		// 检查ID是否已经存在
@@ -180,7 +180,7 @@ func StoreID(id string) (int64, error) {
 func SimplifiedStoreID(id string) (int64, error) {
 	var newRow int64
 
-	err := db.Update(func(tx *bolt.Tx) error {
+	err := db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(BucketName))
 
 		// 生成新的行号
@@ -261,7 +261,7 @@ func StoreIDPro(id string, subid string) (int64, int64, error) {
 	var newRowID, newSubRowID int64
 	var err error
 
-	err = db.Update(func(tx *bolt.Tx) error {
+	err = db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(BucketName))
 
 		// 生成正向键
@@ -394,7 +394,7 @@ func StoreIDv2Pro(id string, subid string) (int64, int64, error) {
 // 根据b得到a
 func RetrieveRowByID(rowid string) (string, error) {
 	var id string
-	err := db.View(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(BucketName))
 
 		// 根据行号检索ID
@@ -461,7 +461,7 @@ func RetrieveRowByIDv2Pro(newRowID string, newSubRowID string) (string, string, 
 func RetrieveRowByIDPro(newRowID, newSubRowID string) (string, string, error) {
 	var id, subid string
 
-	err := db.View(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(BucketName))
 
 		// 根据新的行号和子行号检索ID和SubID
@@ -529,7 +529,7 @@ func RetrieveRowByIDv2(rowid string) (string, error) {
 
 // 根据a 以b为类别 储存c
 func WriteConfig(sectionName, keyName, value string) error {
-	return db.Update(func(tx *bolt.Tx) error {
+	return db.Update(func(tx *bbolt.Tx) error {
 		b, err := tx.CreateBucketIfNotExists([]byte(ConfigBucket))
 		if err != nil {
 			mylog.Printf("Error creating or accessing bucket: %v", err)
@@ -590,7 +590,7 @@ func WriteConfigv2(sectionName, keyName, value string) error {
 // 根据a和b取出c
 func ReadConfig(sectionName, keyName string) (string, error) {
 	var result string
-	err := db.View(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(ConfigBucket))
 		if b == nil {
 			return fmt.Errorf("bucket not found")
@@ -611,7 +611,7 @@ func ReadConfig(sectionName, keyName string) (string, error) {
 
 // DeleteConfig根据sectionName和keyName删除指定的键值对
 func DeleteConfig(sectionName, keyName string) error {
-	return db.Update(func(tx *bolt.Tx) error {
+	return db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(ConfigBucket))
 		if b == nil {
 			return fmt.Errorf("bucket %s does not exist", ConfigBucket)
@@ -727,7 +727,7 @@ func joinSectionAndKey(sectionName, keyName string) []byte {
 
 // UpdateVirtualValue 更新旧的虚拟值到新的虚拟值的映射
 func UpdateVirtualValue(oldRowValue, newRowValue int64) error {
-	return db.Update(func(tx *bolt.Tx) error {
+	return db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(BucketName))
 
 		// 查找旧虚拟值对应的真实值
@@ -766,7 +766,7 @@ func UpdateVirtualValue(oldRowValue, newRowValue int64) error {
 // RetrieveRealValue 根据虚拟值获取真实值，并返回虚拟值及其对应的真实值
 func RetrieveRealValue(virtualValue int64) (string, string, error) {
 	var realValue string
-	err := db.View(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(BucketName))
 
 		// 构造键，根据虚拟值查找
@@ -791,7 +791,7 @@ func RetrieveRealValue(virtualValue int64) (string, string, error) {
 // RetrieveVirtualValue 根据真实值获取虚拟值，并返回真实值及其对应的虚拟值
 func RetrieveVirtualValue(realValue string) (string, string, error) {
 	var virtualValue int64
-	err := db.View(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(BucketName))
 
 		// 根据真实值查找虚拟值
@@ -967,7 +967,7 @@ func RetrieveVirtualValuev2Pro(realValue string, realValueSub string) (string, s
 func RetrieveVirtualValuePro(realValue string, realValueSub string) (string, string, error) {
 	var newRowID, newSubRowID string
 
-	err := db.View(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(BucketName))
 
 		// 构建正向键
@@ -1001,7 +1001,7 @@ func RetrieveVirtualValuePro(realValue string, realValueSub string) (string, str
 func RetrieveRealValuePro(virtualValue1, virtualValue2 int64) (string, string, error) {
 	var realValue1, realValue2 string
 
-	err := db.View(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(BucketName))
 
 		// 根据两个虚拟值构造键
@@ -1079,7 +1079,7 @@ func RetrieveRealValuesv2Pro(virtualValue int64, virtualValueSub int64) (string,
 
 // UpdateVirtualValuePro 更新一对旧虚拟值到新虚拟值的映射 旧群号 新群号 旧用户 新用户
 func UpdateVirtualValuePro(oldVirtualValue1, newVirtualValue1, oldVirtualValue2, newVirtualValue2 int64) error {
-	return db.Update(func(tx *bolt.Tx) error {
+	return db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(BucketName))
 		// 构造旧和新的复合键
 		oldCompositeKey := fmt.Sprintf("%d:%d", oldVirtualValue1, oldVirtualValue2)
@@ -1147,7 +1147,7 @@ func UpdateVirtualValuev2Pro(oldVirtualValue1, newVirtualValue1, oldVirtualValue
 func FindKeysBySubAndType(sub string, typeSuffix string) ([]string, error) {
 	var ids []string
 
-	err := db.View(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(ConfigBucket))
 		if b == nil {
 			return fmt.Errorf("bucket %s not found", ConfigBucket)
@@ -1178,7 +1178,7 @@ func FindKeysBySubAndType(sub string, typeSuffix string) ([]string, error) {
 func FindSubKeysById(id string) ([]string, error) {
 	var subKeys []string
 
-	err := db.View(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte("ids"))
 		if b == nil {
 			return fmt.Errorf("bucket %s not found", "ids")
@@ -1257,7 +1257,7 @@ func FindSubKeysByIdPro(id string) ([]string, error) {
 
 // 场景: xxx:yyy zzz:bbb  zzz:bbb xxx:yyy 把xxx(id)替换为newID 比如更换群号(会卡住)
 func UpdateKeysWithNewID(id, newID string) error {
-	return db.Update(func(tx *bolt.Tx) error {
+	return db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(BucketName))
 		if b == nil {
 			return fmt.Errorf("bucket %s not found", BucketName)
