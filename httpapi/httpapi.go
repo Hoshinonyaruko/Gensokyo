@@ -1,7 +1,9 @@
 package httpapi
 
 import (
+	"fmt"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -52,6 +54,10 @@ func CombinedMiddleware(api openapi.OpenAPI, apiV2 openapi.OpenAPI) gin.HandlerF
 		}
 		if c.Request.URL.Path == "/put_interaction" {
 			handlePutInteraction(c, api, apiV2)
+			return
+		}
+		if c.Request.URL.Path == "/delete_msg" {
+			handleDeleteMsg(c, api, apiV2)
 			return
 		}
 
@@ -391,4 +397,74 @@ func handlePutInteraction(c *gin.Context, api openapi.OpenAPI, apiV2 openapi.Ope
 	// 返回处理结果
 	c.Header("Content-Type", "application/json")
 	c.String(http.StatusOK, retmsg)
+}
+
+// 类型转换函数，将interface{}转换为string
+func convertToString(value interface{}) string {
+	switch v := value.(type) {
+	case int:
+		return strconv.Itoa(v)
+	case int64:
+		return strconv.FormatInt(v, 10)
+	case float64:
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	case string:
+		return v
+	default:
+		fmt.Println("Unexpected type:", reflect.TypeOf(value))
+		return ""
+	}
+}
+
+func handleDeleteMsg(c *gin.Context, api openapi.OpenAPI, apiV2 openapi.OpenAPI) {
+	// 使用interface{}以适应不同类型的输入，接受动态参数类型
+	var req struct {
+		UserID    interface{} `json:"user_id,omitempty" form:"user_id"`
+		GroupID   interface{} `json:"group_id,omitempty" form:"group_id"`
+		ChannelID interface{} `json:"channel_id,omitempty" form:"channel_id"`
+		GuildID   interface{} `json:"guild_id,omitempty" form:"guild_id"`
+		MessageID interface{} `json:"message_id" form:"message_id"`
+	}
+
+	// 解析请求参数
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 构造参数内容，只包括实际有值的字段
+	params := callapi.ParamsContent{}
+
+	if req.UserID != nil {
+		params.UserID = convertToString(req.UserID)
+	}
+	if req.GroupID != nil {
+		params.GroupID = convertToString(req.GroupID)
+	}
+	if req.ChannelID != nil {
+		params.ChannelID = convertToString(req.ChannelID)
+	}
+	if req.GuildID != nil {
+		params.GuildID = convertToString(req.GuildID)
+	}
+	if req.MessageID != nil {
+		params.MessageID = convertToString(req.MessageID)
+	}
+
+	// 创建 ActionMessage 实例
+	message := callapi.ActionMessage{
+		Action: "delete_msg",
+		Params: params,
+	}
+
+	// 调用处理函数，假设 handlers.DeleteMsg 已经实现并且适合处理消息删除的操作
+	client := &HttpAPIClient{}
+	retmsg, err := handlers.DeleteMsg(client, api, apiV2, message)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 返回处理结果
+	c.JSON(http.StatusOK, gin.H{"message": retmsg})
 }
