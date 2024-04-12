@@ -95,7 +95,11 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			echo.AddMsgType(config.GetAppIDStr(), idInt64, "group_private")
 			HandleSendPrivateMsg(client, api, apiv2, messageCopy)
 		}
+	} else {
+		// 特殊值代表不递归
+		echo.AddMapping(idInt64, 10)
 	}
+
 	var resp *dto.C2CMessageResponse
 	switch msgType {
 	//这里是pr上来的,我也不明白为什么私聊会出现group类型 猜测是为了匹配包含了groupid的私聊?
@@ -310,21 +314,26 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 	default:
 		mylog.Printf("Unknown message type: %s", msgType)
 	}
-	//重置递归类型
-	if echo.GetMapping(idInt64) <= 0 {
-		echo.AddMsgType(config.GetAppIDStr(), idInt64, "")
-	}
-	echo.AddMapping(idInt64, echo.GetMapping(idInt64)-1)
 
-	//递归3次枚举类型
-	if echo.GetMapping(idInt64) > 0 {
-		tryMessageTypes := []string{"group", "guild", "guild_private"}
-		messageCopy := message // 创建message的副本
-		echo.AddMsgType(config.GetAppIDStr(), idInt64, tryMessageTypes[echo.GetMapping(idInt64)-1])
-		delay := config.GetSendDelay()
-		time.Sleep(time.Duration(delay) * time.Millisecond)
-		retmsg, _ = HandleSendPrivateMsg(client, api, apiv2, messageCopy)
+	// 如果递归id不是10(不递归特殊值)
+	if echo.GetMapping(idInt64) != 10 {
+		//重置递归类型
+		if echo.GetMapping(idInt64) <= 0 {
+			echo.AddMsgType(config.GetAppIDStr(), idInt64, "")
+		}
+		echo.AddMapping(idInt64, echo.GetMapping(idInt64)-1)
+
+		//递归3次枚举类型
+		if echo.GetMapping(idInt64) > 0 {
+			tryMessageTypes := []string{"group", "guild", "guild_private"}
+			messageCopy := message // 创建message的副本
+			echo.AddMsgType(config.GetAppIDStr(), idInt64, tryMessageTypes[echo.GetMapping(idInt64)-1])
+			delay := config.GetSendDelay()
+			time.Sleep(time.Duration(delay) * time.Millisecond)
+			retmsg, _ = HandleSendPrivateMsg(client, api, apiv2, messageCopy)
+		}
 	}
+
 	return retmsg, nil
 }
 
