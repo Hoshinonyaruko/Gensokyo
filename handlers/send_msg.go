@@ -111,6 +111,9 @@ func HandleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 			echo.AddMsgType(config.GetAppIDStr(), idInt64, "group_private")
 			retmsg, _ = HandleSendMsg(client, api, apiv2, messageCopy)
 		}
+	} else {
+		// 特殊值代表不递归
+		echo.AddMapping(idInt64, 10)
 	}
 
 	switch msgType {
@@ -163,22 +166,27 @@ func HandleSendMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Ope
 	default:
 		mylog.Printf("1Unknown message type: %s", msgType)
 	}
-	//重置递归类型
-	if echo.GetMapping(idInt64) <= 0 {
-		echo.AddMsgType(config.GetAppIDStr(), idInt64, "")
-		echo.AddMsgType(config.GetAppIDStr(), idInt642, "")
-	}
-	echo.AddMapping(idInt64, echo.GetMapping(idInt64)-1)
 
-	//递归3次枚举类型
-	if echo.GetMapping(idInt64) > 0 {
-		tryMessageTypes := []string{"group", "guild", "guild_private"}
-		messageCopy := message // 创建message的副本
-		echo.AddMsgType(config.GetAppIDStr(), idInt64, tryMessageTypes[echo.GetMapping(idInt64)-1])
-		delay := config.GetSendDelay()
-		time.Sleep(time.Duration(delay) * time.Millisecond)
-		retmsg, _ = HandleSendMsg(client, api, apiv2, messageCopy)
+	// 如果递归id不是10(不递归特殊值)
+	if echo.GetMapping(idInt64) != 10 {
+		//重置递归类型
+		if echo.GetMapping(idInt64) <= 0 {
+			echo.AddMsgType(config.GetAppIDStr(), idInt64, "")
+			echo.AddMsgType(config.GetAppIDStr(), idInt642, "")
+		}
+		echo.AddMapping(idInt64, echo.GetMapping(idInt64)-1)
+
+		//递归3次枚举类型
+		if echo.GetMapping(idInt64) > 0 {
+			tryMessageTypes := []string{"group", "guild", "guild_private"}
+			messageCopy := message // 创建message的副本
+			echo.AddMsgType(config.GetAppIDStr(), idInt64, tryMessageTypes[echo.GetMapping(idInt64)-1])
+			delay := config.GetSendDelay()
+			time.Sleep(time.Duration(delay) * time.Millisecond)
+			retmsg, _ = HandleSendMsg(client, api, apiv2, messageCopy)
+		}
 	}
+
 	return retmsg, nil
 }
 

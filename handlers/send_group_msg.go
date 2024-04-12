@@ -105,6 +105,9 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			echo.AddMsgType(config.GetAppIDStr(), idInt64, "group_private")
 			retmsg, _ = HandleSendGroupMsg(client, api, apiv2, messageCopy)
 		}
+	} else {
+		// 特殊值代表不递归
+		echo.AddMapping(idInt64, 10)
 	}
 
 	switch msgType {
@@ -514,21 +517,28 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 	default:
 		mylog.Printf("Unknown message type: %s", msgType)
 	}
-	//重置递归类型
-	if echo.GetMapping(idInt64) <= 0 {
-		echo.AddMsgType(config.GetAppIDStr(), idInt64, "")
-	}
-	echo.AddMapping(idInt64, echo.GetMapping(idInt64)-1)
 
-	//递归3次枚举类型
-	if echo.GetMapping(idInt64) > 0 {
-		tryMessageTypes := []string{"group", "guild", "guild_private"}
-		messageCopy := message // 创建message的副本
-		echo.AddMsgType(config.GetAppIDStr(), idInt64, tryMessageTypes[echo.GetMapping(idInt64)-1])
-		delay := config.GetSendDelay()
-		time.Sleep(time.Duration(delay) * time.Millisecond)
-		retmsg, _ = HandleSendGroupMsg(client, api, apiv2, messageCopy)
+	// 如果递归id不是10(不递归特殊值)
+	if echo.GetMapping(idInt64) != 10 {
+		//重置递归类型 递归结束重置类型,避免下一次同样id,不同类型的请求被使用上一次类型
+		if echo.GetMapping(idInt64) <= 0 {
+			echo.AddMsgType(config.GetAppIDStr(), idInt64, "")
+		}
+
+		//减少递归计数器
+		echo.AddMapping(idInt64, echo.GetMapping(idInt64)-1)
+
+		//递归3次枚举类型
+		if echo.GetMapping(idInt64) > 0 {
+			tryMessageTypes := []string{"group", "guild", "guild_private"}
+			messageCopy := message // 创建message的副本
+			echo.AddMsgType(config.GetAppIDStr(), idInt64, tryMessageTypes[echo.GetMapping(idInt64)-1])
+			delay := config.GetSendDelay()
+			time.Sleep(time.Duration(delay) * time.Millisecond)
+			retmsg, _ = HandleSendGroupMsg(client, api, apiv2, messageCopy)
+		}
 	}
+
 	return retmsg, nil
 }
 
