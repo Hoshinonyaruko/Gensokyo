@@ -313,7 +313,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			}
 
 			// 发送成功回执
-			retmsg, _ = SendResponse(client, err, &message, resp)
+			retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
 
 			delete(foundItems, imageType) // 从foundItems中删除已处理的图片项
 			messageText = ""
@@ -346,7 +346,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				echo.PushGlobalStack(pair)
 			}
 			//发送成功回执
-			retmsg, _ = SendResponse(client, err, &message, resp)
+			retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
 		}
 		var resp *dto.GroupMessageResponse
 		// 遍历foundItems并发送每种信息
@@ -382,7 +382,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 							echo.PushGlobalStack(pair)
 						}
 						//发送成功回执
-						retmsg, _ = SendResponse(client, err, &message, resp)
+						retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
 					}
 					continue // 跳过这个项，继续下一个
 				}
@@ -442,7 +442,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 					}
 				}
 				//发送成功回执
-				retmsg, _ = SendResponse(client, err, &message, resp)
+				retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
 			}
 		}
 	case "guild":
@@ -1278,6 +1278,10 @@ func auto_md(message callapi.ActionMessage, messageText string, richMediaMessage
 				var actiondata string
 				//检查是否设置了enter数组
 				enter := checkDataLabelPrefix(dataLabel)
+				//例外规则
+				if checkDataLabelPrefixExcept(whiteLabel) {
+					enter = false
+				}
 
 				switch {
 				case strings.HasPrefix(whiteLabel, "邀请机器人"): //默认是群
@@ -1414,6 +1418,17 @@ func checkDataLabelPrefix(dataLabel string) bool {
 	enters := config.GetEnters()
 	for _, enter := range enters {
 		if enter != "" && strings.HasPrefix(dataLabel, enter) {
+			return true
+		}
+	}
+	return false
+}
+
+// 检查whiteLabel是否以config中getentersexcept返回的任一字符串开头
+func checkDataLabelPrefixExcept(whiteLabel string) bool {
+	enters := config.GetEntersExcept()
+	for _, enter := range enters {
+		if enter != "" && strings.HasPrefix(whiteLabel, enter) {
 			return true
 		}
 	}
