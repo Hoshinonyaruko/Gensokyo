@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/hoshinonyaruko/gensokyo/botstats"
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
@@ -214,6 +215,10 @@ func (client *WebSocketClient) sendHeartbeat(ctx context.Context, botID uint64, 
 		case <-ctx.Done():
 			return
 		case <-time.After(time.Duration(heartbeatinterval) * time.Second):
+			messageReceived, messageSent, lastMessageTime, err := botstats.GetStats()
+			if err != nil {
+				mylog.Printf("心跳错误,获取机器人发信状态错误:%v", err)
+			}
 			message := map[string]interface{}{
 				"post_type":       "meta_event",
 				"meta_event_type": "heartbeat",
@@ -230,14 +235,14 @@ func (client *WebSocketClient) sendHeartbeat(ctx context.Context, botID uint64, 
 						"packet_received":   34933,
 						"packet_sent":       8513,
 						"packet_lost":       0,
-						"message_received":  24674,
-						"message_sent":      1663,
+						"message_received":  messageReceived,
+						"message_sent":      messageSent,
 						"disconnect_times":  0,
 						"lost_times":        0,
-						"last_message_time": int(time.Now().Unix()) - 10, // 假设最后一条消息是10秒前收到的
+						"last_message_time": int(lastMessageTime),
 					},
 				},
-				"interval": 10000, // 以毫秒为单位
+				"interval": 5000, // 以毫秒为单位
 			}
 			client.SendMessage(message)
 			// 重发失败的消息

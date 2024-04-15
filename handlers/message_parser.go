@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hoshinonyaruko/gensokyo/botstats"
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/echo"
@@ -50,10 +51,96 @@ type ServerResponse struct {
 	Echo      interface{} `json:"echo"`
 }
 
+// 定义了一个符合 Client 接口的 HttpAPIClient 结构体
+type HttpAPIClient struct {
+	// 可添加所需字段
+}
+
+// 实现 Client 接口的 SendMessage 方法
+// 假client中不执行任何操作，只是返回 nil 来符合接口要求
+func (c *HttpAPIClient) SendMessage(message map[string]interface{}) error {
+	// 不实际发送消息
+	// log.Printf("SendMessage called with: %v", message)
+
+	// 返回nil占位符
+	return nil
+}
+
 // 发送成功回执 todo 返回可互转的messageid 实现群撤回api
-func SendResponse(client callapi.Client, err error, message *callapi.ActionMessage, resp *dto.GroupMessageResponse) (string, error) {
+func SendResponse(client callapi.Client, err error, message *callapi.ActionMessage, resp *dto.GroupMessageResponse, api openapi.OpenAPI, apiv2 openapi.OpenAPI) (string, error) {
 	var messageID64 int64
 	var mapErr error
+
+	// 转换群号
+	var errr error
+	var GroupID64 int64
+	if groupID, ok := message.Params.GroupID.(string); ok && groupID != "" {
+		if config.GetIdmapPro() {
+			//将真实id转为int userid64
+			GroupID64, _, errr = idmap.StoreIDv2Pro(message.Params.GroupID.(string), message.Params.UserID.(string))
+			if errr != nil {
+				mylog.Fatalf("Error storing ID: %v", err)
+			}
+		} else {
+			// 映射str的GroupID到int
+			GroupID64, errr = idmap.StoreIDv2(message.Params.GroupID.(string))
+			if errr != nil {
+				mylog.Errorf("failed to convert GroupID64 to int: %v", err)
+			}
+		}
+	}
+
+	var channelID64 int64
+	if channelID, ok := message.Params.ChannelID.(string); ok && channelID != "" {
+		if config.GetIdmapPro() {
+			//将真实id转为int userid64
+			channelID64, _, errr = idmap.StoreIDv2Pro(message.Params.ChannelID.(string), message.Params.UserID.(string))
+			if errr != nil {
+				mylog.Fatalf("Error storing ID: %v", err)
+			}
+		} else {
+			// 映射str的GroupID到int
+			channelID64, errr = idmap.StoreIDv2(message.Params.ChannelID.(string))
+			if errr != nil {
+				mylog.Errorf("failed to convert GroupID64 to int: %v", err)
+			}
+		}
+	}
+
+	var guildID64 int64
+	if guildID, ok := message.Params.GuildID.(string); ok && guildID != "" {
+		if config.GetIdmapPro() {
+			//将真实id转为int userid64
+			guildID64, _, errr = idmap.StoreIDv2Pro(message.Params.GuildID.(string), message.Params.UserID.(string))
+			if errr != nil {
+				mylog.Fatalf("Error storing ID: %v", err)
+			}
+		} else {
+			// 映射str的GroupID到int
+			guildID64, errr = idmap.StoreIDv2(message.Params.GuildID.(string))
+			if errr != nil {
+				mylog.Errorf("failed to convert GroupID64 to int: %v", err)
+			}
+		}
+	}
+
+	var userID64 int64
+	if userID, ok := message.Params.UserID.(string); ok && userID != "" {
+		if config.GetIdmapPro() {
+			//将真实id转为int userid64
+			userID64, _, errr = idmap.StoreIDv2Pro("group_private", message.Params.UserID.(string))
+			if errr != nil {
+				mylog.Fatalf("Error storing ID: %v", err)
+			}
+		} else {
+			// 映射str的GroupID到int
+			userID64, errr = idmap.StoreIDv2(message.Params.UserID.(string))
+			if errr != nil {
+				mylog.Errorf("failed to convert GroupID64 to int: %v", err)
+			}
+		}
+	}
+
 	// 设置响应值
 	response := ServerResponse{}
 	if resp != nil {
@@ -63,27 +150,60 @@ func SendResponse(client callapi.Client, err error, message *callapi.ActionMessa
 			return "", nil
 		}
 		response.Data.MessageID = int(messageID64)
+		// 发送成功 增加今日发信息数
+		botstats.RecordMessageSent()
+		//  是否自动撤回
+		if echoStr, ok := message.Echo.(string); ok {
+			msg_on_touch := echo.GetMsgIDv3(config.GetAppIDStr(), echoStr)
+			// 检查是否需要自动撤回
+			autoWithdrawPrefixes := config.GetAutoWithdraw()
+			if len(autoWithdrawPrefixes) > 0 {
+				for _, prefix := range autoWithdrawPrefixes {
+					if strings.HasPrefix(msg_on_touch, prefix) {
+						go func() {
+							delay := config.GetAutoWithdrawTime() // 获取延迟时间
+							time.Sleep(time.Duration(delay) * time.Second)
+
+							// 构建参数
+							var params callapi.ParamsContent
+							if groupID, ok := message.Params.GroupID.(string); ok && groupID != "" {
+								params.GroupID = strconv.FormatInt(GroupID64, 10)
+							} else if channelID, ok := message.Params.ChannelID.(string); ok && channelID != "" {
+								params.ChannelID = strconv.FormatInt(channelID64, 10)
+							} else if guildID, ok := message.Params.GuildID.(string); ok && guildID != "" {
+								params.GuildID = strconv.FormatInt(guildID64, 10)
+							} else if userID, ok := message.Params.UserID.(string); ok && userID != "" {
+								params.UserID = strconv.FormatInt(userID64, 10)
+							} else {
+								return // 如果没有有效的参数，则退出
+							}
+							params.MessageID = strconv.FormatInt(messageID64, 10)
+
+							// 创建撤回消息的请求
+							deleteMessage := callapi.ActionMessage{
+								Action: "delete_msg",
+								Params: params,
+							}
+
+							// 调用删除消息函数
+							client := &HttpAPIClient{}
+							_, err := DeleteMsg(client, api, apiv2, deleteMessage)
+							if err != nil {
+								mylog.Printf("Error DeleteMsg: %v", err)
+							}
+						}()
+						break
+					}
+				}
+			}
+		}
 	} else {
 		// Default ID handling
 		response.Data.MessageID = 123
 	}
 
-	var errr error
-	var GroupID64 int64
-	if config.GetIdmapPro() {
-		//将真实id转为int userid64
-		GroupID64, _, errr = idmap.StoreIDv2Pro(message.Params.GroupID.(string), message.Params.UserID.(string))
-		if errr != nil {
-			mylog.Fatalf("Error storing ID: %v", err)
-		}
-	} else {
-		// 映射str的GroupID到int
-		GroupID64, errr = idmap.StoreIDv2(message.Params.GroupID.(string))
-		if errr != nil {
-			mylog.Errorf("failed to convert GroupID64 to int: %v", err)
-		}
-	}
 	//mylog.Printf("convert GroupID64 to int: %v", GroupID64) 测试
+	// TODO: 改为动态参数 不是固定GroupID 但应用端不支持.会报错.暂时统一从group取id,自己判断类型发撤回请求.
 	response.GroupID = GroupID64
 	response.Echo = message.Echo
 	if err != nil {

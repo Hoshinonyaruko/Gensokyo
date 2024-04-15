@@ -66,6 +66,6 @@ func HandleSendGroupForwardMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 		count++
 		time.Sleep(500 * time.Millisecond) // 每条消息之间的延时
 	}
-	retmsg, _ = SendResponse(client, nil, &message, nil)
+	retmsg, _ = SendResponse(client, nil, &message, nil, api, apiv2)
 	return retmsg, nil
 }

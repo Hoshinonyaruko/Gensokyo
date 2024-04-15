@@ -101,7 +101,7 @@ func HandleSendGuildChannelForum(client callapi.Client, api openapi.OpenAPI, api
 		}
 
 		//发送成功回执
-		retmsg, _ = SendResponse(client, err, &message, nil)
+		retmsg, _ = SendResponse(client, err, &message, nil, api, apiv2)
 
 	default:
 		mylog.Printf("2Unknown message type: %s", msgType)

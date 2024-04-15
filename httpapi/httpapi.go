@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	"github.com/hoshinonyaruko/gensokyo/config"
+	"github.com/hoshinonyaruko/gensokyo/handlers"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hoshinonyaruko/gensokyo/callapi"
-	"github.com/hoshinonyaruko/gensokyo/handlers"
 	"github.com/tencent-connect/botgo/openapi"
 )
 
