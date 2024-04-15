@@ -273,7 +273,7 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 			}
 
 			// 发送成功回执
-			retmsg, _ = SendResponse(client, err, &message, resp)
+			retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
 
 			delete(foundItems, imageType) // 从foundItems中删除已处理的图片项
 			messageText = ""
@@ -306,7 +306,7 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 				echo.PushGlobalStack(pair)
 			}
 			//发送成功回执
-			retmsg, _ = SendResponse(client, err, &message, resp)
+			retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
 		}
 		var resp *dto.GroupMessageResponse
 		// 遍历foundItems并发送每种信息
@@ -342,7 +342,7 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 							echo.PushGlobalStack(pair)
 						}
 						//发送成功回执
-						retmsg, _ = SendResponse(client, err, &message, resp)
+						retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
 					}
 					continue // 跳过这个项，继续下一个
 				}
@@ -402,7 +402,7 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 					}
 				}
 				//发送成功回执
-				retmsg, _ = SendResponse(client, err, &message, resp)
+				retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
 			}
 		}
 	case "guild":

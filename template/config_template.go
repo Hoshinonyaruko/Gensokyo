@@ -7,7 +7,7 @@ settings:
   ws_address: ["ws://<YOUR_WS_ADDRESS>:<YOUR_WS_PORT>"] # WebSocket服务的地址 支持多个["","",""]
   ws_token: ["","",""]              #连接wss地址时服务器所需的token,按顺序一一对应,如果是ws地址,没有密钥,请留空.
   reconnect_times : 100             #反向ws连接失败后的重试次数,希望一直重试,可设置9999
-  heart_beat_interval : 10          #反向ws心跳间隔 单位秒 推荐5-10
+  heart_beat_interval : 5          #反向ws心跳间隔 单位秒 推荐5-10
   launch_reconnect_times : 1        #启动时尝试反向ws连接次数,建议先打开应用端再开启gensokyo,因为启动时连接会阻塞webui启动,默认只连接一次,可自行增大
 
   #基础设置
@@ -107,6 +107,9 @@ settings:
   black_prefixs : [""]              #可设置多个 比如设置 查询 则查询开头的信息均被拦截 防止审核失败
   alias : ["",""]                   #两两成对,指令替换,"a","b","c","d"代表将a开头替换为b开头,c开头替换为d开头.
   enters : ["",""]                  #自动md卡片点击直接触发,小众功能,满足以下条件:应用端支持双向echo+设置了visual_prefixs和whiteList
+  enters_except : ["",""]           #自动md卡片点击直接触发,例外,对子按钮生效.
+  auto_withdraw : []                #仅当应用端实现了双向echo可用.实现不难,可以去找对应开发者去提需求.
+  auto_withdraw_time : 30           #30秒
 
   visual_prefixs :                  #虚拟前缀 与white_prefixs配合使用 处理流程自动忽略该前缀 remove_prefix remove_at 需为true时生效
   - prefix: ""                      #虚拟前缀开头 例 你有3个指令 帮助 测试 查询 将 prefix 设置为 工具类 后 则可通过 工具类 帮助 触发机器人

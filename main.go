@@ -17,6 +17,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/hoshinonyaruko/gensokyo/Processor"
+	"github.com/hoshinonyaruko/gensokyo/botstats"
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/handlers"
 	"github.com/hoshinonyaruko/gensokyo/httpapi"
@@ -298,9 +299,14 @@ func main() {
 
 	//创建idmap服务器 数据库
 	idmap.InitializeDB()
+	//创建botstats数据库
+	botstats.InitializeDB()
 	//创建webui数据库
 	webui.InitializeDB()
+
+	//关闭时候释放数据库
 	defer idmap.CloseDB()
+	defer botstats.CloseDB()
 	defer webui.CloseDB()
 
 	//图片上传 调用次数限制
@@ -519,6 +525,7 @@ func ErrorNotifyHandler() event.ErrorNotifyHandler {
 // ATMessageEventHandler 实现处理 频道at 消息的回调
 func ATMessageEventHandler() event.ATMessageEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSATMessageData) error {
+		botstats.RecordMessageReceived()
 		return p.ProcessGuildATMessage(data)
 	}
 }
@@ -550,6 +557,7 @@ func MemberEventHandler() event.GuildMemberEventHandler {
 // DirectMessageHandler 处理私信事件
 func DirectMessageHandler() event.DirectMessageEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSDirectMessageData) error {
+		botstats.RecordMessageReceived()
 		return p.ProcessChannelDirectMessage(data)
 	}
 }
@@ -557,6 +565,7 @@ func DirectMessageHandler() event.DirectMessageEventHandler {
 // CreateMessageHandler 处理消息事件 私域的事件 不at信息
 func CreateMessageHandler() event.MessageEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSMessageData) error {
+		botstats.RecordMessageReceived()
 		return p.ProcessGuildNormalMessage(data)
 	}
 }
@@ -580,6 +589,7 @@ func ThreadEventHandler() event.ThreadEventHandler {
 // GroupATMessageEventHandler 实现处理 群at 消息的回调
 func GroupATMessageEventHandler() event.GroupATMessageEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSGroupATMessageData) error {
+		botstats.RecordMessageReceived()
 		return p.ProcessGroupMessage(data)
 	}
 }
@@ -587,6 +597,7 @@ func GroupATMessageEventHandler() event.GroupATMessageEventHandler {
 // C2CMessageEventHandler 实现处理 群私聊 消息的回调
 func C2CMessageEventHandler() event.C2CMessageEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSC2CMessageData) error {
+		botstats.RecordMessageReceived()
 		return p.ProcessC2CMessage(data)
 	}
 }

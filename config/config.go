@@ -111,7 +111,10 @@ type Settings struct {
 	BlackPrefixs      []string             `yaml:"black_prefixs"`
 	Alias             []string             `yaml:"alias"`
 	Enters            []string             `yaml:"enters"`
+	EntersExcept      []string             `yaml:"enters_except"`
 	VisualPrefixs     []VisualPrefixConfig `yaml:"visual_prefixs"`
+	AutoWithdraw      []string             `yaml:"auto_withdraw"`
+	AutoWithdrawTime  int                  `yaml:"auto_withdraw_time"`
 	//开发增强类
 	DevlopAcDir string `yaml:"develop_access_token_dir"`
 	DevBotid    string `yaml:"develop_bot_id"`
@@ -1955,6 +1958,16 @@ func GetEnters() []string {
 	return nil // 返回nil，如果instance为nil
 }
 
+// 获取EntersExcept
+func GetEntersExcept() []string {
+	mu.Lock()
+	defer mu.Unlock()
+	if instance != nil {
+		return instance.Settings.EntersExcept
+	}
+	return nil // 返回nil，如果instance为nil
+}
+
 // 获取 LinkPrefix
 func GetLinkPrefix() string {
 	mu.Lock()
@@ -2215,4 +2228,28 @@ func GetUploadPicV2Base64() bool {
 		return false
 	}
 	return instance.Settings.UploadPicV2Base64
+}
+
+// 获取 AutoWithdraw 数组
+func GetAutoWithdraw() []string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get AutoWithdraw.")
+		return nil
+	}
+	return instance.Settings.AutoWithdraw
+}
+
+// 获取 GetAutoWithdrawTime  数量
+func GetAutoWithdrawTime() int {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get AutoWithdrawTime.")
+		return 0
+	}
+	return instance.Settings.AutoWithdrawTime
 }
