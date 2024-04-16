@@ -61,7 +61,8 @@ func recordStats(receivedIncrement int, sentIncrement int) {
 
 		updateCounter(b, messageReceivedKey, receivedIncrement)
 		updateCounter(b, messageSentKey, sentIncrement)
-		b.Put([]byte(lastMessageTimeKey), []byte(today+" "+now.Format(time.RFC3339)))
+		// Ensure the time format is RFC3339 and only store date and time
+		b.Put([]byte(lastMessageTimeKey), []byte(now.Format(time.RFC3339)))
 
 		return nil
 	})
@@ -98,19 +99,13 @@ func getInt(b *bbolt.Bucket, key string) int {
 }
 
 func getLastMessageTime(b *bbolt.Bucket) int64 {
-	lastTimeBytes := b.Get([]byte("lastMessageTimeKey")) // 确保使用正确的键
+	lastTimeBytes := b.Get([]byte("lastMessageTime")) // 确保使用正确的键
 	if lastTimeBytes == nil {
 		return 0 // 如果键不存在或值为空，直接返回0
 	}
 
-	// 将字节切片转换为字符串，并尝试按空格分割
-	splitResult := strings.Split(string(lastTimeBytes), " ")
-	if len(splitResult) < 2 {
-		return 0 // 如果没有足够的分割结果，返回0
-	}
-
 	// 安全地解析时间
-	lastTime, err := time.Parse(time.RFC3339, splitResult[1])
+	lastTime, err := time.Parse(time.RFC3339, string(lastTimeBytes))
 	if err != nil {
 		return 0 // 如果解析时间出错，返回0
 	}
