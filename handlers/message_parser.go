@@ -250,6 +250,8 @@ func SendGuildResponse(client callapi.Client, err error, message *callapi.Action
 			return "", nil
 		}
 		response.Data.MessageID = int(messageID64)
+		// 发送成功 增加今日发信息数
+		botstats.RecordMessageSent()
 	} else {
 		// Default ID handling
 		response.Data.MessageID = 123
@@ -306,6 +308,8 @@ func SendC2CResponse(client callapi.Client, err error, message *callapi.ActionMe
 			return "", nil
 		}
 		response.Data.MessageID = int(messageID64)
+		// 发送成功 增加今日发信息数
+		botstats.RecordMessageSent()
 	} else {
 		// Default ID handling
 		response.Data.MessageID = 123
