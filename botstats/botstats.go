@@ -1,11 +1,14 @@
 package botstats
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"go.etcd.io/bbolt"
 )
 
@@ -47,6 +50,10 @@ func RecordMessageSent() {
 
 // 收到增量 发出增量
 func recordStats(receivedIncrement int, sentIncrement int) {
+	if db == nil {
+		mylog.Printf("recordStats db is nil")
+		return
+	}
 	db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(bucketName))
 		now := time.Now()
@@ -82,14 +89,23 @@ func updateCounter(b *bbolt.Bucket, key string, increment int) {
 func GetStats() (int, int, int64, error) {
 	var messageReceived, messageSent int
 	var lastMessageTime int64
+	if db == nil {
+		return 0, 0, 0, errors.New("database is not initialized")
+	}
 	err := db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(bucketName))
+		if b == nil {
+			return fmt.Errorf("bucket %s not found", bucketName)
+		}
 		messageReceived = getInt(b, messageReceivedKey)
 		messageSent = getInt(b, messageSentKey)
 		lastMessageTime = getLastMessageTime(b)
 		return nil
 	})
-	return messageReceived, messageSent, lastMessageTime, err
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	return messageReceived, messageSent, lastMessageTime, nil
 }
 
 func getInt(b *bbolt.Bucket, key string) int {
