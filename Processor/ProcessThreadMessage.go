@@ -38,8 +38,10 @@ func (p *Processors) ProcessThreadMessage(data *dto.WSThreadData) error {
 		//帖子不需要
 		//转换appid
 		AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
-		//构造echo
-		echostr := AppIDString + "_" + strconv.FormatInt(s, 10)
+		// 获取当前时间的13位毫秒级时间戳
+		currentTimeMillis := time.Now().UnixNano() / 1e6
+		// 构造echostr，包括AppID，原始的s变量和当前时间戳
+		echostr := fmt.Sprintf("%s_%d_%d", AppIDString, s, currentTimeMillis)
 		//映射str的userid到int
 		userid64, err := idmap.StoreIDv2(data.AuthorID)
 		if err != nil {
@@ -147,8 +149,10 @@ func (p *Processors) ProcessThreadMessage(data *dto.WSThreadData) error {
 			//帖子不需要
 			//转换appid
 			AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
-			//构造echo
-			echostr := AppIDString + "_" + strconv.FormatInt(s, 10)
+			// 获取当前时间的13位毫秒级时间戳
+			currentTimeMillis := time.Now().UnixNano() / 1e6
+			// 构造echostr，包括AppID，原始的s变量和当前时间戳
+			echostr := fmt.Sprintf("%s_%d_%d", AppIDString, s, currentTimeMillis)
 			//映射str的userid到int
 			userid64, err := idmap.StoreIDv2(data.AuthorID)
 			if err != nil {
@@ -287,8 +291,10 @@ func (p *Processors) ProcessThreadMessage(data *dto.WSThreadData) error {
 			if err != nil {
 				mylog.Printf("Error parseContent Forum: %v", err)
 			}
-			//构造echo
-			echostr := AppIDString + "_" + strconv.FormatInt(s, 10)
+			// 获取当前时间的13位毫秒级时间戳
+			currentTimeMillis := time.Now().UnixNano() / 1e6
+			// 构造echostr，包括AppID，原始的s变量和当前时间戳
+			echostr := fmt.Sprintf("%s_%d_%d", AppIDString, s, currentTimeMillis)
 			//映射str的messageID到int
 			messageID64, err := idmap.StoreIDv2(data.ID)
 			if err != nil {
