@@ -24,8 +24,12 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 	// 转换appid
 	AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 
-	// 构造echo
-	echostr := AppIDString + "_" + strconv.FormatInt(s, 10)
+	// 获取当前时间的13位毫秒级时间戳
+	currentTimeMillis := time.Now().UnixNano() / 1e6
+
+	// 构造echostr，包括AppID，原始的s变量和当前时间戳
+	echostr := fmt.Sprintf("%s_%d_%d", AppIDString, s, currentTimeMillis)
+
 	var userid64 int64
 	var GroupID64 int64
 	var err error

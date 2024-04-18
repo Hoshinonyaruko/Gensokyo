@@ -35,7 +35,10 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 
 		//转换appidstring
 		AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
-		echostr := AppIDString + "_" + strconv.FormatInt(s, 10)
+		// 获取当前时间的13位毫秒级时间戳
+		currentTimeMillis := time.Now().UnixNano() / 1e6
+		// 构造echostr，包括AppID，原始的s变量和当前时间戳
+		echostr := fmt.Sprintf("%s_%d_%d", AppIDString, s, currentTimeMillis)
 
 		var userid64 int64
 		var ChannelID64 int64
@@ -183,8 +186,10 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 			p.HandleFrameworkCommand(messageText, data, "guild_private")
 			//转换appid
 			AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
-			//构造echo
-			echostr := AppIDString + "_" + strconv.FormatInt(s, 10)
+			// 获取当前时间的13位毫秒级时间戳
+			currentTimeMillis := time.Now().UnixNano() / 1e6
+			// 构造echostr，包括AppID，原始的s变量和当前时间戳
+			echostr := fmt.Sprintf("%s_%d_%d", AppIDString, s, currentTimeMillis)
 			//映射str的userid到int
 			userid64, err := idmap.StoreIDv2(data.Author.ID)
 			if err != nil {
@@ -271,16 +276,16 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 			var err error
 			if config.GetIdmapPro() {
 				//将真实id转为int userid64
-				_, _, err = idmap.StoreIDv2Pro(data.ChannelID, data.Author.ID)
+				ChannelID64, userid64, err = idmap.StoreIDv2Pro(data.ChannelID, data.Author.ID)
 				if err != nil {
 					mylog.Fatalf("Error storing ID: %v", err)
 				}
 				//将真实id转为int userid64
-				userid64, err = idmap.StoreIDv2(data.Author.ID)
+				_, err = idmap.StoreIDv2(data.Author.ID)
 				if err != nil {
 					mylog.Fatalf("Error storing ID: %v", err)
 				}
-				ChannelID64, err = idmap.StoreIDv2(data.ChannelID)
+				_, err = idmap.StoreIDv2(data.ChannelID)
 				if err != nil {
 					mylog.Printf("Error storing ID: %v", err)
 					return nil
@@ -319,8 +324,10 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 			p.HandleFrameworkCommand(messageText, data, "guild_private")
 			//转换appid
 			AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
-			//构造echo
-			echostr := AppIDString + "_" + strconv.FormatInt(s, 10)
+			// 获取当前时间的13位毫秒级时间戳
+			currentTimeMillis := time.Now().UnixNano() / 1e6
+			// 构造echostr，包括AppID，原始的s变量和当前时间戳
+			echostr := fmt.Sprintf("%s_%d_%d", AppIDString, s, currentTimeMillis)
 
 			//userid := int(userid64)
 			//映射str的messageID到int
