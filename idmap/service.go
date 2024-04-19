@@ -18,6 +18,7 @@ import (
 
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
+	"github.com/hoshinonyaruko/gensokyo/structs"
 	"go.etcd.io/bbolt"
 )
 
@@ -29,10 +30,11 @@ var (
 )
 
 const (
-	DBName       = "idmap.db"
-	BucketName   = "ids"
-	ConfigBucket = "config"
-	CounterKey   = "currentRow"
+	DBName         = "idmap.db"
+	BucketName     = "ids"
+	ConfigBucket   = "config"
+	UserInfoBucket = "UserInfo"
+	CounterKey     = "currentRow"
 )
 
 var db *bbolt.DB
@@ -41,15 +43,32 @@ var ErrKeyNotFound = errors.New("key not found")
 
 func InitializeDB() {
 	var err error
+	// 打开数据库文件
 	db, err = bbolt.Open(DBName, 0600, nil)
 	if err != nil {
 		log.Fatalf("Error opening DB: %v", err)
 	}
 
-	db.Update(func(tx *bbolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists([]byte(BucketName))
-		return err
+	// 在数据库中创建必要的buckets
+	err = db.Update(func(tx *bbolt.Tx) error {
+		// 创建默认的Bucket
+		if _, err := tx.CreateBucketIfNotExists([]byte(BucketName)); err != nil {
+			return err
+		}
+		// 创建存储用户信息的Bucket
+		if _, err := tx.CreateBucketIfNotExists([]byte(UserInfoBucket)); err != nil {
+			return err
+		}
+		// 创建配置数据的Bucket
+		if _, err := tx.CreateBucketIfNotExists([]byte(ConfigBucket)); err != nil {
+			return err
+		}
+		return nil
 	})
+
+	if err != nil {
+		log.Fatalf("Error setting up buckets: %v", err)
+	}
 }
 
 func CloseDB() {
@@ -530,19 +549,19 @@ func RetrieveRowByIDv2(rowid string) (string, error) {
 // 根据a 以b为类别 储存c
 func WriteConfig(sectionName, keyName, value string) error {
 	return db.Update(func(tx *bbolt.Tx) error {
-		b, err := tx.CreateBucketIfNotExists([]byte(ConfigBucket))
-		if err != nil {
-			mylog.Printf("Error creating or accessing bucket: %v", err)
-			return fmt.Errorf("failed to access or create bucket %s: %w", ConfigBucket, err)
+		b := tx.Bucket([]byte(ConfigBucket)) // 直接获取bucket
+		if b == nil {
+			mylog.Printf("Bucket %s not found", ConfigBucket)
+			return fmt.Errorf("bucket %s not found", ConfigBucket)
 		}
 
 		key := joinSectionAndKey(sectionName, keyName)
-		err = b.Put(key, []byte(value))
+		err := b.Put(key, []byte(value))
 		if err != nil {
 			mylog.Printf("Error putting data into bucket with key %s: %v", key, err)
 			return fmt.Errorf("failed to put data into bucket with key %s: %w", key, err)
 		}
-		//mylog.Printf("Data saved successfully with key %s,value %s", key, value)
+		//log.Printf("Data saved successfully with key %s, value %s", key, value)
 		return nil
 	})
 }
@@ -1310,4 +1329,54 @@ func UpdateKeysWithNewID(id, newID string) error {
 
 		return nil
 	})
+}
+
+// StoreUserInfo 存储用户信息
+func StoreUserInfo(rawID string, userInfo structs.FriendData) error {
+	return db.Update(func(tx *bbolt.Tx) error {
+		b := tx.Bucket([]byte(UserInfoBucket))
+		key := fmt.Sprintf("%s:%s", rawID, userInfo.UserID) // 创建复合键
+		if v := b.Get([]byte(key)); v != nil {
+			return fmt.Errorf("duplicate key: %s", key)
+		}
+
+		// 序列化用户信息作为值
+		value, err := json.Marshal(userInfo)
+		if err != nil {
+			return fmt.Errorf("could not encode user info: %s", err)
+		}
+
+		// 存储键值对
+		if err := b.Put([]byte(key), value); err != nil {
+			return fmt.Errorf("could not store user info: %s", err)
+		}
+		return nil
+	})
+}
+
+// ListAllUsers 返回数据库中所有用户的信息
+func ListAllUsers() ([]structs.FriendData, error) {
+	var users []structs.FriendData
+	err := db.View(func(tx *bbolt.Tx) error {
+		b := tx.Bucket([]byte(UserInfoBucket))
+		if b == nil {
+			return fmt.Errorf("bucket %s not found", UserInfoBucket)
+		}
+
+		// 遍历bucket中的所有键值对
+		err := b.ForEach(func(key, value []byte) error {
+			var user structs.FriendData
+			if err := json.Unmarshal(value, &user); err != nil {
+				log.Printf("Error unmarshaling user data: %v", err)
+				return err
+			}
+			users = append(users, user)
+			return nil
+		})
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
 }

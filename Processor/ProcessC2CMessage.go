@@ -12,6 +12,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/handlers"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
+	"github.com/hoshinonyaruko/gensokyo/structs"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/websocket/client"
 )
@@ -146,6 +147,15 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 		privateMsgMap := structToMap(privateMsg)
 		//上报信息到onebotv11应用端(正反ws)
 		p.BroadcastMessageToAll(privateMsgMap)
+		//组合FriendData
+		struserid := strconv.FormatInt(userid64, 10)
+		userdata := structs.FriendData{
+			Nickname: "",
+			Remark:   "",
+			UserID:   struserid,
+		}
+		//缓存私信好友列表
+		idmap.StoreUserInfo(data.Author.ID, userdata)
 	} else {
 		//将私聊信息转化为群信息(特殊需求情况下)
 
@@ -267,6 +277,17 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 		groupMsgMap := structToMap(groupMsg)
 		//上报信息到onebotv11应用端(正反ws)
 		p.BroadcastMessageToAll(groupMsgMap)
+
+		//组合FriendData
+		struserid := strconv.FormatInt(userid64, 10)
+		userdata := structs.FriendData{
+			Nickname: "",
+			Remark:   "",
+			UserID:   struserid,
+		}
+		//缓存私信好友列表
+		idmap.StoreUserInfo(data.Author.ID, userdata)
 	}
+
 	return nil
 }
