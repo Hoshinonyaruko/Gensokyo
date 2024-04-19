@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
+	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
+	"github.com/hoshinonyaruko/gensokyo/structs"
 	"github.com/tencent-connect/botgo/openapi"
 )
 
@@ -13,30 +15,24 @@ func init() {
 }
 
 type APIOutput struct {
-	Data    []FriendData `json:"data"`
-	Message string       `json:"message"`
-	RetCode int          `json:"retcode"`
-	Status  string       `json:"status"`
-	Echo    interface{}  `json:"echo"`
-}
-
-type FriendData struct {
-	Nickname string `json:"nickname"`
-	Remark   string `json:"remark"`
-	UserID   string `json:"user_id"`
+	Data    []structs.FriendData `json:"data"`
+	Message string               `json:"message"`
+	RetCode int                  `json:"retcode"`
+	Status  string               `json:"status"`
+	Echo    interface{}          `json:"echo"`
 }
 
 func HandleGetFriendList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
 	var output APIOutput
 
-	for i := 0; i < 10; i++ { // Assume we want to loop 10 times to create friend data
-		data := FriendData{
-			Nickname: "小狐狸",
-			Remark:   "",
-			UserID:   "2022717137",
-		}
-		output.Data = append(output.Data, data)
+	// 从数据库获取所有用户信息
+	users, err := idmap.ListAllUsers()
+	if err != nil {
+		mylog.Fatalf("Failed to list users: %v", err)
 	}
+
+	// 添加数据库中读取的用户数据到output.Data
+	output.Data = append(output.Data, users...)
 
 	output.Message = ""
 	output.RetCode = 0
@@ -48,7 +44,7 @@ func HandleGetFriendList(client callapi.Client, api openapi.OpenAPI, apiv2 opena
 	outputMap := structToMap(output)
 
 	// Send the map
-	err := client.SendMessage(outputMap) //发回去
+	err = client.SendMessage(outputMap) //发回去
 	if err != nil {
 		mylog.Printf("error sending friend list via wsclient: %v", err)
 	}

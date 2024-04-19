@@ -52,6 +52,10 @@ func CombinedMiddleware(api openapi.OpenAPI, apiV2 openapi.OpenAPI) gin.HandlerF
 			handleGetGroupList(c, api, apiV2)
 			return
 		}
+		if c.Request.URL.Path == "/get_friend_list" {
+			handleGetFriendList(c, api, apiV2)
+			return
+		}
 		if c.Request.URL.Path == "/put_interaction" {
 			handlePutInteraction(c, api, apiV2)
 			return
@@ -347,6 +351,29 @@ func handleGetGroupList(c *gin.Context, api openapi.OpenAPI, apiV2 openapi.OpenA
 
 	// 调用处理函数
 	retmsg, err := handlers.GetGroupList(client, api, apiV2, message)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 返回处理结果
+	c.Header("Content-Type", "application/json")
+	c.String(http.StatusOK, retmsg)
+}
+
+// handleGetFriendList 处理获取好友列表
+func handleGetFriendList(c *gin.Context, api openapi.OpenAPI, apiV2 openapi.OpenAPI) {
+	var retmsg string
+
+	// 使用解析后的参数处理请求
+	client := &HttpAPIClient{}
+	// 创建 ActionMessage 实例
+	message := callapi.ActionMessage{
+		Action: "get_friend_list",
+	}
+
+	// 调用处理函数
+	retmsg, err := handlers.HandleGetFriendList(client, api, apiV2, message)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
