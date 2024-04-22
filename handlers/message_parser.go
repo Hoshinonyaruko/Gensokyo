@@ -321,6 +321,7 @@ func SendC2CResponse(client callapi.Client, err error, message *callapi.ActionMe
 	}
 	response.UserID = userid64
 	response.Echo = message.Echo
+	response.GuildID = guildID
 	if err != nil {
 		response.Message = err.Error() // 可选：在响应中添加错误消息
 		//response.RetCode = -1          // 可以是任何非零值，表示出错
