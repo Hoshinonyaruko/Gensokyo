@@ -978,13 +978,8 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 
 					// 从trimmedPrefix中去除前后空格(可能会有bug)
 					trimmedPrefix = strings.TrimSpace(trimmedPrefix)
-
-					if trimmedPrefix == "" {
-						matched = false
-						break
-					}
-
-					if strings.HasPrefix(messageText, trimmedPrefix) {
+					// trimmedPrefix如果是""就会导致任意内容都是true,所以不能是""
+					if strings.HasPrefix(messageText, trimmedPrefix) && trimmedPrefix != "" {
 						matched = true
 						break
 					}
