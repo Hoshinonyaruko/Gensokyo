@@ -93,15 +93,23 @@ func (p *Processors) ProcessGroupAddBot(data *dto.GroupAddBotEvent) error {
 		mylog.Printf("Invalid type for timestamp: %T", v)
 		return nil
 	}
-  
+
 	mylog.Printf("Bot被[%v]邀请进入群[%v]", userid64, GroupID64)
+
+	var selfid64 int64
+	if config.GetUseUin() {
+		selfid64 = config.GetUinint64()
+	} else {
+		selfid64 = int64(p.Settings.AppID)
+	}
+
 	Request = GroupRequestEvent{
 		Comment:     "",
 		Flag:        "",
 		GroupID:     GroupID64,
 		PostType:    "request",
 		RequestType: "group",
-		SelfID:      int64(config.GetAppID()),
+		SelfID:      selfid64,
 		SubType:     "invite",
 		Time:        timestampInt64,
 		UserID:      userid64,
@@ -111,7 +119,7 @@ func (p *Processors) ProcessGroupAddBot(data *dto.GroupAddBotEvent) error {
 		NoticeType: "group_increase",
 		OperatorID: 0,
 		PostType:   "notice",
-		SelfID:     int64(config.GetAppID()),
+		SelfID:     selfid64,
 		SubType:    "invite",
 		Time:       timestampInt64,
 		UserID:     userid64,
