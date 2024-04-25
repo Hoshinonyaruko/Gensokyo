@@ -53,7 +53,7 @@ func (client *WebSocketClient) SendMessage(message map[string]interface{}) error
 }
 
 // 处理onebotv11应用端发来的信息
-func (client *WebSocketClient) handleIncomingMessages(ctx context.Context, cancel context.CancelFunc) {
+func (client *WebSocketClient) handleIncomingMessages(cancel context.CancelFunc) {
 	for {
 		_, msg, err := client.conn.ReadMessage()
 		if err != nil {
@@ -155,7 +155,7 @@ func (client *WebSocketClient) Reconnect() {
 	client.cancel = cancel
 	heartbeatinterval := config.GetHeartBeatInterval()
 	go client.sendHeartbeat(ctx, client.botID, heartbeatinterval)
-	go client.handleIncomingMessages(ctx, cancel)
+	go client.handleIncomingMessages(cancel)
 
 	defer func() {
 		client.isReconnecting = false
@@ -337,7 +337,7 @@ func NewWebSocketClient(urlStr string, botID uint64, api openapi.OpenAPI, apiv2 
 	client.cancel = cancel
 	heartbeatinterval := config.GetHeartBeatInterval()
 	go client.sendHeartbeat(ctx, botID, heartbeatinterval)
-	go client.handleIncomingMessages(ctx, cancel)
+	go client.handleIncomingMessages(cancel)
 
 	return client, nil
 }

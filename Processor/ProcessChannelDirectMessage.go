@@ -120,13 +120,20 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 			IsBindedUserId = idmap.CheckValuev2(userid64)
 		}
 
+		var selfid64 int64
+		if config.GetUseUin() {
+			selfid64 = config.GetUinint64()
+		} else {
+			selfid64 = int64(p.Settings.AppID)
+		}
+
 		privateMsg := OnebotPrivateMessage{
 			RawMessage:  messageText,
 			Message:     segmentedMessages,
 			MessageID:   messageID,
 			MessageType: "private",
 			PostType:    "message",
-			SelfID:      int64(p.Settings.AppID),
+			SelfID:      selfid64,
 			UserID:      userid64,
 			Sender: PrivateSender{
 				Nickname: data.Member.Nick,
@@ -196,6 +203,12 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 				mylog.Printf("Error storing ID: %v", err)
 				return nil
 			}
+			var selfid64 int64
+			if config.GetUseUin() {
+				selfid64 = config.GetUinint64()
+			} else {
+				selfid64 = int64(p.Settings.AppID)
+			}
 			//OnebotChannelMessage
 			onebotMsg := OnebotChannelMessage{
 				ChannelID:   data.ChannelID,
@@ -205,7 +218,7 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 				MessageID:   data.ID,
 				MessageType: "guild",
 				PostType:    "message",
-				SelfID:      int64(p.Settings.AppID),
+				SelfID:      selfid64,
 				UserID:      userid64,
 				SelfTinyID:  "",
 				Sender: Sender{
@@ -348,6 +361,14 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 			} else {
 				IsBindedUserId = idmap.CheckValuev2(userid64)
 			}
+
+			var selfid64 int64
+			if config.GetUseUin() {
+				selfid64 = config.GetUinint64()
+			} else {
+				selfid64 = int64(p.Settings.AppID)
+			}
+
 			groupMsg := OnebotGroupMessage{
 				RawMessage:  messageText,
 				Message:     segmentedMessages,
@@ -355,7 +376,7 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 				GroupID:     ChannelID64,
 				MessageType: "group",
 				PostType:    "message",
-				SelfID:      int64(p.Settings.AppID),
+				SelfID:      selfid64,
 				UserID:      userid64,
 				Sender: Sender{
 					Nickname: data.Member.Nick,

@@ -97,13 +97,21 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 		} else {
 			IsBindedUserId = idmap.CheckValuev2(userid64)
 		}
+
+		var selfid64 int64
+		if config.GetUseUin() {
+			selfid64 = config.GetUinint64()
+		} else {
+			selfid64 = int64(p.Settings.AppID)
+		}
+
 		privateMsg := OnebotPrivateMessage{
 			RawMessage:  messageText,
 			Message:     segmentedMessages,
 			MessageID:   messageID,
 			MessageType: "private",
 			PostType:    "message",
-			SelfID:      int64(p.Settings.AppID),
+			SelfID:      selfid64,
 			UserID:      userid64,
 			Sender: PrivateSender{
 				Nickname: "", //这个不支持,但加机器人好友,会收到一个事件,可以对应储存获取,用idmaps可以做到.
@@ -205,6 +213,14 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 		messageID := int(messageID64)
 		//todo 判断array模式 然后对Message处理成array格式
 		IsBindedUserId := idmap.CheckValue(data.Author.ID, userid64)
+
+		var selfid64 int64
+		if config.GetUseUin() {
+			selfid64 = config.GetUinint64()
+		} else {
+			selfid64 = int64(p.Settings.AppID)
+		}
+
 		groupMsg := OnebotGroupMessage{
 			RawMessage:  messageText,
 			Message:     messageText,
@@ -212,7 +228,7 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 			GroupID:     userid64,
 			MessageType: "group",
 			PostType:    "message",
-			SelfID:      int64(p.Settings.AppID),
+			SelfID:      selfid64,
 			UserID:      userid64,
 			Sender: Sender{
 				UserID: userid64,
