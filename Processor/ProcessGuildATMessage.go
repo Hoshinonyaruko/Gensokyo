@@ -54,6 +54,12 @@ func (p *Processors) ProcessGuildATMessage(data *dto.WSATMessageData) error {
 		if config.GetArrayValue() {
 			segmentedMessages = handlers.ConvertToSegmentedMessage(data)
 		}
+		var selfid64 int64
+		if config.GetUseUin() {
+			selfid64 = config.GetUinint64()
+		} else {
+			selfid64 = int64(p.Settings.AppID)
+		}
 		// 处理onebot_channel_message逻辑
 		onebotMsg := OnebotChannelMessage{
 			ChannelID:   data.ChannelID,
@@ -63,7 +69,7 @@ func (p *Processors) ProcessGuildATMessage(data *dto.WSATMessageData) error {
 			MessageID:   data.ID,
 			MessageType: "guild",
 			PostType:    "message",
-			SelfID:      int64(p.Settings.AppID),
+			SelfID:      selfid64,
 			UserID:      userid64,
 			SelfTinyID:  "0",
 			Sender: Sender{
@@ -208,6 +214,12 @@ func (p *Processors) ProcessGuildATMessage(data *dto.WSATMessageData) error {
 			IsBindedUserId = idmap.CheckValuev2(userid64)
 			IsBindedGroupId = idmap.CheckValuev2(ChannelID64)
 		}
+		var selfid64 int64
+		if config.GetUseUin() {
+			selfid64 = config.GetUinint64()
+		} else {
+			selfid64 = int64(p.Settings.AppID)
+		}
 		groupMsg := OnebotGroupMessage{
 			RawMessage:  messageText,
 			Message:     segmentedMessages,
@@ -215,7 +227,7 @@ func (p *Processors) ProcessGuildATMessage(data *dto.WSATMessageData) error {
 			GroupID:     ChannelID64,
 			MessageType: "group",
 			PostType:    "message",
-			SelfID:      int64(p.Settings.AppID),
+			SelfID:      selfid64,
 			UserID:      userid64,
 			Sender: Sender{
 				Nickname: data.Member.Nick,

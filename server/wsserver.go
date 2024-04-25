@@ -93,7 +93,13 @@ func wsHandler(api openapi.OpenAPI, apiV2 openapi.OpenAPI, p *Processor.Processo
 	p.WsServerClients = append(p.WsServerClients, client)
 
 	// 获取botID
-	botID := config.GetAppID()
+
+	var botID uint64
+	if config.GetUseUin() {
+		botID = uint64(config.GetUinint64())
+	} else {
+		botID = config.GetAppID()
+	}
 
 	// 发送连接成功的消息
 	message := map[string]interface{}{

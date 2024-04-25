@@ -64,12 +64,19 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 			return nil
 		}
 	}
+	var selfid64 int64
+	if config.GetUseUin() {
+		selfid64 = config.GetUinint64()
+	} else {
+		selfid64 = int64(p.Settings.AppID)
+	}
+
 	if !config.GetGlobalInteractionToMessage() {
 		notice := &OnebotInteractionNotice{
 			GroupID:    GroupID64,
 			NoticeType: "interaction",
 			PostType:   "notice",
-			SelfID:     int64(p.Settings.AppID),
+			SelfID:     selfid64,
 			SubType:    "create",
 			Time:       time.Now().Unix(),
 			UserID:     userid64,
@@ -95,6 +102,12 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 				return nil
 			}
 			messageID := int(messageID64)
+			var selfid64 int64
+			if config.GetUseUin() {
+				selfid64 = config.GetUinint64()
+			} else {
+				selfid64 = int64(p.Settings.AppID)
+			}
 			groupMsg := OnebotGroupMessage{
 				RawMessage:  data.Data.Resolved.ButtonData,
 				Message:     segmentedMessages,
@@ -102,7 +115,7 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 				GroupID:     GroupID64,
 				MessageType: "group",
 				PostType:    "message",
-				SelfID:      int64(p.Settings.AppID),
+				SelfID:      selfid64,
 				UserID:      userid64,
 				Sender: Sender{
 					UserID: userid64,
@@ -131,7 +144,12 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 			//群回调
 			newdata := ConvertInteractionToMessage(data)
 			segmentedMessages := handlers.ConvertToSegmentedMessage(newdata)
-
+			var selfid64 int64
+			if config.GetUseUin() {
+				selfid64 = config.GetUinint64()
+			} else {
+				selfid64 = int64(p.Settings.AppID)
+			}
 			onebotMsg := OnebotChannelMessage{
 				ChannelID:   data.ChannelID,
 				GuildID:     data.GuildID,
@@ -140,7 +158,7 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 				MessageID:   data.ID,
 				MessageType: "guild",
 				PostType:    "message",
-				SelfID:      int64(p.Settings.AppID),
+				SelfID:      selfid64,
 				UserID:      userid64,
 				SelfTinyID:  "0",
 				Sender: Sender{

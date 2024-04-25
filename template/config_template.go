@@ -13,6 +13,7 @@ settings:
   #基础设置
   app_id: 12345                                      # 你的应用ID
   uin : 0                                            # 你的机器人QQ号,点击机器人资料卡查看  
+  use_uin : false                                    # false=使用appid作为机器人id,true=使用机器人QQ号,需设置正确的uin
   token: "<YOUR_APP_TOKEN>"                          # 你的应用令牌
   client_secret: "<YOUR_CLIENT_SECRET>"              # 你的客户端密钥
   shard_count: 1                    #分片数量 默认1
@@ -110,6 +111,7 @@ settings:
   enters_except : ["",""]           #自动md卡片点击直接触发,例外,对子按钮生效.
   auto_withdraw : []                #仅当应用端实现了双向echo可用.实现不难,可以去找对应开发者去提需求.
   auto_withdraw_time : 30           #30秒
+  visual_prefixs_bypass : []        #要绕过二级指令白名单的指令,比如需要用户回答自定义内容的指令.
 
   visual_prefixs :                  #虚拟前缀 与white_prefixs配合使用 处理流程自动忽略该前缀 remove_prefix remove_at 需为true时生效
   - prefix: ""                      #虚拟前缀开头 例 你有3个指令 帮助 测试 查询 将 prefix 设置为 工具类 后 则可通过 工具类 帮助 触发机器人

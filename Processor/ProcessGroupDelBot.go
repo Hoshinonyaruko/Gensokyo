@@ -53,12 +53,19 @@ func (p *Processors) ProcessGroupDelBot(data *dto.GroupAddBotEvent) error {
 	mylog.Printf("Bot被[%v]从群[%v]移出", userid64, GroupID64)
 	//从数据库删除群数据(仅删除类型缓存,再次加入会刷新)
 	idmap.DeleteConfigv2(fmt.Sprint(GroupID64), "type")
+
+	var selfid64 int64
+	if config.GetUseUin() {
+		selfid64 = config.GetUinint64()
+	} else {
+		selfid64 = int64(p.Settings.AppID)
+	}
 	Notice = GroupNoticeEvent{
 		GroupID:    GroupID64,
 		NoticeType: "group_decrease",
 		OperatorID: 0,
 		PostType:   "notice",
-		SelfID:     int64(config.GetAppID()),
+		SelfID:     selfid64,
 		SubType:    "kick_me",
 		Time:       timestampInt64,
 		UserID:     userid64,

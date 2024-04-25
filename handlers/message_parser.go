@@ -740,6 +740,7 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 		//处理前 先去前后空
 		messageText = strings.TrimSpace(msg.Content)
 	}
+	var originmessageText = messageText
 	//mylog.Printf("1[%v]", messageText)
 
 	// 将messageText里的BotID替换成AppID
@@ -962,6 +963,15 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 					matched = true
 				} else {
 					matched = false
+					// 调用 GetVisualPrefixsBypass 获取前缀数组
+					visualPrefixes := config.GetVisualPrefixsBypass()
+					// 判断 messageText 是否以数组中的任一前缀开头
+					for _, prefix := range visualPrefixes {
+						if strings.HasPrefix(originmessageText, prefix) {
+							matched = true
+							break
+						}
+					}
 				}
 			} else {
 				// 遍历白名单数组，检查是否有匹配项
@@ -990,6 +1000,7 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 			if !matched {
 				messageText = ""
 				SendMessage(matchedPrefix.NoWhiteResponse, data, msgtype, api, apiv2)
+				return messageText //2024-4-25新增,可能会有bug.观察
 			}
 		}
 	}

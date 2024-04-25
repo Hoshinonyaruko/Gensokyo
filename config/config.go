@@ -45,6 +45,7 @@ type Settings struct {
 	ClientSecret string `yaml:"client_secret"`
 	ShardCount   int    `yaml:"shard_count"`
 	ShardID      int    `yaml:"shard_id"`
+	UseUin       bool   `yaml:"use_uin"`
 	//事件订阅类
 	TextIntent []string `yaml:"text_intent"`
 	//转换类
@@ -96,25 +97,26 @@ type Settings struct {
 	Username     string `yaml:"server_user_name"`
 	Password     string `yaml:"server_user_password"`
 	//指令魔法类
-	RemovePrefix      bool                 `yaml:"remove_prefix"`
-	RemoveAt          bool                 `yaml:"remove_at"`
-	RemoveBotAtGroup  bool                 `yaml:"remove_bot_at_group"`
-	AddAtGroup        bool                 `yaml:"add_at_group"`
-	WhitePrefixMode   bool                 `yaml:"white_prefix_mode"`
-	VwhitePrefixMode  bool                 `yaml:"v_white_prefix_mode"`
-	WhitePrefixs      []string             `yaml:"white_prefixs"`
-	WhiteBypass       []int64              `yaml:"white_bypass"`
-	WhiteEnable       []bool               `yaml:"white_enable"`
-	WhiteBypassRevers bool                 `yaml:"white_bypass_reverse"`
-	NoWhiteResponse   string               `yaml:"No_White_Response"`
-	BlackPrefixMode   bool                 `yaml:"black_prefix_mode"`
-	BlackPrefixs      []string             `yaml:"black_prefixs"`
-	Alias             []string             `yaml:"alias"`
-	Enters            []string             `yaml:"enters"`
-	EntersExcept      []string             `yaml:"enters_except"`
-	VisualPrefixs     []VisualPrefixConfig `yaml:"visual_prefixs"`
-	AutoWithdraw      []string             `yaml:"auto_withdraw"`
-	AutoWithdrawTime  int                  `yaml:"auto_withdraw_time"`
+	RemovePrefix        bool                 `yaml:"remove_prefix"`
+	RemoveAt            bool                 `yaml:"remove_at"`
+	RemoveBotAtGroup    bool                 `yaml:"remove_bot_at_group"`
+	AddAtGroup          bool                 `yaml:"add_at_group"`
+	WhitePrefixMode     bool                 `yaml:"white_prefix_mode"`
+	VwhitePrefixMode    bool                 `yaml:"v_white_prefix_mode"`
+	WhitePrefixs        []string             `yaml:"white_prefixs"`
+	WhiteBypass         []int64              `yaml:"white_bypass"`
+	WhiteEnable         []bool               `yaml:"white_enable"`
+	WhiteBypassRevers   bool                 `yaml:"white_bypass_reverse"`
+	NoWhiteResponse     string               `yaml:"No_White_Response"`
+	BlackPrefixMode     bool                 `yaml:"black_prefix_mode"`
+	BlackPrefixs        []string             `yaml:"black_prefixs"`
+	Alias               []string             `yaml:"alias"`
+	Enters              []string             `yaml:"enters"`
+	EntersExcept        []string             `yaml:"enters_except"`
+	VisualPrefixs       []VisualPrefixConfig `yaml:"visual_prefixs"`
+	AutoWithdraw        []string             `yaml:"auto_withdraw"`
+	AutoWithdrawTime    int                  `yaml:"auto_withdraw_time"`
+	VisualPrefixsBypass []string             `yaml:"visual_prefixs_bypass"`
 	//开发增强类
 	DevlopAcDir string `yaml:"develop_access_token_dir"`
 	DevBotid    string `yaml:"develop_bot_id"`
@@ -1497,6 +1499,18 @@ func GetPostSecret() []string {
 	return instance.Settings.PostSecret
 }
 
+// 获取 VisualPrefixsBypass
+func GetVisualPrefixsBypass() []string {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to getVisualPrefixsBypass.")
+		return nil
+	}
+	return instance.Settings.VisualPrefixsBypass
+}
+
 // 获取 POST 最大重试次数数组
 func GetPostMaxRetries() []int {
 	mu.Lock()
@@ -1555,6 +1569,17 @@ func GetUrlToQrimage() bool {
 		return false
 	}
 	return instance.Settings.UrlToQrimage
+}
+
+func GetUseUin() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to UseUin value.")
+		return false
+	}
+	return instance.Settings.UseUin
 }
 
 // 获取GetQrSize的值
@@ -1924,6 +1949,16 @@ func GetKeyBoardID() string {
 		return ""
 	}
 	return instance.Settings.KeyBoardID
+}
+
+// 获取Uin int64
+func GetUinint64() int64 {
+	mu.Lock()
+	defer mu.Unlock()
+	if instance != nil {
+		return instance.Settings.Uin
+	}
+	return 0
 }
 
 // 获取Uin String

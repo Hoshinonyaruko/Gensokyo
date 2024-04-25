@@ -255,7 +255,13 @@ func main() {
 					attemptedConnections++ // 增加尝试连接的计数
 					go func(address string) {
 						retry := config.GetLaunchReconectTimes()
-						wsClient, err := wsclient.NewWebSocketClient(address, conf.Settings.AppID, api, apiV2, retry)
+						var BotID uint64
+						if config.GetUseUin() {
+							BotID = uint64(config.GetUinint64())
+						} else {
+							BotID = conf.Settings.AppID
+						}
+						wsClient, err := wsclient.NewWebSocketClient(address, BotID, api, apiV2, retry)
 						if err != nil {
 							log.Printf("Error creating WebSocketClient for address(连接到反向ws失败) %s: %v\n", address, err)
 							errorChan <- err

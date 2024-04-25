@@ -102,6 +102,13 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 		IsBindedUserId = idmap.CheckValuev2(userid64)
 		IsBindedGroupId = idmap.CheckValuev2(GroupID64)
 	}
+	var selfid64 int64
+	if config.GetUseUin() {
+		selfid64 = config.GetUinint64()
+	} else {
+		selfid64 = int64(p.Settings.AppID)
+	}
+
 	groupMsg := OnebotGroupMessage{
 		RawMessage:  messageText,
 		Message:     segmentedMessages,
@@ -109,7 +116,7 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 		GroupID:     GroupID64,
 		MessageType: "group",
 		PostType:    "message",
-		SelfID:      int64(p.Settings.AppID),
+		SelfID:      selfid64,
 		UserID:      userid64,
 		Sender: Sender{
 			UserID: userid64,
