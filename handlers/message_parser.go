@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hoshinonyaruko/gensokyo/acnode"
 	"github.com/hoshinonyaruko/gensokyo/botstats"
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/config"
@@ -410,6 +411,10 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 	case string:
 		mylog.Printf("params.message is a string\n")
 		messageText = message
+		// 直接应用替换规则
+		if config.GetEnableChangeWord() {
+			messageText = acnode.CheckWordOUT(messageText)
+		}
 	case []interface{}:
 		//多个映射组成的切片
 		mylog.Printf("params.message is a slice (segment_type_koishi)\n")
@@ -428,6 +433,10 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 			switch segmentType {
 			case "text":
 				segmentContent, _ = segmentMap["data"].(map[string]interface{})["text"].(string)
+				// 应用替换规则
+				if config.GetEnableChangeWord() {
+					segmentContent = acnode.CheckWordOUT(segmentContent)
+				}
 			case "image":
 				fileContent, _ := segmentMap["data"].(map[string]interface{})["file"].(string)
 				segmentContent = "[CQ:image,file=" + fileContent + "]"
@@ -490,6 +499,10 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 		switch messageType {
 		case "text":
 			messageText, _ = message["data"].(map[string]interface{})["text"].(string)
+			// 应用替换规则
+			if config.GetEnableChangeWord() {
+				messageText = acnode.CheckWordOUT(messageText)
+			}
 		case "image":
 			fileContent, _ := message["data"].(map[string]interface{})["file"].(string)
 			messageText = "[CQ:image,file=" + fileContent + "]"
