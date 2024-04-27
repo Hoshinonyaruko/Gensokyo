@@ -31,9 +31,15 @@ func GetLoginInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 
 	var response LoginInfoResponse
 	var botname string
+	var globalBotID uint64
 
-	// Assuming 全局_botid is a global or environment variable
-	globalBotID := config.GetAppID() // Replace with the actual global variable or value
+	// 获取机器人ID
+	if config.GetUseUin() {
+		globalBotID = uint64(config.GetUinint64())
+	} else {
+		globalBotID = config.GetAppID()
+	}
+
 	userIDStr := fmt.Sprintf("%d", globalBotID)
 	botname = config.GetCustomBotName()
 
