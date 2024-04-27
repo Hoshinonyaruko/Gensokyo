@@ -105,7 +105,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			echo.AddMsgType(config.GetAppIDStr(), idInt64, "group_private")
 			retmsg, _ = HandleSendGroupMsg(client, api, apiv2, messageCopy)
 		}
-	} else {
+	} else if echo.GetMapping(idInt64) <= 0 {
 		// 特殊值代表不递归
 		echo.AddMapping(idInt64, 10)
 	}
