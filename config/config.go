@@ -152,11 +152,13 @@ type Settings struct {
 	CustomTemplateID string `yaml:"custom_template_id"`
 	KeyBoardID       string `yaml:"keyboard_id"`
 	//发送行为修改
-	LazyMessageId bool   `yaml:"lazy_message_id"`
-	RamDomSeq     bool   `yaml:"ramdom_seq"`
-	BotForumTitle string `yaml:"bot_forum_title"`
-	AtoPCount     int    `yaml:"AMsgRetryAsPMsg_Count"`
-	SendDelay     int    `yaml:"send_delay"`
+	LazyMessageId     bool   `yaml:"lazy_message_id"`
+	RamDomSeq         bool   `yaml:"ramdom_seq"`
+	BotForumTitle     string `yaml:"bot_forum_title"`
+	AtoPCount         int    `yaml:"AMsgRetryAsPMsg_Count"`
+	SendDelay         int    `yaml:"send_delay"`
+	EnableChangeWord  bool   `yaml:"enableChangeWord"`
+	DefaultChangeWord string `yaml:"defaultChangeWord"`
 	//错误临时修复类
 	Fix11300 bool `yaml:"fix_11300"`
 	//内置指令
@@ -2287,4 +2289,26 @@ func GetAutoWithdrawTime() int {
 		return 0
 	}
 	return instance.Settings.AutoWithdrawTime
+}
+
+// 获取DefaultChangeWord
+func GetDefaultChangeWord() string {
+	mu.Lock()
+	defer mu.Unlock()
+	if instance != nil {
+		return instance.Settings.DefaultChangeWord
+	}
+	return "*"
+}
+
+// 获取敏感词替换状态
+func GetEnableChangeWord() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to EnableChangeWord.")
+		return false
+	}
+	return instance.Settings.EnableChangeWord
 }
