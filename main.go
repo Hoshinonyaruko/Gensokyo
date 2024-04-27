@@ -535,7 +535,9 @@ func ATMessageEventHandler() event.ATMessageEventHandler {
 		botstats.RecordMessageReceived()
 		if config.GetEnableChangeWord() {
 			data.Content = acnode.CheckWordIN(data.Content)
-			data.Author.Username = acnode.CheckWordIN(data.Author.Username)
+			if data.Author.Username != "" {
+				data.Author.Username = acnode.CheckWordIN(data.Author.Username)
+			}
 		}
 		return p.ProcessGuildATMessage(data)
 	}
@@ -571,7 +573,9 @@ func DirectMessageHandler() event.DirectMessageEventHandler {
 		botstats.RecordMessageReceived()
 		if config.GetEnableChangeWord() {
 			data.Content = acnode.CheckWordIN(data.Content)
-			data.Author.Username = acnode.CheckWordIN(data.Author.Username)
+			if data.Author.Username != "" {
+				data.Author.Username = acnode.CheckWordIN(data.Author.Username)
+			}
 		}
 		return p.ProcessChannelDirectMessage(data)
 	}
@@ -583,7 +587,9 @@ func CreateMessageHandler() event.MessageEventHandler {
 		botstats.RecordMessageReceived()
 		if config.GetEnableChangeWord() {
 			data.Content = acnode.CheckWordIN(data.Content)
-			data.Author.Username = acnode.CheckWordIN(data.Author.Username)
+			if data.Author.Username != "" {
+				data.Author.Username = acnode.CheckWordIN(data.Author.Username)
+			}
 		}
 		return p.ProcessGuildNormalMessage(data)
 	}
@@ -611,7 +617,9 @@ func GroupATMessageEventHandler() event.GroupATMessageEventHandler {
 		botstats.RecordMessageReceived()
 		if config.GetEnableChangeWord() {
 			data.Content = acnode.CheckWordIN(data.Content)
-			data.Author.Username = acnode.CheckWordIN(data.Author.Username)
+			if data.Author.Username != "" {
+				data.Author.Username = acnode.CheckWordIN(data.Author.Username)
+			}
 		}
 		return p.ProcessGroupMessage(data)
 	}
@@ -623,7 +631,9 @@ func C2CMessageEventHandler() event.C2CMessageEventHandler {
 		botstats.RecordMessageReceived()
 		if config.GetEnableChangeWord() {
 			data.Content = acnode.CheckWordIN(data.Content)
-			data.Author.Username = acnode.CheckWordIN(data.Author.Username)
+			if data.Author.Username != "" {
+				data.Author.Username = acnode.CheckWordIN(data.Author.Username)
+			}
 		}
 		return p.ProcessC2CMessage(data)
 	}
