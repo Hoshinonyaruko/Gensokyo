@@ -172,6 +172,8 @@ settings:
   bot_forum_title : "机器人帖子"                      # 机器人发帖子回复默认标题 
   AMsgRetryAsPMsg_Count : 30        #当主动信息发送失败时,自动转为后续的被动信息发送,需要开启Lazy message id,该配置项为所有群、频道的主动转被动消息队列最大长度,建议30-100,无上限
   send_delay : 300                  #单位 毫秒 默认300ms 可以视情况减少到100或者50
+  enableChangeWord : false          #敏感词替换系统,具有IN和OUT两个文本维度,会在运行目录下释放txt文件,一行一个,格式为aaa####bbb,作用是将aaa替换为bbb,输入替换是对用户输入进行替换,输出则是替换机器人发出的文本信息.
+  defaultChangeWord : "*"           #默认替换词,当开启
 
   #错误临时修复类
   fix_11300: false                  #修复11300报错,需要在develop_bot_id填入自己机器人的appid. 11300原因暂时未知,临时修复方案.
