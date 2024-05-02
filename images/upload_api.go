@@ -21,6 +21,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/oss"
 	"github.com/hoshinonyaruko/gensokyo/protobuf"
+	"github.com/hoshinonyaruko/gensokyo/protobufc2c"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/openapi"
 	"google.golang.org/protobuf/proto"
@@ -145,10 +146,12 @@ func UploadBase64ImageToServer(msgid string, base64Image string, groupID string,
 		}
 
 		var fileInfo string
+		var isprivate bool
 		//尝试群聊发图
 		fileInfo, err = uploadMedia(context.TODO(), groupID, richMediaMessage, apiv2)
 		if err != nil {
 			//尝试私信发图
+			isprivate = true
 			fileInfo, err = uploadMediaPrivate(context.TODO(), groupID, richMediaMessage, apiv2)
 			if err != nil {
 				//返回原始图片url
@@ -162,32 +165,57 @@ func UploadBase64ImageToServer(msgid string, base64Image string, groupID string,
 			log.Fatalf("Failed to decode Base64 string: %v", err)
 		}
 
-		// 初始化Proto消息类型
-		var mainMessage protobuf.Main
+		// 群聊图片
+		if !isprivate {
+			// 初始化Proto消息类型
+			var mainMessage protobuf.Main
 
-		// 解析二进制数据到Proto消息
-		err = proto.Unmarshal(fileInfoBytes, &mainMessage)
-		if err != nil {
-			log.Fatalf("Failed to unmarshal Proto message: %v", err)
+			// 解析二进制数据到Proto消息
+			err = proto.Unmarshal(fileInfoBytes, &mainMessage)
+			if err != nil {
+				log.Fatalf("Failed to unmarshal Proto message: %v", err)
+			}
+
+			// 从Proto消息中读取值
+			//realGroupID := mainMessage.GetA().GetB().GetInfo().GetDetail().GetGroupInfo().GetGroupNumber()
+			realGroupID := uint64(0)
+			downloadURL := mainMessage.GetA().GetImageData().GetImageInfo().GetUrl()
+			//https的地址不能放到md里
+			//downloadURL = "https://multimedia.nt.qq.com.cn" + downloadURL
+			// 将 downloadURL 中的所有下划线 "_" 替换为 "%5f"
+			downloadURL = strings.Replace(downloadURL, "_", "%5f", -1)
+			downloadURL = "http://multimedia.nt.qq.com" + downloadURL
+			width := mainMessage.GetA().GetImageData().GetWidth()
+			height := mainMessage.GetA().GetImageData().GetHeight()
+
+			// 打印读取的值
+			//log.Printf("RealGroup ID: %d\n", realGroupID)
+			log.Printf("Download URL: %s, Width: %d, Height: %d\n", downloadURL, width, height)
+			// 根据需要返回适当的值
+			return downloadURL, realGroupID, width, height, nil
+		} else {
+			// 私聊图片
+			// 初始化Proto消息类型
+			var imageData protobufc2c.ImageData
+
+			// 解析二进制数据到Proto消息
+			err := proto.Unmarshal(fileInfoBytes, &imageData)
+			if err != nil {
+				log.Fatalf("Failed to unmarshal Proto message: %v", err)
+			}
+
+			// 从Proto消息中读取值
+			realGroupID := uint64(0) // 固定为0
+			width := imageData.GetNestedData().GetDetails().GetWidth()
+			height := imageData.GetNestedData().GetDetails().GetHeight()
+			downloadURL := imageData.GetNestedData().GetDetails().GetUrls().GetUrl()
+			downloadURL = strings.Replace(downloadURL, "_", "%5f", -1) // 替换所有下划线为"%5f"
+			downloadURL = "http://multimedia.nt.qq.com" + downloadURL
+
+			// 打印读取的值
+			log.Printf("Download URL: %s, Width: %d, Height: %d\n", downloadURL, width, height)
+			return downloadURL, realGroupID, uint32(width), uint32(height), nil
 		}
-
-		// 从Proto消息中读取值
-		realGroupID := mainMessage.GetA().GetB().GetInfo().GetDetail().GetGroupInfo().GetGroupNumber()
-		downloadURL := mainMessage.GetA().GetImageData().GetImageInfo().GetUrl()
-		//https的地址不能放到md里
-		//downloadURL = "https://multimedia.nt.qq.com.cn" + downloadURL
-		// 将 downloadURL 中的所有下划线 "_" 替换为 "%5f"
-		downloadURL = strings.Replace(downloadURL, "_", "%5f", -1)
-		downloadURL = "http://multimedia.nt.qq.com" + downloadURL
-		width := mainMessage.GetA().GetImageData().GetWidth()
-		height := mainMessage.GetA().GetImageData().GetHeight()
-
-		// 打印读取的值
-		log.Printf("RealGroup ID: %d\n", realGroupID)
-		log.Printf("Download URL: %s, Width: %d, Height: %d\n", downloadURL, width, height)
-
-		// 根据需要返回适当的值
-		return downloadURL, realGroupID, width, height, nil
 
 	}
 
