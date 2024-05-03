@@ -14,6 +14,7 @@ type EchoMapping struct {
 	mu             sync.Mutex
 	msgTypeMapping map[string]string
 	msgIDMapping   map[string]string
+	eventIDMapping map[string]string
 }
 
 // Int64ToIntMapping 用于存储 int64 到 int 的映射(递归计数器)
@@ -65,7 +66,9 @@ var globalInt64Stack = &Int64Stack{
 var globalEchoMapping = &EchoMapping{
 	msgTypeMapping: make(map[string]string),
 	msgIDMapping:   make(map[string]string),
+	eventIDMapping: make(map[string]string),
 }
+
 var globalInt64ToIntMapping = &Int64ToIntMapping{
 	mapping: make(map[int64]int),
 }
@@ -84,6 +87,10 @@ func (e *EchoMapping) GenerateKey(appid string, s int64) string {
 
 func (e *EchoMapping) GenerateKeyv2(appid string, groupid int64, userid int64) string {
 	return appid + "_" + strconv.FormatInt(groupid, 10) + "_" + strconv.FormatInt(userid, 10)
+}
+
+func (e *EchoMapping) GenerateKeyEventID(appid string, groupid int64) string {
+	return appid + "_" + strconv.FormatInt(groupid, 10)
 }
 
 func (e *EchoMapping) GenerateKeyv3(appid string, s string) string {
@@ -123,6 +130,14 @@ func AddMsgIDv2(appid string, groupid int64, userid int64, msgID string) {
 	globalEchoMapping.msgIDMapping[key] = msgID
 }
 
+// 添加group对应的eventid
+func AddEvnetID(appid string, groupid int64, eventID string) {
+	key := globalEchoMapping.GenerateKeyEventID(appid, groupid)
+	globalEchoMapping.mu.Lock()
+	defer globalEchoMapping.mu.Unlock()
+	globalEchoMapping.eventIDMapping[key] = eventID
+}
+
 // 添加echo对应的messageid
 func AddMsgID(appid string, s int64, msgID string) {
 	key := globalEchoMapping.GenerateKey(appid, s)
@@ -143,6 +158,13 @@ func GetMsgIDByKey(key string) string {
 	globalEchoMapping.mu.Lock()
 	defer globalEchoMapping.mu.Unlock()
 	return globalEchoMapping.msgIDMapping[key]
+}
+
+// 根据给定的key获取EventID
+func GetEventIDByKey(key string) string {
+	globalEchoMapping.mu.Lock()
+	defer globalEchoMapping.mu.Unlock()
+	return globalEchoMapping.eventIDMapping[key]
 }
 
 // AddMapping 添加一个新的映射
