@@ -7,6 +7,7 @@ import (
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/config"
+	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/handlers"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
@@ -94,8 +95,6 @@ func (p *Processors) ProcessGroupAddBot(data *dto.GroupAddBotEvent) error {
 		return nil
 	}
 
-	mylog.Printf("Bot被[%v]邀请进入群[%v]", userid64, GroupID64)
-
 	var selfid64 int64
 	if config.GetUseUin() {
 		selfid64 = config.GetUinint64()
@@ -131,6 +130,14 @@ func (p *Processors) ProcessGroupAddBot(data *dto.GroupAddBotEvent) error {
 	groupMsgMap = structToMap(Notice)
 	//上报信息到onebotv11应用端(正反ws)
 	p.BroadcastMessageToAll(groupMsgMap)
+
+	// 转换appid
+	AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
+
+	// 储存和群号相关的eventid
+	echo.AddEvnetID(AppIDString, GroupID64, data.ID)
+
+	mylog.Printf("Bot被[%v]邀请进入群[%v]eventid[%v]", userid64, GroupID64, data.ID)
 
 	// 调用GetSelfIntroduce函数
 	intros := config.GetSelfIntroduce()

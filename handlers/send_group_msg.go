@@ -117,6 +117,8 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		var SSM bool
 		// 使用 echo 获取消息ID
 		var messageID string
+		// EventID
+		var eventID string
 		if config.GetLazyMessageId() {
 			//由于实现了Params的自定义unmarshell 所以可以类型安全的断言为string
 			messageID = echo.GetLazyMessagesId(message.Params.GroupID.(string))
@@ -215,6 +217,8 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		if messageID == "2000" {
 			messageID = ""
 			mylog.Println("通过lazymessage_id模式发送群聊/频道主动信息,群聊每月仅4次机会,如果本信息非主动推送信息,请提交issue")
+			eventID = GetEventIDByUseridOrGroupid(config.GetAppIDStr(), message.Params.GroupID)
+			mylog.Printf("尝试获取当前是否有eventID可用,如果有则不消耗主动次数:%v", eventID)
 		}
 		mylog.Printf("群组发信息使用messageID:[%v]", messageID)
 		var singleItem = make(map[string][]string)
@@ -246,7 +250,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			singleItem[imageType] = []string{imageUrl}
 			msgseq := echo.GetMappingSeq(messageID)
 			echo.AddMappingSeq(messageID, msgseq+1)
-			groupReply := generateGroupMessage(messageID, singleItem, "", msgseq+1, apiv2, message.Params.GroupID.(string))
+			groupReply := generateGroupMessage(messageID, eventID, singleItem, "", msgseq+1, apiv2, message.Params.GroupID.(string))
 			// 进行类型断言
 			richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
 			if !ok {
@@ -279,6 +283,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 						FileInfo: fileInfo, // 添加图像信息
 					},
 					MsgID:   messageID,
+					EventID: eventID,
 					MsgSeq:  msgseq,
 					MsgType: 7, // 假设7是组合消息类型
 				}
@@ -291,6 +296,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				groupMessage = &dto.MessageToCreate{
 					Content:  "markdown", // 添加文本内容
 					MsgID:    messageID,
+					EventID:  eventID,
 					MsgSeq:   msgseq,
 					Markdown: md,
 					Keyboard: kb,
@@ -323,7 +329,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		if messageText != "" {
 			msgseq := echo.GetMappingSeq(messageID)
 			echo.AddMappingSeq(messageID, msgseq+1)
-			groupReply := generateGroupMessage(messageID, nil, messageText, msgseq+1, apiv2, message.Params.GroupID.(string))
+			groupReply := generateGroupMessage(messageID, eventID, nil, messageText, msgseq+1, apiv2, message.Params.GroupID.(string))
 
 			// 进行类型断言
 			groupMessage, ok := groupReply.(*dto.MessageToCreate)
@@ -357,7 +363,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				//mylog.Println("singleItem:", singleItem)
 				msgseq := echo.GetMappingSeq(messageID)
 				echo.AddMappingSeq(messageID, msgseq+1)
-				groupReply := generateGroupMessage(messageID, singleItem, "", msgseq+1, apiv2, message.Params.GroupID.(string))
+				groupReply := generateGroupMessage(messageID, eventID, singleItem, "", msgseq+1, apiv2, message.Params.GroupID.(string))
 				// 进行类型断言
 				richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
 				if !ok {
@@ -392,7 +398,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 					if config.GetSendError() { //把报错当作文本发出去
 						msgseq := echo.GetMappingSeq(messageID)
 						echo.AddMappingSeq(messageID, msgseq+1)
-						groupReply := generateGroupMessage(messageID, nil, err.Error(), msgseq+1, apiv2, message.Params.GroupID.(string))
+						groupReply := generateGroupMessage(messageID, eventID, nil, err.Error(), msgseq+1, apiv2, message.Params.GroupID.(string))
 						// 进行类型断言
 						groupMessage, ok := groupReply.(*dto.MessageToCreate)
 						if !ok {
@@ -423,6 +429,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 					groupMessage := &dto.MessageToCreate{
 						Content: " ",
 						MsgID:   messageID,
+						EventID: eventID,
 						MsgSeq:  msgseq,
 						MsgType: 7, // 默认文本类型
 						Media:   media,
@@ -543,7 +550,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 }
 
 // 上传富媒体信息
-func generateGroupMessage(id string, foundItems map[string][]string, messageText string, msgseq int, apiv2 openapi.OpenAPI, groupid string) interface{} {
+func generateGroupMessage(id string, eventid string, foundItems map[string][]string, messageText string, msgseq int, apiv2 openapi.OpenAPI, groupid string) interface{} {
 	if imageURLs, ok := foundItems["local_image"]; ok && len(imageURLs) > 0 {
 		// 从本地路径读取图片
 		imageData, err := os.ReadFile(imageURLs[0])
@@ -554,6 +561,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 			return &dto.MessageToCreate{
 				Content: "错误: 图片文件不存在",
 				MsgID:   id,
+				EventID: eventid,
 				MsgSeq:  msgseq,
 				MsgType: 0, // 默认文本类型
 			}
@@ -565,6 +573,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 			return &dto.MessageToCreate{
 				Content: "错误: 压缩图片失败",
 				MsgID:   id,
+				EventID: eventid,
 				MsgSeq:  msgseq,
 				MsgType: 0, // 默认文本类型
 			}
@@ -581,6 +590,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 			return &dto.MessageToCreate{
 				Content: "错误: 上传图片失败",
 				MsgID:   id,
+				EventID: eventid,
 				MsgSeq:  msgseq,
 				MsgType: 0, // 默认文本类型
 			}
@@ -604,6 +614,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 			return &dto.MessageToCreate{
 				Content: "错误: 语音文件不存在",
 				MsgID:   id,
+				EventID: eventid,
 				MsgSeq:  msgseq,
 				MsgType: 0, // 默认文本类型
 			}
@@ -642,6 +653,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 				return &dto.MessageToCreate{
 					Content: "错误: 下载图片失败",
 					MsgID:   id,
+					EventID: eventid,
 					MsgSeq:  msgseq,
 					MsgType: 0, // 默认文本类型
 				}
@@ -655,6 +667,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 				return &dto.MessageToCreate{
 					Content: "错误: 读取图片数据失败",
 					MsgID:   id,
+					EventID: eventid,
 					MsgSeq:  msgseq,
 					MsgType: 0,
 				}
@@ -670,6 +683,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 				return &dto.MessageToCreate{
 					Content: "错误: 上传图片失败",
 					MsgID:   id,
+					EventID: eventid,
 					MsgSeq:  msgseq,
 					MsgType: 0,
 				}
@@ -707,6 +721,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 				return &dto.MessageToCreate{
 					Content: "错误: 下载图片失败",
 					MsgID:   id,
+					EventID: eventid,
 					MsgSeq:  msgseq,
 					MsgType: 0, // 默认文本类型
 				}
@@ -720,6 +735,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 				return &dto.MessageToCreate{
 					Content: "错误: 读取图片数据失败",
 					MsgID:   id,
+					EventID: eventid,
 					MsgSeq:  msgseq,
 					MsgType: 0,
 				}
@@ -735,6 +751,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 				return &dto.MessageToCreate{
 					Content: "错误: 上传图片失败",
 					MsgID:   id,
+					EventID: eventid,
 					MsgSeq:  msgseq,
 					MsgType: 0,
 				}
@@ -817,6 +834,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 			return &dto.MessageToCreate{
 				Content: "错误: 读取语音数据失败",
 				MsgID:   id,
+				EventID: eventid,
 				MsgSeq:  msgseq,
 				MsgType: 0,
 			}
@@ -841,6 +859,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 			return &dto.MessageToCreate{
 				Content: "错误: 上传语音失败",
 				MsgID:   id,
+				EventID: eventid,
 				MsgSeq:  msgseq,
 				MsgType: 0,
 			}
@@ -862,6 +881,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 			return &dto.MessageToCreate{
 				Content: "错误: 下载语音失败",
 				MsgID:   id,
+				EventID: eventid,
 				MsgSeq:  msgseq,
 				MsgType: 0, // 默认文本类型
 			}
@@ -875,6 +895,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 			return &dto.MessageToCreate{
 				Content: "错误: 读取语音数据失败",
 				MsgID:   id,
+				EventID: eventid,
 				MsgSeq:  msgseq,
 				MsgType: 0,
 			}
@@ -899,6 +920,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 			return &dto.MessageToCreate{
 				Content: "错误: 上传语音失败",
 				MsgID:   id,
+				EventID: eventid,
 				MsgSeq:  msgseq,
 				MsgType: 0,
 			}
@@ -929,6 +951,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 			return &dto.MessageToCreate{
 				Content: "错误: 压缩图片失败",
 				MsgID:   id,
+				EventID: eventid,
 				MsgSeq:  msgseq,
 				MsgType: 0, // 默认文本类型
 			}
@@ -962,6 +985,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 		return &dto.MessageToCreate{
 			Content:  "markdown",
 			MsgID:    id,
+			EventID:  eventid,
 			MsgSeq:   msgseq,
 			Markdown: markdown,
 			Keyboard: keyboard,
@@ -979,6 +1003,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 			return &dto.MessageToCreate{
 				Content:  "markdown",
 				MsgID:    id,
+				EventID:  eventid,
 				MsgSeq:   msgseq,
 				Markdown: markdown,
 				Keyboard: keyboard,
@@ -988,6 +1013,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 			return &dto.MessageToCreate{
 				Content:  "markdown",
 				MsgID:    id,
+				EventID:  eventid,
 				MsgSeq:   msgseq,
 				Keyboard: keyboard,
 				MsgType:  2,
@@ -1018,6 +1044,7 @@ func generateGroupMessage(id string, foundItems map[string][]string, messageText
 		return &dto.MessageToCreate{
 			Content: messageText,
 			MsgID:   id,
+			EventID: eventid,
 			MsgSeq:  msgseq,
 			MsgType: 0, // 默认文本类型
 		}

@@ -224,6 +224,40 @@ func GetMessageIDByUseridOrGroupid(appID string, userID interface{}) string {
 	return messageid
 }
 
+// 通过user_id获取EventID 私聊,群,频道,通用 userID可以是三者之一 这是不需要区分群+用户的 只需要精准到群 私聊只需要精准到用户
+func GetEventIDByUseridOrGroupid(appID string, userID interface{}) string {
+	// 从appID和userID生成key
+	var userIDStr string
+	switch u := userID.(type) {
+	case int:
+		userIDStr = strconv.Itoa(u)
+	case int64:
+		userIDStr = strconv.FormatInt(u, 10)
+	case float64:
+		userIDStr = strconv.FormatFloat(u, 'f', 0, 64)
+	case string:
+		userIDStr = u
+	default:
+		// 可能需要处理其他类型或报错
+		return ""
+	}
+	//将真实id转为int
+	userid64, err := idmap.StoreIDv2(userIDStr)
+	if err != nil {
+		mylog.Printf("Error storing ID 241: %v", err)
+		return ""
+	}
+	key := appID + "_" + fmt.Sprint(userid64)
+	mylog.Printf("GetEventIDByUseridOrGroupid_key:%v", key)
+	eventid := echo.GetEventIDByKey(key)
+	if eventid == "" {
+		key := appID + "_" + userIDStr
+		mylog.Printf("GetEventIDByUseridOrGroupid_key_2:%v", key)
+		eventid = echo.GetEventIDByKey(key)
+	}
+	return eventid
+}
+
 // 通过user_id获取messageID
 func GetMessageIDByUseridAndGroupid(appID string, userID interface{}, groupID interface{}) string {
 	// 从appID和userID生成key

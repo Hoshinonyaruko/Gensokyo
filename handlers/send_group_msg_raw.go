@@ -16,6 +16,7 @@ import (
 	"github.com/tencent-connect/botgo/openapi"
 )
 
+// TODO:支持自己提供EventID发信息
 func init() {
 	callapi.RegisterHandler("send_group_msg_raw", HandleSendGroupMsgRaw)
 }
@@ -206,7 +207,7 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 			singleItem[imageType] = []string{imageUrl}
 			msgseq := echo.GetMappingSeq(messageID)
 			echo.AddMappingSeq(messageID, msgseq+1)
-			groupReply := generateGroupMessage(messageID, singleItem, "", msgseq+1, apiv2, message.Params.GroupID.(string))
+			groupReply := generateGroupMessage(messageID, "", singleItem, "", msgseq+1, apiv2, message.Params.GroupID.(string))
 			// 进行类型断言
 			richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
 			if !ok {
@@ -283,7 +284,7 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 		if messageText != "" {
 			msgseq := echo.GetMappingSeq(messageID)
 			echo.AddMappingSeq(messageID, msgseq+1)
-			groupReply := generateGroupMessage(messageID, nil, messageText, msgseq+1, apiv2, message.Params.GroupID.(string))
+			groupReply := generateGroupMessage(messageID, "", nil, messageText, msgseq+1, apiv2, message.Params.GroupID.(string))
 
 			// 进行类型断言
 			groupMessage, ok := groupReply.(*dto.MessageToCreate)
@@ -317,7 +318,7 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 				//mylog.Println("singleItem:", singleItem)
 				msgseq := echo.GetMappingSeq(messageID)
 				echo.AddMappingSeq(messageID, msgseq+1)
-				groupReply := generateGroupMessage(messageID, singleItem, "", msgseq+1, apiv2, message.Params.GroupID.(string))
+				groupReply := generateGroupMessage(messageID, "", singleItem, "", msgseq+1, apiv2, message.Params.GroupID.(string))
 				// 进行类型断言
 				richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
 				if !ok {
@@ -352,7 +353,7 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 					if config.GetSendError() { //把报错当作文本发出去
 						msgseq := echo.GetMappingSeq(messageID)
 						echo.AddMappingSeq(messageID, msgseq+1)
-						groupReply := generateGroupMessage(messageID, nil, err.Error(), msgseq+1, apiv2, message.Params.GroupID.(string))
+						groupReply := generateGroupMessage(messageID, "", nil, err.Error(), msgseq+1, apiv2, message.Params.GroupID.(string))
 						// 进行类型断言
 						groupMessage, ok := groupReply.(*dto.MessageToCreate)
 						if !ok {

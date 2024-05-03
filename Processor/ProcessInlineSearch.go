@@ -3,10 +3,12 @@ package Processor
 
 import (
 	"context"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/config"
+	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/handlers"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
@@ -90,6 +92,12 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 
 		//上报信息到onebotv11应用端(正反ws)
 		p.BroadcastMessageToAll(noticeMap)
+
+		// 转换appid
+		AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
+
+		// 储存和群号相关的eventid
+		echo.AddEvnetID(AppIDString, GroupID64, data.ID)
 	} else {
 		if data.GroupOpenID != "" {
 			//群回调
@@ -138,10 +146,64 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 			groupMsgMap := structToMap(groupMsg)
 			//上报信息到onebotv11应用端(正反ws)
 			p.BroadcastMessageToAll(groupMsgMap)
+
+			// 转换appid
+			AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
+
+			// 储存和群号相关的eventid
+			echo.AddEvnetID(AppIDString, GroupID64, data.ID)
+		} else if data.UserOpenID != "" {
+			//私聊回调
+			newdata := ConvertInteractionToMessage(data)
+			segmentedMessages := handlers.ConvertToSegmentedMessage(newdata)
+			//映射str的messageID到int
+			messageID64, err := idmap.StoreIDv2(data.ID)
+			if err != nil {
+				mylog.Printf("Error storing ID: %v", err)
+				return nil
+			}
+			messageID := int(messageID64)
+			var selfid64 int64
+			if config.GetUseUin() {
+				selfid64 = config.GetUinint64()
+			} else {
+				selfid64 = int64(p.Settings.AppID)
+			}
+			privateMsg := OnebotPrivateMessage{
+				RawMessage:  data.Data.Resolved.ButtonData,
+				Message:     segmentedMessages,
+				MessageID:   messageID,
+				MessageType: "private",
+				PostType:    "message",
+				SelfID:      selfid64,
+				UserID:      userid64,
+				Sender: PrivateSender{
+					Nickname: "", //这个不支持,但加机器人好友,会收到一个事件,可以对应储存获取,用idmaps可以做到.
+					UserID:   userid64,
+				},
+				SubType: "friend",
+				Time:    time.Now().Unix(),
+			}
+			//增强配置
+			if !config.GetNativeOb11() {
+				privateMsg.RealMessageType = "interaction"
+			}
+			// 调试
+			PrintStructWithFieldNames(privateMsg)
+
+			// Convert OnebotGroupMessage to map and send
+			privateMsgMap := structToMap(privateMsg)
+			//上报信息到onebotv11应用端(正反ws)
+			p.BroadcastMessageToAll(privateMsgMap)
+
+			// 转换appid
+			AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
+
+			// 储存和用户ID相关的eventid
+			echo.AddEvnetID(AppIDString, userid64, data.ID)
 		} else {
 			//频道回调
 			// 处理onebot_channel_message逻辑
-			//群回调
 			newdata := ConvertInteractionToMessage(data)
 			segmentedMessages := handlers.ConvertToSegmentedMessage(newdata)
 			var selfid64 int64
@@ -187,6 +249,8 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 
 			//上报信息到onebotv11应用端(正反ws)
 			p.BroadcastMessageToAll(msgMap)
+
+			// TODO: 实现eventid
 		}
 	}
 
