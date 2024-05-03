@@ -181,7 +181,6 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 	//懒message_id池
 	echo.AddLazyMessageId(strconv.FormatInt(GroupID64, 10), data.ID, time.Now())
 	//懒message_id池
-	//echo.AddLazyMessageId(strconv.FormatInt(userid64, 10), data.ID, time.Now())
 	echo.AddLazyMessageIdv2(strconv.FormatInt(GroupID64, 10), strconv.FormatInt(userid64, 10), data.ID, time.Now())
 	// 调试
 	PrintStructWithFieldNames(groupMsg)
