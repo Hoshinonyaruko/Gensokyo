@@ -102,7 +102,7 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 		if data.GroupOpenID != "" {
 			//群回调
 			newdata := ConvertInteractionToMessage(data)
-			mylog.Printf("回调测试111-newdata:%v\n", newdata)
+			//mylog.Printf("回调测试111-newdata:%v\n", newdata)
 			segmentedMessages := handlers.ConvertToSegmentedMessage(newdata)
 			//映射str的messageID到int
 			messageID64, err := idmap.StoreIDv2(data.ID)
@@ -117,7 +117,7 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 			} else {
 				selfid64 = int64(p.Settings.AppID)
 			}
-			mylog.Printf("回调测试-interaction:%v\n", segmentedMessages)
+			//mylog.Printf("回调测试-interaction:%v\n", segmentedMessages)
 			groupMsg := OnebotGroupMessage{
 				RawMessage:  data.Data.Resolved.ButtonData,
 				Message:     segmentedMessages,
