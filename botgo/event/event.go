@@ -78,6 +78,7 @@ func ParseAndHandle(payload *dto.WSPayload) error {
 func ParseData(message []byte, target interface{}) error {
 	// 获取数据部分
 	data := gjson.Get(string(message), "d")
+	// 外层ID 与内层ID不同
 	id := gjson.Get(string(message), "id").String()
 
 	// 使用switch语句处理不同类型
@@ -93,6 +94,15 @@ func ParseData(message []byte, target interface{}) error {
 
 	case *dto.GroupAddBotEvent:
 		// 特殊处理dto.GroupAddBotEvent
+		if err := json.Unmarshal([]byte(data.String()), v); err != nil {
+			return err
+		}
+		// 设置ID字段
+		v.ID = id
+		return nil
+
+	case *dto.WSInteractionData:
+		// 特殊处理dto.WSInteractionData
 		if err := json.Unmarshal([]byte(data.String()), v); err != nil {
 			return err
 		}
