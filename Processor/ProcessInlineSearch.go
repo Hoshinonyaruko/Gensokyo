@@ -102,6 +102,7 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 		if data.GroupOpenID != "" {
 			//群回调
 			newdata := ConvertInteractionToMessage(data)
+			mylog.Printf("回调测试111-newdata:%v\n", newdata)
 			segmentedMessages := handlers.ConvertToSegmentedMessage(newdata)
 			//映射str的messageID到int
 			messageID64, err := idmap.StoreIDv2(data.ID)
@@ -259,7 +260,7 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 }
 
 // ConvertInteractionToMessage 转换 Interaction 到 Message
-func ConvertInteractionToMessage(interaction *dto.WSInteractionData) dto.Message {
+func ConvertInteractionToMessage(interaction *dto.WSInteractionData) *dto.Message {
 	var message dto.Message
 
 	// 直接映射的字段
@@ -272,7 +273,7 @@ func ConvertInteractionToMessage(interaction *dto.WSInteractionData) dto.Message
 	message.Content = interaction.Data.Resolved.ButtonData
 	message.DirectMessage = interaction.ChatType == 2
 
-	return message
+	return &message
 }
 
 // 延迟执行PutInteraction
