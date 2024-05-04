@@ -102,8 +102,16 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 		if data.GroupOpenID != "" {
 			//群回调
 			newdata := ConvertInteractionToMessage(data)
-			mylog.Printf("回调测试111-newdata:%v\n", newdata)
+			//mylog.Printf("回调测试111-newdata:%v\n", newdata)
 			segmentedMessages := handlers.ConvertToSegmentedMessage(newdata)
+			var IsBindedUserId, IsBindedGroupId bool
+			if config.GetHashIDValue() {
+				IsBindedUserId = idmap.CheckValue(data.GroupMemberOpenID, userid64)
+				IsBindedGroupId = idmap.CheckValue(data.GroupOpenID, GroupID64)
+			} else {
+				IsBindedUserId = idmap.CheckValuev2(userid64)
+				IsBindedGroupId = idmap.CheckValuev2(GroupID64)
+			}
 			//映射str的messageID到int
 			messageID64, err := idmap.StoreIDv2(data.ID)
 			if err != nil {
@@ -117,7 +125,7 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 			} else {
 				selfid64 = int64(p.Settings.AppID)
 			}
-			mylog.Printf("回调测试-interaction:%v\n", segmentedMessages)
+			//mylog.Printf("回调测试-interaction:%v\n", segmentedMessages)
 			groupMsg := OnebotGroupMessage{
 				RawMessage:  data.Data.Resolved.ButtonData,
 				Message:     segmentedMessages,
@@ -140,6 +148,11 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 			//增强配置
 			if !config.GetNativeOb11() {
 				groupMsg.RealMessageType = "interaction"
+				groupMsg.IsBindedUserId = IsBindedUserId
+				groupMsg.IsBindedGroupId = IsBindedGroupId
+				groupMsg.RealGroupID = data.GroupOpenID
+				groupMsg.RealUserID = data.GroupMemberOpenID
+				groupMsg.Avatar, _ = GenerateAvatarURLV2(data.GroupMemberOpenID)
 			}
 			// 调试
 			PrintStructWithFieldNames(groupMsg)
