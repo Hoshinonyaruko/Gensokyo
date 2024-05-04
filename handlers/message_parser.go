@@ -1088,6 +1088,7 @@ func ConvertToSegmentedMessage(data interface{}) []map[string]interface{} {
 	case *dto.WSC2CMessageData:
 		msg = (*dto.Message)(v)
 	default:
+		mylog.Printf("类型断言出错类型断言出错类型断言出错类型断言出错\n")
 		return nil
 	}
 	menumsg = false
