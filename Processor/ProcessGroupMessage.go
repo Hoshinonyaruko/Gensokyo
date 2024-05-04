@@ -108,7 +108,7 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 	} else {
 		selfid64 = int64(p.Settings.AppID)
 	}
-	mylog.Printf("回调测试-群:%v\n", segmentedMessages)
+	//mylog.Printf("回调测试-群:%v\n", segmentedMessages)
 	groupMsg := OnebotGroupMessage{
 		RawMessage:  messageText,
 		Message:     segmentedMessages,
