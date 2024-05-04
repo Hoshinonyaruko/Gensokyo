@@ -116,6 +116,7 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 			} else {
 				selfid64 = int64(p.Settings.AppID)
 			}
+			mylog.Printf("回调测试-interaction:%v\n", segmentedMessages)
 			groupMsg := OnebotGroupMessage{
 				RawMessage:  data.Data.Resolved.ButtonData,
 				Message:     segmentedMessages,
