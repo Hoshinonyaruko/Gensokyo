@@ -3,6 +3,7 @@ package Processor
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"sync"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/openapi"
+	"github.com/tencent-connect/botgo/websocket/client"
 )
 
 var (
@@ -34,8 +36,20 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 		fromuid = data.GroupMemberOpenID
 	} else {
 		fromgid = data.ChannelID
-		fromuid = "0"
+		fromuid = data.GuildID
 	}
+
+	// 获取s
+	s := client.GetGlobalS()
+	// 转换appid
+	AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
+
+	// 获取当前时间的13位毫秒级时间戳
+	currentTimeMillis := time.Now().UnixNano() / 1e6
+
+	// 构造echostr，包括AppID，原始的s变量和当前时间戳
+	echostr := fmt.Sprintf("%s_%d_%d", AppIDString, s, currentTimeMillis)
+
 	//这里处理自动handle回调回应
 	if config.GetAutoPutInteraction() {
 		DelayedPutInteraction(p.Api, data.ID, fromuid, fromgid)
@@ -154,6 +168,46 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 				groupMsg.RealUserID = data.GroupMemberOpenID
 				groupMsg.Avatar, _ = GenerateAvatarURLV2(data.GroupMemberOpenID)
 			}
+			//根据条件判断是否增加nick和card
+			var CaN = config.GetCardAndNick()
+			if CaN != "" {
+				groupMsg.Sender.Nickname = CaN
+				groupMsg.Sender.Card = CaN
+			}
+			// 根据条件判断是否添加Echo字段
+			if config.GetTwoWayEcho() {
+				groupMsg.Echo = echostr
+				//用向应用端(如果支持)发送echo,来确定客户端的send_msg对应的触发词原文
+				echo.AddMsgIDv3(AppIDString, echostr, data.Data.Resolved.ButtonData)
+			}
+			// 获取MasterID数组
+			masterIDs := config.GetMasterID()
+
+			// 判断userid64是否在masterIDs数组里
+			isMaster := false
+			for _, id := range masterIDs {
+				if strconv.FormatInt(userid64, 10) == id {
+					isMaster = true
+					break
+				}
+			}
+
+			// 根据isMaster的值为groupMsg的Sender赋值role字段
+			if isMaster {
+				groupMsg.Sender.Role = "owner"
+			} else {
+				groupMsg.Sender.Role = "member"
+			}
+
+			// 映射消息类型
+			echo.AddMsgType(AppIDString, s, "group")
+
+			//储存当前群或频道号的类型
+			idmap.WriteConfigv2(fmt.Sprint(GroupID64), "type", "group")
+
+			//映射类型
+			echo.AddMsgType(AppIDString, GroupID64, "group")
+
 			// 调试
 			PrintStructWithFieldNames(groupMsg)
 
@@ -171,6 +225,12 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 			//私聊回调
 			newdata := ConvertInteractionToMessage(data)
 			segmentedMessages := handlers.ConvertToSegmentedMessage(newdata)
+			var IsBindedUserId bool
+			if config.GetHashIDValue() {
+				IsBindedUserId = idmap.CheckValue(data.UserOpenID, userid64)
+			} else {
+				IsBindedUserId = idmap.CheckValuev2(userid64)
+			}
 			//映射str的messageID到int
 			messageID64, err := idmap.StoreIDv2(data.ID)
 			if err != nil {
@@ -202,7 +262,26 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 			//增强配置
 			if !config.GetNativeOb11() {
 				privateMsg.RealMessageType = "interaction"
+				privateMsg.IsBindedUserId = IsBindedUserId
+				if IsBindedUserId {
+					privateMsg.Avatar, _ = GenerateAvatarURL(userid64)
+				}
 			}
+			// 根据条件判断是否添加Echo字段
+			if config.GetTwoWayEcho() {
+				privateMsg.Echo = echostr
+				//用向应用端(如果支持)发送echo,来确定客户端的send_msg对应的触发词原文
+				echo.AddMsgIDv3(AppIDString, echostr, data.Data.Resolved.ButtonData)
+			}
+			// 映射类型 对S映射
+			echo.AddMsgType(AppIDString, s, "group_private")
+
+			// 映射类型 对userid64映射
+			echo.AddMsgType(AppIDString, userid64, "group_private")
+
+			// 持久化储存当前用户的类型
+			idmap.WriteConfigv2(fmt.Sprint(userid64), "type", "group_private")
+
 			// 调试
 			PrintStructWithFieldNames(privateMsg)
 
@@ -217,7 +296,8 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 			// 储存和用户ID相关的eventid
 			echo.AddEvnetID(AppIDString, userid64, data.ID)
 		} else {
-			//频道回调
+			// TODO: 区分频道和频道私信 如果有人提需求
+			// 频道回调
 			// 处理onebot_channel_message逻辑
 			newdata := ConvertInteractionToMessage(data)
 			segmentedMessages := handlers.ConvertToSegmentedMessage(newdata)
