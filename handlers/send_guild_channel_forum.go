@@ -266,7 +266,7 @@ func GenerateForumMessage(foundItems map[string][]string, messageText string, ap
 			mylog.Printf("Error compressing image: %v", err)
 			return nil, fmt.Errorf("error compressing image: %v", err)
 		}
-		imageURL, _, _, _, err := images.UploadBase64ImageToServer("", base64.StdEncoding.EncodeToString(compressedData), "", apiv2)
+		imageURL, _, _, err := images.UploadBase64ImageToServer(base64.StdEncoding.EncodeToString(compressedData), apiv2)
 		if err != nil {
 			mylog.Printf("failed to upload base64 image: %v", err)
 			return nil, fmt.Errorf("failed to upload base64 image: %v", err)
