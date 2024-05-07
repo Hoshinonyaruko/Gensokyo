@@ -64,7 +64,7 @@ gensokyo兼容 [OneBot-v11](https://github.com/botuniverse/onebot-11) ，并在�
 
 持续完善中.....交流群:196173384
 
-欢迎测试,询问任何有关使用的问题,有问必答,有难必帮~
+欢迎测试,询问任何有关使用的问题,有问必答,有难必帮~~
 
 [Gensokyo临时文档](https://www.yuque.com/km57bt/hlhnxg/mw7gm8dlpccd324e)展开左侧折叠栏,临时文档包含markdown定义、额外api文档等内容
 
