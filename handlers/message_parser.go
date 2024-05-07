@@ -25,6 +25,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/images"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
+	"github.com/hoshinonyaruko/gensokyo/structs"
 	"github.com/hoshinonyaruko/gensokyo/url"
 	"github.com/skip2/go-qrcode"
 	"github.com/tencent-connect/botgo/dto"
@@ -883,7 +884,7 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 	}
 	// 移除以 GetVisualkPrefixs 数组开头的文本
 	visualkPrefixs := config.GetVisualkPrefixs()
-	var matchedPrefix *config.VisualPrefixConfig
+	var matchedPrefix *structs.VisualPrefixConfig
 	var isSpecialType bool    // 用于标记是否为特殊类型
 	var originalPrefix string // 存储原始前缀
 

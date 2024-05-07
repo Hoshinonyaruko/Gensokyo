@@ -63,7 +63,6 @@ settings:
   image_limit : 100                 #每分钟上传的最大图片数量,可自行增加
   guild_url_image_to_base64 : false #解决频道发不了某些url图片,报错40003问题
   url_pic_transfer : false          #把图片url(任意来源图链)变成你备案的白名单url 需要较高上下行+ssl+自备案域名+设置白名单域名(暂时不需要)
-  img_up_api_ntv2: false            #gsk内建图片上传api 开启后全局有效 是否将图片转换为ntqq图床url(md发图用,自行调用)文档:https://www.yuque.com/km57bt/hlhnxg/ig2nk88fccykn6dm
   uploadpicv2_b64: true             #uploadpicv2接口使用base64直接上传 https://www.yuque.com/km57bt/hlhnxg/ig2nk88fccykn6dm
   global_server_temp_qqguild : false                     #需设置server_temp_qqguild,公域私域均可用,以频道为底层发图,速度快,该接口为进阶接口,使用有一定难度.
   server_temp_qqguild : "0"            #在v3图片接口采用固定的子频道号,可以是帖子子频道 https://www.yuque.com/km57bt/hlhnxg/uqmnsno3vx1ytp2q
