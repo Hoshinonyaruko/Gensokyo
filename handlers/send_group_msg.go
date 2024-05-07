@@ -19,6 +19,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/images"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/hoshinonyaruko/gensokyo/silk"
+	"github.com/hoshinonyaruko/gensokyo/structs"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/dto/keyboard"
 	"github.com/tencent-connect/botgo/openapi"
@@ -368,7 +369,19 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
 				if !ok {
 					mylog.Printf("Error: Expected RichMediaMessage type for key %s.", key)
-					if key == "markdown" || key == "qqmusic" {
+					// 定义一个map来存储关键字
+					keyMap := map[string]bool{
+						"markdown":      true,
+						"qqmusic":       true,
+						"local_image":   true,
+						"local_record":  true,
+						"url_image":     true,
+						"url_images":    true,
+						"base64_record": true,
+						"base64_image":  true,
+					}
+					// key是 for key, urls := range foundItems { 这里的key
+					if _, exists := keyMap[key]; exists {
 						// 进行类型断言
 						groupMessage, ok := groupReply.(*dto.MessageToCreate)
 						if !ok {
@@ -378,7 +391,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 						//重新为err赋值
 						resp, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 						if err != nil {
-							mylog.Printf("发送md信息失败: %v", err)
+							mylog.Printf("发送 MessageToCreate 信息失败: %v", err)
 						}
 						if err != nil && strings.Contains(err.Error(), `"code":22009`) {
 							mylog.Printf("信息发送失败,加入到队列中,下次被动信息进行发送")
@@ -582,8 +595,24 @@ func generateGroupMessage(id string, eventid string, foundItems map[string][]str
 		// base64编码
 		base64Encoded := base64.StdEncoding.EncodeToString(compressedData)
 
+		if config.GetUploadPicV2Base64() {
+			// 直接上传图片返回 MessageToCreate type=7
+			messageToCreate, err := images.CreateAndUploadMediaMessage(context.TODO(), base64Encoded, eventid, 1, false, "", groupid, id, msgseq, apiv2)
+			if err != nil {
+				mylog.Printf("Error messageToCreate: %v", err)
+				return &dto.MessageToCreate{
+					Content: "错误: 上传图片失败",
+					MsgID:   id,
+					EventID: eventid,
+					MsgSeq:  msgseq,
+					MsgType: 0, // 默认文本类型
+				}
+			}
+			return messageToCreate
+		}
+
 		// 上传base64编码的图片并获取其URL
-		imageURL, _, _, _, err := images.UploadBase64ImageToServer(id, base64Encoded, groupid, apiv2)
+		imageURL, _, _, err := images.UploadBase64ImageToServer(base64Encoded, apiv2)
 		if err != nil {
 			mylog.Printf("Error uploading base64 encoded image: %v", err)
 			// 如果上传失败，也返回文本信息，提示上传失败
@@ -629,8 +658,26 @@ func generateGroupMessage(id string, eventid string, foundItems map[string][]str
 			RecordData = silk.EncoderSilk(RecordData)
 			mylog.Printf("音频转码ing")
 		}
+
+		base64Encoded := base64.StdEncoding.EncodeToString(RecordData)
+		if config.GetUploadPicV2Base64() {
+			// 直接上传图片返回 MessageToCreate type=7
+			messageToCreate, err := images.CreateAndUploadMediaMessage(context.TODO(), base64Encoded, eventid, 1, false, "", groupid, id, msgseq, apiv2)
+			if err != nil {
+				mylog.Printf("Error messageToCreate: %v", err)
+				return &dto.MessageToCreate{
+					Content: "错误: 上传语音失败",
+					MsgID:   id,
+					EventID: eventid,
+					MsgSeq:  msgseq,
+					MsgType: 0, // 默认文本类型
+				}
+			}
+			return messageToCreate
+		}
+
 		// 将解码的语音数据转换回base64格式并上传
-		imageURL, err := images.UploadBase64RecordToServer(base64.StdEncoding.EncodeToString(RecordData))
+		imageURL, err := images.UploadBase64RecordToServer(base64Encoded)
 		if err != nil {
 			mylog.Printf("failed to upload base64 record: %v", err)
 			return nil
@@ -676,8 +723,24 @@ func generateGroupMessage(id string, eventid string, foundItems map[string][]str
 			// 转换为base64
 			base64Encoded := base64.StdEncoding.EncodeToString(imageData)
 
+			if config.GetUploadPicV2Base64() {
+				// 直接上传图片返回 MessageToCreate type=7
+				messageToCreate, err := images.CreateAndUploadMediaMessage(context.TODO(), base64Encoded, eventid, 1, false, "", groupid, id, msgseq, apiv2)
+				if err != nil {
+					mylog.Printf("Error messageToCreate: %v", err)
+					return &dto.MessageToCreate{
+						Content: "错误: 上传图片失败",
+						MsgID:   id,
+						EventID: eventid,
+						MsgSeq:  msgseq,
+						MsgType: 0, // 默认文本类型
+					}
+				}
+				return messageToCreate
+			}
+
 			// 上传图片并获取新的URL
-			newURL, _, _, _, err := images.UploadBase64ImageToServer(id, base64Encoded, groupid, apiv2)
+			newURL, _, _, err := images.UploadBase64ImageToServer(base64Encoded, apiv2)
 			if err != nil {
 				mylog.Printf("Error uploading base64 encoded image: %v", err)
 				return &dto.MessageToCreate{
@@ -744,8 +807,24 @@ func generateGroupMessage(id string, eventid string, foundItems map[string][]str
 			// 转换为base64
 			base64Encoded := base64.StdEncoding.EncodeToString(imageData)
 
+			if config.GetUploadPicV2Base64() {
+				// 直接上传图片返回 MessageToCreate type=7
+				messageToCreate, err := images.CreateAndUploadMediaMessage(context.TODO(), base64Encoded, eventid, 1, false, "", groupid, id, msgseq, apiv2)
+				if err != nil {
+					mylog.Printf("Error messageToCreate: %v", err)
+					return &dto.MessageToCreate{
+						Content: "错误: 上传图片失败",
+						MsgID:   id,
+						EventID: eventid,
+						MsgSeq:  msgseq,
+						MsgType: 0, // 默认文本类型
+					}
+				}
+				return messageToCreate
+			}
+
 			// 上传图片并获取新的URL
-			newURL, _, _, _, err := images.UploadBase64ImageToServer(id, base64Encoded, groupid, apiv2)
+			newURL, _, _, err := images.UploadBase64ImageToServer(base64Encoded, apiv2)
 			if err != nil {
 				mylog.Printf("Error uploading base64 encoded image: %v", err)
 				return &dto.MessageToCreate{
@@ -944,6 +1023,7 @@ func generateGroupMessage(id string, eventid string, foundItems map[string][]str
 			mylog.Printf("failed to decode base64 image: %v", err)
 			return nil
 		}
+
 		// 首先压缩图片 默认不压缩
 		compressedData, err := images.CompressSingleImage(fileImageData)
 		if err != nil {
@@ -956,8 +1036,26 @@ func generateGroupMessage(id string, eventid string, foundItems map[string][]str
 				MsgType: 0, // 默认文本类型
 			}
 		}
+
+		base64Encoded := base64.StdEncoding.EncodeToString(compressedData)
+		if config.GetUploadPicV2Base64() {
+			// 直接上传图片返回 MessageToCreate type=7
+			messageToCreate, err := images.CreateAndUploadMediaMessage(context.TODO(), base64Encoded, eventid, 1, false, "", groupid, id, msgseq, apiv2)
+			if err != nil {
+				mylog.Printf("Error messageToCreate: %v", err)
+				return &dto.MessageToCreate{
+					Content: "错误: 上传图片失败",
+					MsgID:   id,
+					EventID: eventid,
+					MsgSeq:  msgseq,
+					MsgType: 0, // 默认文本类型
+				}
+			}
+			return messageToCreate
+		}
+
 		// 将解码的图片数据转换回base64格式并上传
-		imageURL, _, _, _, err := images.UploadBase64ImageToServer(id, base64.StdEncoding.EncodeToString(compressedData), groupid, apiv2)
+		imageURL, _, _, err := images.UploadBase64ImageToServer(base64Encoded, apiv2)
 		if err != nil {
 			mylog.Printf("failed to upload base64 image: %v", err)
 			return nil
@@ -1189,7 +1287,7 @@ func auto_md(message callapi.ActionMessage, messageText string, richMediaMessage
 		mylog.Printf("msg_on_touch:%v", msg_on_touch)
 		// 判断是否是 GetVisualkPrefixs 数组开头的文本
 		visualkPrefixs := config.GetVisualkPrefixs()
-		var matchedPrefix *config.VisualPrefixConfig
+		var matchedPrefix *structs.VisualPrefixConfig
 		var isSpecialType bool // 用于标记是否为特殊类型
 		// 去掉前缀开头的*
 		// 处理特殊类型前缀

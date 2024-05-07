@@ -203,7 +203,7 @@ func generateMessageSSE(body InterfaceBody, msgID, ID string) *dto.MessageSSE {
 
 	// 剩余字段赋值
 	msgsse.MsgType = 2
-	msgsse.MsgSeq = index + 3
+	msgsse.MsgSeq = index + 10 // 防止seq重复被去重 预留10条信息供上下文发送
 	msgsse.Stream = &dto.StreamSSE{
 		State: body.State,
 		Index: index,
