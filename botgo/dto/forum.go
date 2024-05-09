@@ -53,7 +53,8 @@ type Thread struct {
 	ChannelID  string     `json:"channel_id"`
 	AuthorID   string     `json:"author_id"`
 	ThreadInfo ThreadInfo `json:"thread_info"`
-	ID         string     `json:"id,omitempty"` // 新增字段以存储ID
+	ID         string     `json:"id,omitempty"`       // 新增字段以存储ID
+	EventID    string     `json:"event_id,omitempty"` // 新增字段以存储EventID
 }
 
 // Post 帖子事件主体内容

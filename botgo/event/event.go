@@ -56,6 +56,8 @@ var eventParseFuncMap = map[dto.OPCode]map[dto.EventType]eventParseFunc{
 		dto.EventC2CMessageCreate:     c2cMessageHandler,
 		dto.EventGroupAddRobot:        groupaddbothandler,
 		dto.EventGroupDelRobot:        groupdelbothandler,
+		dto.EventGroupMsgReject:       groupMsgRejecthandler,
+		dto.EventGroupMsgReceive:      groupMsgReceivehandler,
 	},
 }
 
@@ -78,8 +80,8 @@ func ParseAndHandle(payload *dto.WSPayload) error {
 func ParseData(message []byte, target interface{}) error {
 	// 获取数据部分
 	data := gjson.Get(string(message), "d")
-	// 外层ID 与内层ID不同
-	id := gjson.Get(string(message), "id").String()
+	// 外层ID 与内层ID不同 外层id是event_id 用于发送参数 d内层id是id,用于put回调接口
+	eventid := gjson.Get(string(message), "id").String()
 
 	// 使用switch语句处理不同类型
 	switch v := target.(type) {
@@ -89,7 +91,7 @@ func ParseData(message []byte, target interface{}) error {
 			return err
 		}
 		// 设置ID字段
-		v.ID = id
+		v.EventID = eventid
 		return nil
 
 	case *dto.GroupAddBotEvent:
@@ -98,7 +100,7 @@ func ParseData(message []byte, target interface{}) error {
 			return err
 		}
 		// 设置ID字段
-		v.ID = id
+		v.EventID = eventid
 		return nil
 
 	case *dto.WSInteractionData:
@@ -107,7 +109,25 @@ func ParseData(message []byte, target interface{}) error {
 			return err
 		}
 		// 设置ID字段
-		v.ID = id
+		v.EventID = eventid
+		return nil
+
+	case *dto.GroupMsgRejectEvent:
+		// 特殊处理dto.GroupMsgRejectEvent
+		if err := json.Unmarshal([]byte(data.String()), v); err != nil {
+			return err
+		}
+		// 设置ID字段
+		v.EventID = eventid
+		return nil
+
+	case *dto.GroupMsgReceiveEvent:
+		// 特殊处理dto.GroupMsgReceiveEvent
+		if err := json.Unmarshal([]byte(data.String()), v); err != nil {
+			return err
+		}
+		// 设置ID字段
+		v.EventID = eventid
 		return nil
 
 	default:
@@ -343,6 +363,28 @@ func interactionHandler(payload *dto.WSPayload, message []byte) error {
 	}
 	if DefaultHandlers.Interaction != nil {
 		return DefaultHandlers.Interaction(payload, data)
+	}
+	return nil
+}
+
+func groupMsgRejecthandler(payload *dto.WSPayload, message []byte) error {
+	data := &dto.GroupMsgRejectEvent{}
+	if err := ParseData(message, data); err != nil {
+		return err
+	}
+	if DefaultHandlers.GroupMsgReject != nil {
+		return DefaultHandlers.GroupMsgReject(payload, data)
+	}
+	return nil
+}
+
+func groupMsgReceivehandler(payload *dto.WSPayload, message []byte) error {
+	data := &dto.GroupMsgReceiveEvent{}
+	if err := ParseData(message, data); err != nil {
+		return err
+	}
+	if DefaultHandlers.GroupMsgReceive != nil {
+		return DefaultHandlers.GroupMsgReceive(payload, data)
 	}
 	return nil
 }

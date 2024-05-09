@@ -29,6 +29,8 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 	// 转换appid
 	var userid64 int64
 	var GroupID64 int64
+	var LongGroupID64 int64
+	var LongUserID64 int64
 	var err error
 	var fromgid, fromuid string
 	if data.GroupOpenID != "" {
@@ -60,9 +62,9 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 		if err != nil {
 			mylog.Fatalf("Error storing ID: %v", err)
 		}
-		//当参数不全
-		_, _ = idmap.StoreIDv2(fromgid)
-		_, _ = idmap.StoreIDv2(fromuid)
+		// 当哈希碰撞 因为获取时候是用的非idmap的get函数
+		LongGroupID64, _ = idmap.StoreIDv2(fromgid)
+		LongUserID64, _ = idmap.StoreIDv2(fromuid)
 		if !config.GetHashIDValue() {
 			mylog.Fatalf("避坑日志:你开启了高级id转换,请设置hash_id为true,并且删除idmaps并重启")
 		}
@@ -111,13 +113,20 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 		AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 
 		// 储存和群号相关的eventid
-		echo.AddEvnetID(AppIDString, GroupID64, data.ID)
+		// idmap-pro的设计其实是有问题的,和idmap冲突,并且也还是会哈希碰撞 需要用一个不会碰撞的id去存
+		echo.AddEvnetID(AppIDString, LongGroupID64, data.EventID)
 	} else {
 		if data.GroupOpenID != "" {
 			//群回调
 			newdata := ConvertInteractionToMessage(data)
 			//mylog.Printf("回调测试111-newdata:%v\n", newdata)
-			segmentedMessages := handlers.ConvertToSegmentedMessage(newdata)
+
+			// 如果在Array模式下, 则处理Message为Segment格式
+			var segmentedMessages interface{} = data.Data.Resolved.ButtonData
+			if config.GetArrayValue() {
+				segmentedMessages = handlers.ConvertToSegmentedMessage(newdata)
+			}
+
 			var IsBindedUserId, IsBindedGroupId bool
 			if config.GetHashIDValue() {
 				IsBindedUserId = idmap.CheckValue(data.GroupMemberOpenID, userid64)
@@ -126,12 +135,10 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 				IsBindedUserId = idmap.CheckValuev2(userid64)
 				IsBindedGroupId = idmap.CheckValuev2(GroupID64)
 			}
-			//映射str的messageID到int
-			messageID64, err := idmap.StoreIDv2(data.ID)
-			if err != nil {
-				mylog.Printf("Error storing ID: %v", err)
-				return nil
-			}
+
+			//平台事件,不是真实信息,无需messageID
+			messageID64 := 123
+
 			messageID := int(messageID64)
 			var selfid64 int64
 			if config.GetUseUin() {
@@ -220,23 +227,28 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 			AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 
 			// 储存和群号相关的eventid
-			echo.AddEvnetID(AppIDString, GroupID64, data.ID)
+			fmt.Printf("测试:储存eventid:[%v]LongGroupID64[%v]\n", data.EventID, LongGroupID64)
+			echo.AddEvnetID(AppIDString, LongGroupID64, data.EventID)
 		} else if data.UserOpenID != "" {
 			//私聊回调
 			newdata := ConvertInteractionToMessage(data)
-			segmentedMessages := handlers.ConvertToSegmentedMessage(newdata)
+
+			// 如果在Array模式下, 则处理Message为Segment格式
+			var segmentedMessages interface{} = data.Data.Resolved.ButtonData
+			if config.GetArrayValue() {
+				segmentedMessages = handlers.ConvertToSegmentedMessage(newdata)
+			}
+
 			var IsBindedUserId bool
 			if config.GetHashIDValue() {
 				IsBindedUserId = idmap.CheckValue(data.UserOpenID, userid64)
 			} else {
 				IsBindedUserId = idmap.CheckValuev2(userid64)
 			}
-			//映射str的messageID到int
-			messageID64, err := idmap.StoreIDv2(data.ID)
-			if err != nil {
-				mylog.Printf("Error storing ID: %v", err)
-				return nil
-			}
+
+			//平台事件,不是真实信息,无需messageID
+			messageID64 := 123
+
 			messageID := int(messageID64)
 			var selfid64 int64
 			if config.GetUseUin() {
@@ -294,13 +306,19 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 			AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 
 			// 储存和用户ID相关的eventid
-			echo.AddEvnetID(AppIDString, userid64, data.ID)
+			echo.AddEvnetID(AppIDString, LongUserID64, data.EventID)
 		} else {
 			// TODO: 区分频道和频道私信 如果有人提需求
 			// 频道回调
 			// 处理onebot_channel_message逻辑
 			newdata := ConvertInteractionToMessage(data)
-			segmentedMessages := handlers.ConvertToSegmentedMessage(newdata)
+
+			// 如果在Array模式下, 则处理Message为Segment格式
+			var segmentedMessages interface{} = data.Data.Resolved.ButtonData
+			if config.GetArrayValue() {
+				segmentedMessages = handlers.ConvertToSegmentedMessage(newdata)
+			}
+
 			var selfid64 int64
 			if config.GetUseUin() {
 				selfid64 = config.GetUinint64()

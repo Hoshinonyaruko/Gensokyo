@@ -2130,3 +2130,35 @@ func GetEnableChangeWord() bool {
 	}
 	return instance.Settings.EnableChangeWord
 }
+
+// 获取GlobalGroupMsgRejectReciveEventToMessage状态
+func GetGlobalGroupMsgRejectReciveEventToMessage() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GlobalGroupMsgRejectReciveEventToMessage.")
+		return false
+	}
+	return instance.Settings.GlobalGroupMsgRejectReciveEventToMessage
+}
+
+// 获取GlobalGroupMsgRejectMessage
+func GetGlobalGroupMsgRejectMessage() string {
+	mu.Lock()
+	defer mu.Unlock()
+	if instance != nil {
+		return instance.Settings.GlobalGroupMsgRejectMessage
+	}
+	return ""
+}
+
+// 获取GlobalGroupMsgRejectMessage
+func GetGlobalGroupMsgReceiveMessage() string {
+	mu.Lock()
+	defer mu.Unlock()
+	if instance != nil {
+		return instance.Settings.GlobalGroupMsgReceiveMessage
+	}
+	return ""
+}

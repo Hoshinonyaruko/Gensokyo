@@ -653,6 +653,20 @@ func GroupDelRobotEventHandler() event.GroupDelRobotEventHandler {
 	}
 }
 
+// GroupMsgRejectHandler 实现处理 群请求关闭机器人主动推送 事件的回调
+func GroupMsgRejectHandler() event.GroupMsgRejectHandler {
+	return func(event *dto.WSPayload, data *dto.GroupMsgRejectEvent) error {
+		return p.ProcessGroupMsgReject(data)
+	}
+}
+
+// GroupMsgReceiveHandler 实现处理 群请求开启机器人主动推送 事件的回调
+func GroupMsgReceiveHandler() event.GroupMsgReceiveHandler {
+	return func(event *dto.WSPayload, data *dto.GroupMsgReceiveEvent) error {
+		return p.ProcessGroupMsgRecive(data)
+	}
+}
+
 func getHandlerByName(handlerName string) (interface{}, bool) {
 	switch handlerName {
 	case "ReadyHandler": //连接成功
@@ -679,10 +693,14 @@ func getHandlerByName(handlerName string) (interface{}, bool) {
 		return GroupATMessageEventHandler(), true
 	case "C2CMessageEventHandler": //群私聊
 		return C2CMessageEventHandler(), true
-	case "GroupAddRobotEventHandler": //群私聊
+	case "GroupAddRobotEventHandler": //群添加机器人
 		return GroupAddRobotEventHandler(), true
-	case "GroupDelRobotEventHandler": //群私聊
+	case "GroupDelRobotEventHandler": //群删除机器人
 		return GroupDelRobotEventHandler(), true
+	case "GroupMsgRejectHandler": //群请求关闭机器人主动推送
+		return GroupMsgRejectHandler(), true
+	case "GroupMsgReceiveHandler": //群请求开启机器人主动推送
+		return GroupMsgReceiveHandler(), true
 	default:
 		log.Printf("Unknown handler: %s\n", handlerName)
 		return nil, false

@@ -42,6 +42,8 @@ const (
 	EventC2CMessageCreate      EventType = "C2C_MESSAGE_CREATE"
 	EventGroupAddRobot         EventType = "GROUP_ADD_ROBOT"
 	EventGroupDelRobot         EventType = "GROUP_DEL_ROBOT"
+	EventGroupMsgReject        EventType = "GROUP_MSG_REJECT"
+	EventGroupMsgReceive       EventType = "GROUP_MSG_RECEIVE"
 )
 
 // intentEventMap 不同 intent 对应的事件定义
