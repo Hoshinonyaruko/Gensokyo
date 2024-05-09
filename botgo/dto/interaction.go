@@ -3,6 +3,7 @@ package dto
 // Interaction 互动行为对象
 type Interaction struct {
 	ID                string           `json:"id,omitempty"`                  // 平台方事件 ID
+	EventID           string           `json:"event_id,omitempty"`            // 外层event_id
 	Type              InteractionType  `json:"type,omitempty"`                // 消息按钮: 11, 单聊快捷菜单: 12
 	Scene             string           `json:"scene,omitempty"`               // 事件发生的场景
 	ChatType          int              `json:"chat_type,omitempty"`           // 频道场景: 0, 群聊场景: 1, 单聊场景: 2

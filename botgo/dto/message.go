@@ -54,6 +54,21 @@ type Forum struct {
 // GroupAddBotEvent 表示群添加机器人事件的数据结构
 type GroupAddBotEvent struct {
 	ID             string      `json:"id"`
+	EventID        string      `json:"event_id"`
+	GroupOpenID    string      `json:"group_openid"`
+	OpMemberOpenID string      `json:"op_member_openid"`
+	Timestamp      interface{} `json:"timestamp"`
+}
+
+type GroupMsgRejectEvent struct {
+	EventID        string      `json:"event_id"`
+	GroupOpenID    string      `json:"group_openid"`
+	OpMemberOpenID string      `json:"op_member_openid"`
+	Timestamp      interface{} `json:"timestamp"`
+}
+
+type GroupMsgReceiveEvent struct {
+	EventID        string      `json:"event_id"`
 	GroupOpenID    string      `json:"group_openid"`
 	OpMemberOpenID string      `json:"op_member_openid"`
 	Timestamp      interface{} `json:"timestamp"`
