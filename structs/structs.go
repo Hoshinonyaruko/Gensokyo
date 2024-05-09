@@ -24,12 +24,15 @@ type Settings struct {
 	//事件订阅类
 	TextIntent []string `yaml:"text_intent"`
 	//转换类
-	GlobalChannelToGroup       bool `yaml:"global_channel_to_group"`
-	GlobalPrivateToChannel     bool `yaml:"global_private_to_channel"`
-	GlobalForumToChannel       bool `yaml:"global_forum_to_channel"`
-	GlobalInteractionToMessage bool `yaml:"global_interaction_to_message"`
-	HashID                     bool `yaml:"hash_id"`
-	IdmapPro                   bool `yaml:"idmap_pro"`
+	GlobalChannelToGroup                     bool   `yaml:"global_channel_to_group"`
+	GlobalPrivateToChannel                   bool   `yaml:"global_private_to_channel"`
+	GlobalForumToChannel                     bool   `yaml:"global_forum_to_channel"`
+	GlobalInteractionToMessage               bool   `yaml:"global_interaction_to_message"`
+	GlobalGroupMsgRejectReciveEventToMessage bool   `yaml:"global_group_msg_rre_to_message"`
+	GlobalGroupMsgRejectMessage              string `yaml:"global_group_msg_reject_message"`
+	GlobalGroupMsgReceiveMessage             string `yaml:"global_group_msg_receive_message"`
+	HashID                                   bool   `yaml:"hash_id"`
+	IdmapPro                                 bool   `yaml:"idmap_pro"`
 	//gensokyo互联类
 	Server_dir         string `yaml:"server_dir"`
 	Port               string `yaml:"port"`

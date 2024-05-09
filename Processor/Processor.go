@@ -130,6 +130,30 @@ type OnebotInteractionNotice struct {
 	Data       *dto.WSInteractionData `json:"data,omitempty"`
 }
 
+// onebotv11标准扩展
+type OnebotGroupRejectNotice struct {
+	GroupID    int64                    `json:"group_id,omitempty"`
+	NoticeType string                   `json:"notice_type,omitempty"`
+	PostType   string                   `json:"post_type,omitempty"`
+	SelfID     int64                    `json:"self_id,omitempty"`
+	SubType    string                   `json:"sub_type,omitempty"`
+	Time       int64                    `json:"time,omitempty"`
+	UserID     int64                    `json:"user_id,omitempty"`
+	Data       *dto.GroupMsgRejectEvent `json:"data,omitempty"`
+}
+
+// onebotv11标准扩展
+type OnebotGroupReceiveNotice struct {
+	GroupID    int64                     `json:"group_id,omitempty"`
+	NoticeType string                    `json:"notice_type,omitempty"`
+	PostType   string                    `json:"post_type,omitempty"`
+	SelfID     int64                     `json:"self_id,omitempty"`
+	SubType    string                    `json:"sub_type,omitempty"`
+	Time       int64                     `json:"time,omitempty"`
+	UserID     int64                     `json:"user_id,omitempty"`
+	Data       *dto.GroupMsgReceiveEvent `json:"data,omitempty"`
+}
+
 type PrivateSender struct {
 	Nickname string `json:"nickname"`
 	UserID   int64  `json:"user_id"` // Can be either string or int depending on logic

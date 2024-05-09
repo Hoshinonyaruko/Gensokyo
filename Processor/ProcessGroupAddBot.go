@@ -135,9 +135,9 @@ func (p *Processors) ProcessGroupAddBot(data *dto.GroupAddBotEvent) error {
 	AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 
 	// 储存和群号相关的eventid
-	echo.AddEvnetID(AppIDString, GroupID64, data.ID)
+	echo.AddEvnetID(AppIDString, GroupID64, data.EventID)
 
-	mylog.Printf("Bot被[%v]邀请进入群[%v]eventid[%v]", userid64, GroupID64, data.ID)
+	mylog.Printf("Bot被[%v]邀请进入群[%v]eventid[%v]", userid64, GroupID64, data.EventID)
 
 	// 调用GetSelfIntroduce函数
 	intros := config.GetSelfIntroduce()
