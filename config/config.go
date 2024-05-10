@@ -35,45 +35,139 @@ type CommentBlock struct {
 	Offset    int      // 注释与目标键之间的行数
 }
 
+// 不支持配置热重载的配置项
+var restartRequiredFields = []string{
+	"WsAddress", "WsToken", "ReconnectTimes", "HeartBeatInterval", "LaunchReconnectTimes",
+	"AppID", "Uin", "Token", "ClientSecret", "ShardCount", "ShardID", "UseUin",
+	"TextIntent",
+	"ServerDir", "Port", "BackupPort", "Lotus", "LotusPassword", "LotusWithoutIdmaps",
+	"WsServerPath", "EnableWsServer", "WsServerToken",
+	"IdentifyFile", "IdentifyAppids", "Crt", "Key",
+	"DeveloperLog", "LogLevel", "SaveLogs",
+	"DisableWebui", "Username", "Password",
+	"Title", // 继续检查和增加
+}
+
 // LoadConfig 从文件中加载配置并初始化单例配置
-func LoadConfig(path string) (*Config, error) {
+func LoadConfig(path string, fastload bool) (*Config, error) {
 	mu.Lock()
 	defer mu.Unlock()
-
-	// 如果单例已经被初始化了，直接返回
-	if instance != nil {
-		return instance, nil
-	}
 
 	configData, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	//todo remove it 破坏性变更的擦屁股代码
-	var ischange bool
-	configData, ischange = replaceVisualPrefixsLine(configData)
-	if ischange {
-		err = os.WriteFile(path, configData, 0644)
-		if err != nil {
-			// 处理写入错误
+
+	// 检查并替换视觉前缀行，如果有必要，后期会注释
+	// var isChange bool
+	// configData, isChange = replaceVisualPrefixsLine(configData)
+	// if isChange {
+	// 	// 如果配置文件已修改，重新写入修正后的数据
+	// 	if err = os.WriteFile(path, configData, 0644); err != nil {
+	// 		return nil, err // 处理写入错误
+	// 	}
+	// }
+
+	// 尝试解析配置数据
+	conf := &Config{}
+	if err = yaml.Unmarshal(configData, conf); err != nil {
+		return nil, err
+	}
+
+	if !fastload {
+		// 确保本地配置文件的完整性,添加新的字段
+		if err = ensureConfigComplete(path); err != nil {
 			return nil, err
 		}
-	}
-	//mylog.Printf("dev_ischange:%v", ischange)
-	conf := &Config{}
-	err = yaml.Unmarshal(configData, conf)
-	if err != nil {
-		return nil, err
+	} else {
+		if isValidConfig(conf) {
+			//log.Printf("instance.Settings：%v", instance.Settings)
+			// 用现有的instance比对即将覆盖赋值的conf,用[]string返回配置发生了变化的配置项
+			changedFields := compareConfigChanges("Settings", instance.Settings, conf.Settings)
+			// 根据changedFields进行进一步的操作，在不支持热重载的字段实现自动重启
+			if len(changedFields) > 0 {
+				log.Printf("配置已变更的字段：%v", changedFields)
+				checkForRestart(changedFields) // 检查变更字段是否需要重启
+			}
+		} //conf为空时不对比
 	}
 
-	// 确保配置完整性
-	if err := ensureConfigComplete(path); err != nil {
-		return nil, err
+	// 更新单例实例，即使它已经存在 更新前检查是否有效,vscode对文件的更新行为会触发2次文件变动
+	// 第一次会让configData为空,迅速的第二次才是正常有值的configData
+	if isValidConfig(conf) {
+		instance = conf
 	}
 
-	// 设置单例实例
-	instance = conf
 	return instance, nil
+}
+
+func isValidConfig(conf *Config) bool {
+	// 确认config不为空且必要字段已设置
+	return conf != nil && conf.Version != 0
+}
+
+// 去除Settings前缀
+func stripSettingsPrefix(fieldName string) string {
+	return strings.TrimPrefix(fieldName, "Settings.")
+}
+
+// compareConfigChanges 检查并返回发生变化的配置字段，处理嵌套结构体
+func compareConfigChanges(prefix string, oldConfig interface{}, newConfig interface{}) []string {
+	var changedFields []string
+
+	oldVal := reflect.ValueOf(oldConfig)
+	newVal := reflect.ValueOf(newConfig)
+
+	// 解引用指针
+	if oldVal.Kind() == reflect.Ptr {
+		oldVal = oldVal.Elem()
+	}
+	if newVal.Kind() == reflect.Ptr {
+		newVal = newVal.Elem()
+	}
+
+	// 遍历所有字段
+	for i := 0; i < oldVal.NumField(); i++ {
+		oldField := oldVal.Field(i)
+		newField := newVal.Field(i)
+		fieldType := oldVal.Type().Field(i)
+		fieldName := fieldType.Name
+
+		fullFieldName := fieldName
+		if prefix != "" {
+			fullFieldName = fmt.Sprintf("%s.%s", prefix, fieldName)
+		}
+
+		// 对于结构体字段递归比较
+		if oldField.Kind() == reflect.Struct || newField.Kind() == reflect.Struct {
+			subChanges := compareConfigChanges(fullFieldName, oldField.Interface(), newField.Interface())
+			changedFields = append(changedFields, subChanges...)
+		} else {
+			// 打印将要比较的字段和它们的值
+			//fmt.Printf("Comparing field: %s\nOld value: %v\nNew value: %v\n", fullFieldName, oldField.Interface(), newField.Interface())
+			if !reflect.DeepEqual(oldField.Interface(), newField.Interface()) {
+				//fmt.Println("-> Field changed")
+				// 去除Settings前缀后添加到变更字段列表
+				changedField := stripSettingsPrefix(fullFieldName)
+				changedFields = append(changedFields, changedField)
+			}
+		}
+	}
+
+	return changedFields
+}
+
+// 检查是否需要重启
+func checkForRestart(changedFields []string) {
+	for _, field := range changedFields {
+		for _, restartField := range restartRequiredFields {
+			if field == restartField {
+				fmt.Println("Configuration change requires restart:", field)
+				sys.RestartApplication() // 调用重启函数
+				return
+			}
+		}
+	}
 }
 
 func CreateAndWriteConfigTemp() error {
@@ -1426,46 +1520,46 @@ func GetQrSize() int {
 	return instance.Settings.QrSize
 }
 
-func replaceVisualPrefixsLine(configData []byte) ([]byte, bool) {
-	// 定义新的 visual_prefixs 部分
-	newVisualPrefixs := `  visual_prefixs :                  #虚拟前缀 与white_prefixs配合使用 处理流程自动忽略该前缀 remove_prefix remove_at 需为true时生效
-  - prefix: ""                      #虚拟前缀开头 例 你有3个指令 帮助 测试 查询 将 prefix 设置为 工具类 后 则可通过 工具类 帮助 触发机器人
-    whiteList: [""]                 #开关状态取决于 white_prefix_mode 为每一个二级指令头设计独立的白名单
-    No_White_Response : "" 
-  - prefix: ""
-    whiteList: [""]
-    No_White_Response : "" 
-  - prefix: ""
-    whiteList: [""]
-    No_White_Response : "" `
+// func replaceVisualPrefixsLine(configData []byte) ([]byte, bool) {
+// 	// 定义新的 visual_prefixs 部分
+// 	newVisualPrefixs := `  visual_prefixs :                  #虚拟前缀 与white_prefixs配合使用 处理流程自动忽略该前缀 remove_prefix remove_at 需为true时生效
+//   - prefix: ""                      #虚拟前缀开头 例 你有3个指令 帮助 测试 查询 将 prefix 设置为 工具类 后 则可通过 工具类 帮助 触发机器人
+//     whiteList: [""]                 #开关状态取决于 white_prefix_mode 为每一个二级指令头设计独立的白名单
+//     No_White_Response : ""
+//   - prefix: ""
+//     whiteList: [""]
+//     No_White_Response : ""
+//   - prefix: ""
+//     whiteList: [""]
+//     No_White_Response : "" `
 
-	// 将 byte 数组转换为字符串
-	configStr := string(configData)
+// 	// 将 byte 数组转换为字符串
+// 	configStr := string(configData)
 
-	// 按行分割 configStr
-	lines := strings.Split(configStr, "\n")
+// 	// 按行分割 configStr
+// 	lines := strings.Split(configStr, "\n")
 
-	// 创建一个新的字符串构建器
-	var newConfigData strings.Builder
+// 	// 创建一个新的字符串构建器
+// 	var newConfigData strings.Builder
 
-	// 标记是否进行了替换
-	replaced := false
+// 	// 标记是否进行了替换
+// 	replaced := false
 
-	// 遍历所有行
-	for _, line := range lines {
-		// 检查是否是 visual_prefixs 开头的行
-		if strings.HasPrefix(strings.TrimSpace(line), "visual_prefixs : [") {
-			// 替换为新的 visual_prefixs 部分
-			newConfigData.WriteString(newVisualPrefixs + "\n")
-			replaced = true
-			continue // 跳过原有行
-		}
-		newConfigData.WriteString(line + "\n")
-	}
+// 	// 遍历所有行
+// 	for _, line := range lines {
+// 		// 检查是否是 visual_prefixs 开头的行
+// 		if strings.HasPrefix(strings.TrimSpace(line), "visual_prefixs : [") {
+// 			// 替换为新的 visual_prefixs 部分
+// 			newConfigData.WriteString(newVisualPrefixs + "\n")
+// 			replaced = true
+// 			continue // 跳过原有行
+// 		}
+// 		newConfigData.WriteString(line + "\n")
+// 	}
 
-	// 返回新配置和是否发生了替换的标记
-	return []byte(newConfigData.String()), replaced
-}
+// 	// 返回新配置和是否发生了替换的标记
+// 	return []byte(newConfigData.String()), replaced
+// }
 
 // 获取GetWhiteBypassRevers的值
 func GetWhiteBypassRevers() bool {
