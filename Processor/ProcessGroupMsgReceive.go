@@ -65,6 +65,8 @@ func (p *Processors) ProcessGroupMsgRecive(data *dto.GroupMsgReceiveEvent) error
 			mylog.Printf("Error storing ID: %v", err)
 			return nil
 		}
+		// 修复不开启idmap-pro问题
+		LongGroupID64 = GroupID64
 	}
 	var selfid64 int64
 	if config.GetUseUin() {
@@ -76,7 +78,7 @@ func (p *Processors) ProcessGroupMsgRecive(data *dto.GroupMsgReceiveEvent) error
 	if !config.GetGlobalGroupMsgRejectReciveEventToMessage() {
 		notice := &OnebotGroupReceiveNotice{
 			GroupID:    GroupID64,
-			NoticeType: "interaction",
+			NoticeType: "group_receive",
 			PostType:   "notice",
 			SelfID:     selfid64,
 			SubType:    "create",
@@ -150,7 +152,7 @@ func (p *Processors) ProcessGroupMsgRecive(data *dto.GroupMsgReceiveEvent) error
 			}
 			//增强配置
 			if !config.GetNativeOb11() {
-				groupMsg.RealMessageType = "interaction"
+				groupMsg.RealMessageType = "group_receive"
 				groupMsg.IsBindedUserId = IsBindedUserId
 				groupMsg.IsBindedGroupId = IsBindedGroupId
 				groupMsg.RealGroupID = data.GroupOpenID
