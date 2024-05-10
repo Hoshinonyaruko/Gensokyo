@@ -246,6 +246,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		}
 
 		if imageCount == 1 && messageText != "" {
+			var groupMessage *dto.MessageToCreate
 			mylog.Printf("发图文混合信息-群")
 			// 创建包含单个图片的 singleItem
 			singleItem[imageType] = []string{imageUrl}
@@ -254,11 +255,15 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			groupReply := generateGroupMessage(messageID, eventID, singleItem, "", msgseq+1, apiv2, message.Params.GroupID.(string))
 			// 进行类型断言
 			richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
+			// 如果断言为RichMediaMessage失败
 			if !ok {
-				mylog.Printf("Error: Expected RichMediaMessage type for key ")
-				return "", nil
+				// 尝试断言为MessageToCreate
+				groupMessage, ok = groupReply.(*dto.MessageToCreate)
+				if !ok {
+					mylog.Printf("Error: Expected RichMediaMessage type for key,value:%v", groupReply)
+					return "", nil
+				}
 			}
-			var groupMessage *dto.MessageToCreate
 			var transmd bool
 			var md *dto.Markdown
 			var kb *keyboard.MessageKeyboard
@@ -266,46 +271,53 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			if config.GetTwoWayEcho() {
 				md, kb, transmd = auto_md(message, messageText, richMediaMessage)
 			}
+			// 如果groupMessage是nil 说明groupReply是richMediaMessage类型 如果groupMessage不是nil 说明groupReply是MessageToCreate
+			if groupMessage == nil {
+				//如果没有转换成md发送
+				if !transmd {
+					// 上传图片并获取FileInfo
+					fileInfo, err := uploadMedia(context.TODO(), message.Params.GroupID.(string), richMediaMessage, apiv2)
+					if err != nil {
+						mylog.Printf("上传图片失败: %v", err)
+						return "", nil // 或其他错误处理
+					}
+					// 创建包含文本和图像信息的消息
+					msgseq = echo.GetMappingSeq(messageID)
+					echo.AddMappingSeq(messageID, msgseq+1)
+					groupMessage = &dto.MessageToCreate{
+						Content: messageText, // 添加文本内容
+						Media: dto.Media{
+							FileInfo: fileInfo, // 添加图像信息
+						},
+						MsgID:   messageID,
+						EventID: eventID,
+						MsgSeq:  msgseq,
+						MsgType: 7, // 假设7是组合消息类型
+					}
+					groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
+				} else {
+					//将kb和md组合成groupMessage并用MsgType=2发送
 
-			//如果没有转换成md发送
-			if !transmd {
-				// 上传图片并获取FileInfo
-				fileInfo, err := uploadMedia(context.TODO(), message.Params.GroupID.(string), richMediaMessage, apiv2)
-				if err != nil {
-					mylog.Printf("上传图片失败: %v", err)
-					return "", nil // 或其他错误处理
+					msgseq = echo.GetMappingSeq(messageID)
+					echo.AddMappingSeq(messageID, msgseq+1)
+					groupMessage = &dto.MessageToCreate{
+						Content:  "markdown", // 添加文本内容
+						MsgID:    messageID,
+						EventID:  eventID,
+						MsgSeq:   msgseq,
+						Markdown: md,
+						Keyboard: kb,
+						MsgType:  2, // 假设7是组合消息类型
+					}
+					groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
+
 				}
-				// 创建包含文本和图像信息的消息
-				msgseq = echo.GetMappingSeq(messageID)
-				echo.AddMappingSeq(messageID, msgseq+1)
-				groupMessage = &dto.MessageToCreate{
-					Content: messageText, // 添加文本内容
-					Media: dto.Media{
-						FileInfo: fileInfo, // 添加图像信息
-					},
-					MsgID:   messageID,
-					EventID: eventID,
-					MsgSeq:  msgseq,
-					MsgType: 7, // 假设7是组合消息类型
-				}
-				groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
 			} else {
-				//将kb和md组合成groupMessage并用MsgType=2发送
-
-				msgseq = echo.GetMappingSeq(messageID)
-				echo.AddMappingSeq(messageID, msgseq+1)
-				groupMessage = &dto.MessageToCreate{
-					Content:  "markdown", // 添加文本内容
-					MsgID:    messageID,
-					EventID:  eventID,
-					MsgSeq:   msgseq,
-					Markdown: md,
-					Keyboard: kb,
-					MsgType:  2, // 假设7是组合消息类型
-				}
+				// 为groupMessage附加内容 变成图文信息
+				groupMessage.Content = messageText
 				groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
-
 			}
+
 			// 发送组合消息
 			resp, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 			if err != nil {
