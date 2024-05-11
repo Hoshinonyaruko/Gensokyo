@@ -1335,6 +1335,7 @@ func auto_md(message callapi.ActionMessage, messageText string, richMediaMessage
 				mylog.Printf("获取图片宽高出错")
 			}
 			imgDesc := fmt.Sprintf("图片 #%dpx #%dpx", width, height)
+
 			// 将所有的\r\n替换为\r
 			messageText = strings.ReplaceAll(messageText, "\r\n", "\r")
 			// 将所有的\n替换为\r
@@ -1343,18 +1344,33 @@ func auto_md(message callapi.ActionMessage, messageText string, richMediaMessage
 			if !strings.HasPrefix(messageText, "\r") {
 				messageText = "\r" + messageText
 			}
-			// 创建 MarkdownParams 的实例
-			mdParams := []*dto.MarkdownParams{
-				{Key: "text_start", Values: []string{" "}}, //空着
-				{Key: "img_dec", Values: []string{imgDesc}},
-				{Key: "img_url", Values: []string{imgURL}},
-				{Key: "text_end", Values: []string{messageText}},
+			if config.GetEntersAsBlock() {
+				messageText = strings.ReplaceAll(messageText, "\r", " ")
 			}
-			// 组合模板 Markdown
-			md = &dto.Markdown{
-				CustomTemplateID: CustomTemplateID,
-				Params:           mdParams,
+
+			// 根据配置决定如何生成Markdown内容
+			if !config.GetNativeMD() {
+				// 创建 MarkdownParams 的实例
+				mdParams := []*dto.MarkdownParams{
+					{Key: "text_start", Values: []string{" "}}, //空着
+					{Key: "img_dec", Values: []string{imgDesc}},
+					{Key: "img_url", Values: []string{imgURL}},
+					{Key: "text_end", Values: []string{messageText}},
+				}
+				// 组合模板 Markdown
+				md = &dto.Markdown{
+					CustomTemplateID: CustomTemplateID,
+					Params:           mdParams,
+				}
+			} else {
+				// 使用原生Markdown格式
+				content := fmt.Sprintf(" %s![%s](%s)%s", " ", imgDesc, imgURL, messageText)
+				// 原生 Markdown
+				md = &dto.Markdown{
+					Content: content,
+				}
 			}
+
 			whiteList := matchedPrefix.WhiteList
 			// 创建 CustomKeyboard
 			customKeyboard := &keyboard.CustomKeyboard{
