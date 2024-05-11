@@ -128,6 +128,8 @@ type Settings struct {
 	//MD相关
 	CustomTemplateID string `yaml:"custom_template_id"`
 	KeyBoardID       string `yaml:"keyboard_id"`
+	NativeMD         bool   `yaml:"native_md"`
+	EntersAsBlock    bool   `yaml:"enters_as_block"`
 	//发送行为修改
 	LazyMessageId     bool   `yaml:"lazy_message_id"`
 	RamDomSeq         bool   `yaml:"ramdom_seq"`

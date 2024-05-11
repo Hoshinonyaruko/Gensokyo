@@ -2256,3 +2256,27 @@ func GetGlobalGroupMsgReceiveMessage() string {
 	}
 	return ""
 }
+
+// 获取EntersAsBlock状态
+func GetEntersAsBlock() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to EntersAsBlock.")
+		return false
+	}
+	return instance.Settings.EntersAsBlock
+}
+
+// 获取NativeMD状态
+func GetNativeMD() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to NativeMD.")
+		return false
+	}
+	return instance.Settings.NativeMD
+}
