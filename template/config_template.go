@@ -167,7 +167,9 @@ settings:
   #MD相关
   custom_template_id : ""           #自动转换图文信息到md所需要的id *需要应用端支持双方向echo
   keyboard_id : ""                  #自动转换图文信息到md所需要的按钮id *需要应用端支持双方向echo
-  
+  native_md : false                 #自动转换图文信息到md,使用原生markdown能力.
+  enters_as_block : false           #自动转换图文信息到md,\r \r\n \n 替换为空格.
+
   #发送行为修改
   lazy_message_id : false           #false=message_id 条条准确对应 true=message_id 按时间范围随机对应(适合主动推送bot)前提,有足够多的活跃信息刷新id池
   ramdom_seq : false                #当多开gensokyo时,如果遇到群信息只能发出一条,请开启每个gsk的此项.(建议使用一个gsk连接多个应用)
