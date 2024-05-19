@@ -183,6 +183,19 @@ func main() {
 			log.Printf("自定义ac地址模式...请从日志手动获取bot的真实id并设置,不然at会不正常")
 		}
 		if !nologin {
+
+			//创建idmap服务器 数据库
+			idmap.InitializeDB()
+			//创建botstats数据库
+			botstats.InitializeDB()
+			//创建webui数据库
+			webui.InitializeDB()
+
+			//关闭时候释放数据库
+			defer idmap.CloseDB()
+			defer botstats.CloseDB()
+			defer webui.CloseDB()
+
 			if configURL == "" && !fix11300 { //初始化handlers
 				handlers.BotID = me.ID
 			} else { //初始化handlers
@@ -308,18 +321,6 @@ func main() {
 		}
 
 	}
-
-	//创建idmap服务器 数据库
-	idmap.InitializeDB()
-	//创建botstats数据库
-	botstats.InitializeDB()
-	//创建webui数据库
-	webui.InitializeDB()
-
-	//关闭时候释放数据库
-	defer idmap.CloseDB()
-	defer botstats.CloseDB()
-	defer webui.CloseDB()
 
 	//图片上传 调用次数限制
 	rateLimiter := server.NewRateLimiter()
