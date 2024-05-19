@@ -453,10 +453,19 @@ func handleDeleteMsg(c *gin.Context, api openapi.OpenAPI, apiV2 openapi.OpenAPI)
 		MessageID interface{} `json:"message_id" form:"message_id"`
 	}
 
-	// 解析请求参数
-	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+	// 根据请求方法解析参数
+	if c.Request.Method == http.MethodGet {
+		// 从URL查询参数解析
+		if err := c.ShouldBindQuery(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	} else {
+		// 从JSON或表单数据解析
+		if err := c.ShouldBind(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 	}
 
 	// 构造参数内容，只包括实际有值的字段
