@@ -120,12 +120,12 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 			SubType: "friend",
 			Time:    time.Now().Unix(),
 		}
+		// 额外字段
 		if !config.GetNativeOb11() {
 			privateMsg.RealMessageType = "group_private"
 			privateMsg.IsBindedUserId = IsBindedUserId
-			if IsBindedUserId {
-				privateMsg.Avatar, _ = GenerateAvatarURL(userid64)
-			}
+			privateMsg.RealUserID = data.Author.ID
+			privateMsg.Avatar, _ = GenerateAvatarURLV2(data.Author.ID)
 		}
 		// 根据条件判断是否添加Echo字段
 		if config.GetTwoWayEcho() {
@@ -238,11 +238,15 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 				Area:   "0",
 				Level:  "0",
 			},
-			SubType:         "normal",
-			Time:            time.Now().Unix(),
-			Avatar:          "",
-			RealMessageType: "group_private",
-			IsBindedUserId:  IsBindedUserId,
+			SubType: "normal",
+			Time:    time.Now().Unix(),
+		}
+		//增强配置
+		if !config.GetNativeOb11() {
+			groupMsg.RealMessageType = "group_private"
+			groupMsg.IsBindedUserId = IsBindedUserId
+			groupMsg.RealUserID = data.Author.ID
+			groupMsg.Avatar, _ = GenerateAvatarURLV2(data.Author.ID)
 		}
 		//根据条件判断是否增加nick和card
 		var CaN = config.GetCardAndNick()

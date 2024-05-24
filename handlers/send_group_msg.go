@@ -318,8 +318,9 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
 			}
 
+			var resp *dto.GroupMessageResponse
 			// 发送组合消息
-			resp, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
+			resp, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 			if err != nil {
 				mylog.Printf("发送组合消息失败: %v", err)
 			}
@@ -329,6 +330,12 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				pair.Group = message.Params.GroupID.(string)
 				pair.GroupMessage = groupMessage
 				echo.PushGlobalStack(pair)
+			} else if err != nil && strings.Contains(err.Error(), `"code":40034025`) {
+				groupMessage.EventID = ""
+				resp, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
+				if err != nil {
+					mylog.Printf("发送组合消息失败: %v", err)
+				}
 			}
 
 			// 发送成功回执
@@ -351,9 +358,10 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				return "", nil // 或其他错误处理
 			}
 
+			var resp *dto.GroupMessageResponse
 			groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
 			//重新为err赋值
-			resp, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
+			resp, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 			if err != nil {
 				mylog.Printf("发送文本群组信息失败: %v", err)
 			}
@@ -363,6 +371,12 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				pair.Group = message.Params.GroupID.(string)
 				pair.GroupMessage = groupMessage
 				echo.PushGlobalStack(pair)
+			} else if err != nil && strings.Contains(err.Error(), `"code":40034025`) {
+				groupMessage.EventID = ""
+				resp, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
+				if err != nil {
+					mylog.Printf("发送文本群组信息失败: %v", err)
+				}
 			}
 			//发送成功回执
 			retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
@@ -401,7 +415,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 							return "", nil // 或其他错误处理
 						}
 						//重新为err赋值
-						resp, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
+						resp, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 						if err != nil {
 							mylog.Printf("发送 MessageToCreate 信息失败: %v", err)
 						}
@@ -411,6 +425,14 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 							pair.Group = message.Params.GroupID.(string)
 							pair.GroupMessage = groupMessage
 							echo.PushGlobalStack(pair)
+						} else if err != nil && strings.Contains(err.Error(), `"code":40034025`) {
+							//请求参数event_id无效 重试
+							groupMessage.EventID = ""
+							//重新为err赋值
+							resp, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
+							if err != nil {
+								mylog.Printf("发送 MessageToCreate 信息失败 on code 40034025: %v", err)
+							}
 						}
 						//发送成功回执
 						retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
@@ -442,6 +464,12 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 							pair.Group = message.Params.GroupID.(string)
 							pair.GroupMessage = groupMessage
 							echo.PushGlobalStack(pair)
+						} else if err != nil && strings.Contains(err.Error(), `"code":40034025`) {
+							groupMessage.EventID = ""
+							resp, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
+							if err != nil {
+								mylog.Printf("发送文本报错信息失败: %v", err)
+							}
 						}
 					}
 				}
@@ -471,6 +499,12 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 						pair.Group = message.Params.GroupID.(string)
 						pair.GroupMessage = groupMessage
 						echo.PushGlobalStack(pair)
+					} else if err != nil && strings.Contains(err.Error(), `"code":40034025`) {
+						groupMessage.EventID = ""
+						resp, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
+						if err != nil {
+							mylog.Printf("发送图片失败: %v", err)
+						}
 					}
 				}
 				//发送成功回执
