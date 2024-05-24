@@ -10,6 +10,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
+	"github.com/hoshinonyaruko/gensokyo/structs"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/openapi"
 )
@@ -19,14 +20,6 @@ var msgIDToRelatedID = make(map[string]string)
 
 func init() {
 	callapi.RegisterHandler("send_private_msg_sse", HandleSendPrivateMsgSSE)
-}
-
-type InterfaceBody struct {
-	Content        string   `json:"content"`
-	State          int      `json:"state"`
-	PromptKeyboard []string `json:"prompt_keyboard,omitempty"`
-	ActionButton   int      `json:"action_button,omitempty"`
-	CallbackData   string   `json:"callback_data,omitempty"`
 }
 
 func incrementIndex(msgID string) int {
@@ -108,7 +101,7 @@ func HandleSendPrivateMsgSSE(client callapi.Client, api openapi.OpenAPI, apiv2 o
 	}
 
 	// 然后，将这个JSON字符串反序列化到InterfaceBody类型的对象中
-	var messageBody InterfaceBody
+	var messageBody structs.InterfaceBody
 	err = json.Unmarshal(messageJSON, &messageBody)
 	if err != nil {
 		fmt.Printf("Error unmarshalling to InterfaceBody: %v\n", err)
@@ -164,7 +157,7 @@ func HandleSendPrivateMsgSSE(client callapi.Client, api openapi.OpenAPI, apiv2 o
 	return retmsg, nil
 }
 
-func generateMessageSSE(body InterfaceBody, msgID, ID string) *dto.MessageSSE {
+func generateMessageSSE(body structs.InterfaceBody, msgID, ID string) *dto.MessageSSE {
 	index := incrementIndex(msgID) // 获取并递增Index
 
 	// 将InterfaceBody的PromptKeyboard转换为MessageSSE的结构

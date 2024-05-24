@@ -182,3 +182,11 @@ type VisualPrefixConfig struct {
 	WhiteList       []string `yaml:"whiteList"`
 	NoWhiteResponse string   `yaml:"No_White_Response"`
 }
+
+type InterfaceBody struct {
+	Content        string   `json:"content"`
+	State          int      `json:"state"`
+	PromptKeyboard []string `json:"prompt_keyboard,omitempty"`
+	ActionButton   int      `json:"action_button,omitempty"`
+	CallbackData   string   `json:"callback_data,omitempty"`
+}
