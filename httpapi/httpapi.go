@@ -446,11 +446,11 @@ func convertToString(value interface{}) string {
 func handleDeleteMsg(c *gin.Context, api openapi.OpenAPI, apiV2 openapi.OpenAPI) {
 	// 使用interface{}以适应不同类型的输入，接受动态参数类型
 	var req struct {
-		UserID    interface{} `json:"user_id,omitempty" form:"user_id"`
-		GroupID   interface{} `json:"group_id,omitempty" form:"group_id"`
-		ChannelID interface{} `json:"channel_id,omitempty" form:"channel_id"`
-		GuildID   interface{} `json:"guild_id,omitempty" form:"guild_id"`
-		MessageID interface{} `json:"message_id" form:"message_id"`
+		UserID    string `json:"user_id,omitempty" form:"user_id"`
+		GroupID   string `json:"group_id,omitempty" form:"group_id"`
+		ChannelID string `json:"channel_id,omitempty" form:"channel_id"`
+		GuildID   string `json:"guild_id,omitempty" form:"guild_id"`
+		MessageID string `json:"message_id" form:"message_id"`
 	}
 
 	// 根据请求方法解析参数
@@ -471,19 +471,19 @@ func handleDeleteMsg(c *gin.Context, api openapi.OpenAPI, apiV2 openapi.OpenAPI)
 	// 构造参数内容，只包括实际有值的字段
 	params := callapi.ParamsContent{}
 
-	if req.UserID != nil {
+	if req.UserID != "" {
 		params.UserID = convertToString(req.UserID)
 	}
-	if req.GroupID != nil {
+	if req.GroupID != "" {
 		params.GroupID = convertToString(req.GroupID)
 	}
-	if req.ChannelID != nil {
+	if req.ChannelID != "" {
 		params.ChannelID = convertToString(req.ChannelID)
 	}
-	if req.GuildID != nil {
+	if req.GuildID != "" {
 		params.GuildID = convertToString(req.GuildID)
 	}
-	if req.MessageID != nil {
+	if req.MessageID != "" {
 		params.MessageID = convertToString(req.MessageID)
 	}
 

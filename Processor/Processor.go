@@ -115,6 +115,7 @@ type OnebotPrivateMessage struct {
 	Font            int           `json:"font"`                        // Optional field
 	UserID          int64         `json:"user_id"`                     // Can be either string or int depending on logic
 	RealMessageType string        `json:"real_message_type,omitempty"` //当前信息的真实类型 group group_private guild guild_private
+	RealUserID      string        `json:"real_user_id,omitempty"`      //当前真实uid
 	IsBindedUserId  bool          `json:"is_binded_user_id,omitempty"` //当前用户号号是否是binded后的
 }
 
