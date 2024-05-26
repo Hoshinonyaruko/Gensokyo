@@ -100,6 +100,7 @@ type Settings struct {
 	SandBoxMode bool   `yaml:"sandbox_mode"`
 	DevMessgeID bool   `yaml:"dev_message_id"`
 	SendError   bool   `yaml:"send_error"`
+	SaveError   bool   `yaml:"save_error"`
 	//增长营销类
 	SelfIntroduce []string `yaml:"self_introduce"`
 	//api修改

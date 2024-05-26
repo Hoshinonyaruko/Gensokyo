@@ -74,6 +74,7 @@ func InitializeDB() {
 func CloseDB() {
 	db.Close()
 }
+
 func GenerateRowID(id string, length int) (int64, error) {
 	// 计算MD5哈希值
 	hasher := md5.New()
@@ -89,13 +90,13 @@ func GenerateRowID(id string, length int) (int64, error) {
 	}
 	digits := digitsBuilder.String()
 
-	// 取出需要长度的数字
+	// 取出需要长度的数字或补足0
 	var rowIDStr string
 	if len(digits) >= length {
 		rowIDStr = digits[:length]
 	} else {
-		// 如果数字不足指定长度，返回错误
-		return 0, fmt.Errorf("not enough digits in MD5 hash")
+		// 补足0到右侧
+		rowIDStr = digits + strings.Repeat("0", length-len(digits))
 	}
 
 	// 将数字字符串转换为int64

@@ -1163,6 +1163,18 @@ func GetSendError() bool {
 	return instance.Settings.SendError
 }
 
+// 获取GetSaveError的值
+func GetSaveError() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to GetSaveError value.")
+		return true
+	}
+	return instance.Settings.SaveError
+}
+
 // 获取GetAddAtGroup的值
 func GetAddAtGroup() bool {
 	mu.Lock()

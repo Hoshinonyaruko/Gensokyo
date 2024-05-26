@@ -30,7 +30,7 @@ func SimulateSearch(config *Config, keyword string) (*dto.SearchRsp, error) {
 		Name: "search",
 		Type: dto.InteractionDataTypeChatSearch,
 	}
-	interactionData.Resolved, _ = json.Marshal(dto.SearchInputResolved{Keyword: keyword})
+	//interactionData.Resolved, _ = json.Marshal(dto.SearchInputResolved{Keyword: keyword})
 	interaction := &dto.Interaction{
 		ApplicationID: config.AppID,
 		Type:          dto.InteractionTypeCommand,
