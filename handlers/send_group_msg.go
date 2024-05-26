@@ -510,7 +510,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 						}
 					}
 					// 错误保存到本地
-					if config.GetSaveError() {
+					if err != nil && config.GetSaveError() {
 						mylog.ErrLogToFile("type", "PostGroupMessage")
 						mylog.ErrInterfaceToFile("request", richMediaMessage)
 						mylog.ErrLogToFile("error", err.Error())
