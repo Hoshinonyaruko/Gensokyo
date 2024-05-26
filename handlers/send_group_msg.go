@@ -323,6 +323,12 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			resp, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 			if err != nil {
 				mylog.Printf("发送组合消息失败: %v", err)
+				// 错误保存到本地
+				if config.GetSaveError() {
+					mylog.ErrLogToFile("type", "PostGroupMessage")
+					mylog.ErrInterfaceToFile("request", groupMessage)
+					mylog.ErrLogToFile("error", err.Error())
+				}
 			}
 			if err != nil && strings.Contains(err.Error(), `"code":22009`) {
 				mylog.Printf("信息发送失败,加入到队列中,下次被动信息进行发送")
@@ -335,6 +341,12 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				resp, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 				if err != nil {
 					mylog.Printf("发送组合消息失败: %v", err)
+					// 错误保存到本地
+					if config.GetSaveError() {
+						mylog.ErrLogToFile("type", "PostGroupMessage")
+						mylog.ErrInterfaceToFile("request", groupMessage)
+						mylog.ErrLogToFile("error", err.Error())
+					}
 				}
 			}
 
@@ -364,6 +376,12 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			resp, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 			if err != nil {
 				mylog.Printf("发送文本群组信息失败: %v", err)
+				// 错误保存到本地
+				if config.GetSaveError() {
+					mylog.ErrLogToFile("type", "PostGroupMessage")
+					mylog.ErrInterfaceToFile("request", groupMessage)
+					mylog.ErrLogToFile("error", err.Error())
+				}
 			}
 			if err != nil && strings.Contains(err.Error(), `"code":22009`) {
 				mylog.Printf("信息发送失败,加入到队列中,下次被动信息进行发送")
@@ -376,6 +394,12 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				resp, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 				if err != nil {
 					mylog.Printf("发送文本群组信息失败: %v", err)
+					// 错误保存到本地
+					if config.GetSaveError() {
+						mylog.ErrLogToFile("type", "PostGroupMessage")
+						mylog.ErrInterfaceToFile("request", groupMessage)
+						mylog.ErrLogToFile("error", err.Error())
+					}
 				}
 			}
 			//发送成功回执
@@ -418,6 +442,12 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 						resp, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 						if err != nil {
 							mylog.Printf("发送 MessageToCreate 信息失败: %v", err)
+							// 错误保存到本地
+							if config.GetSaveError() {
+								mylog.ErrLogToFile("type", "PostGroupMessage")
+								mylog.ErrInterfaceToFile("request", groupMessage)
+								mylog.ErrLogToFile("error", err.Error())
+							}
 						}
 						if err != nil && strings.Contains(err.Error(), `"code":22009`) {
 							mylog.Printf("信息发送失败,加入到队列中,下次被动信息进行发送")
@@ -432,6 +462,12 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 							resp, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 							if err != nil {
 								mylog.Printf("发送 MessageToCreate 信息失败 on code 40034025: %v", err)
+								// 错误保存到本地
+								if config.GetSaveError() {
+									mylog.ErrLogToFile("type", "PostGroupMessage")
+									mylog.ErrInterfaceToFile("request", groupMessage)
+									mylog.ErrLogToFile("error", err.Error())
+								}
 							}
 						}
 						//发送成功回执
@@ -442,7 +478,8 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				message_return, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), richMediaMessage)
 				if err != nil {
 					mylog.Printf("发送 %s 信息失败_send_group_msg: %v", key, err)
-					if config.GetSendError() { //把报错当作文本发出去
+					//把报错当作文本发出去
+					if config.GetSendError() {
 						msgseq := echo.GetMappingSeq(messageID)
 						echo.AddMappingSeq(messageID, msgseq+1)
 						groupReply := generateGroupMessage(messageID, eventID, nil, err.Error(), msgseq+1, apiv2, message.Params.GroupID.(string))
@@ -472,6 +509,12 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 							}
 						}
 					}
+					// 错误保存到本地
+					if config.GetSaveError() {
+						mylog.ErrLogToFile("type", "PostGroupMessage")
+						mylog.ErrInterfaceToFile("request", richMediaMessage)
+						mylog.ErrLogToFile("error", err.Error())
+					}
 				}
 				if message_return != nil && message_return.MediaResponse != nil && message_return.MediaResponse.FileInfo != "" {
 					msgseq := echo.GetMappingSeq(messageID)
@@ -492,6 +535,12 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 					resp, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 					if err != nil {
 						mylog.Printf("发送图片失败: %v", err)
+						// 错误保存到本地
+						if config.GetSaveError() {
+							mylog.ErrLogToFile("type", "PostGroupMessage")
+							mylog.ErrInterfaceToFile("request", groupMessage)
+							mylog.ErrLogToFile("error", err.Error())
+						}
 					}
 					if err != nil && strings.Contains(err.Error(), `"code":22009`) {
 						mylog.Printf("信息发送失败,加入到队列中,下次被动信息进行发送")
@@ -1290,6 +1339,12 @@ func uploadMedia(ctx context.Context, groupID string, richMediaMessage *dto.Rich
 	// 调用API来上传媒体
 	messageReturn, err := apiv2.PostGroupMessage(ctx, groupID, richMediaMessage)
 	if err != nil {
+		// 错误保存到本地
+		if config.GetSaveError() {
+			mylog.ErrLogToFile("type", "PostGroupMessage")
+			mylog.ErrInterfaceToFile("request", richMediaMessage)
+			mylog.ErrLogToFile("error", err.Error())
+		}
 		return "", err
 	}
 	// 返回上传后的FileInfo
@@ -1313,6 +1368,12 @@ func SendStackMessages(apiv2 openapi.OpenAPI, messageid string, GroupID string) 
 			_, err := apiv2.PostGroupMessage(context.TODO(), pair.Group, pair.GroupMessage)
 			if err != nil {
 				mylog.Printf("发送组合消息失败: %v", err)
+				// 错误保存到本地
+				if config.GetSaveError() {
+					mylog.ErrLogToFile("type", "PostGroupMessage")
+					mylog.ErrInterfaceToFile("request", pair.GroupMessage)
+					mylog.ErrLogToFile("error", err.Error())
+				}
 			} else {
 				echo.RemoveFromGlobalStack(i)
 			}
