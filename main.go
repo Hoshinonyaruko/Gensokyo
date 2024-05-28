@@ -116,6 +116,10 @@ func main() {
 	loggerAdapter := mylog.NewMyLogAdapter(logLevel, config.GetSaveLogs())
 	botgo.SetLogger(loggerAdapter)
 
+	// 创建webui数据库
+	webui.InitializeDB()
+	defer webui.CloseDB()
+
 	if conf.Settings.AppID == 12345 {
 		// 输出天蓝色文本
 		cyan := color.New(color.FgCyan)
@@ -183,12 +187,7 @@ func main() {
 			log.Printf("自定义ac地址模式...请从日志手动获取bot的真实id并设置,不然at会不正常")
 		}
 
-		// 创建webui数据库
-		webui.InitializeDB()
-		defer webui.CloseDB()
-
 		if !nologin {
-
 			//创建idmap服务器 数据库
 			idmap.InitializeDB()
 			//创建botstats数据库
