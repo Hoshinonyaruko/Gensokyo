@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/config"
@@ -15,34 +16,32 @@ import (
 	"github.com/tencent-connect/botgo/openapi"
 )
 
-var msgIDToIndex = make(map[string]int)
-var msgIDToRelatedID = make(map[string]string)
+var msgIDToIndex sync.Map
+var msgIDToRelatedID sync.Map
 
 func init() {
 	callapi.RegisterHandler("send_private_msg_sse", HandleSendPrivateMsgSSE)
 }
 
 func incrementIndex(msgID string) int {
-	if _, exists := msgIDToIndex[msgID]; !exists {
-		msgIDToIndex[msgID] = 0 // 初始化为0
+	actual, loaded := msgIDToIndex.LoadOrStore(msgID, 0)
+	if !loaded {
 		return 0
 	}
-	msgIDToIndex[msgID]++ // 递增Index
-	return msgIDToIndex[msgID]
+	newVal := actual.(int) + 1
+	msgIDToIndex.Store(msgID, newVal)
+	return newVal
 }
 
-// GetRelatedID 根据MessageID获取相关的ID
-func GetRelatedID(MessageID string) string {
-	if relatedID, exists := msgIDToRelatedID[MessageID]; exists {
-		return relatedID
-	}
-	// 如果没有找到转换关系，返回空字符串
-	return ""
-}
-
-// UpdateRelatedID 更新MessageID到respID的映射关系
 func UpdateRelatedID(MessageID, ID string) {
-	msgIDToRelatedID[MessageID] = ID
+	msgIDToRelatedID.Store(MessageID, ID)
+}
+
+func GetRelatedID(MessageID string) string {
+	if relatedID, ok := msgIDToRelatedID.Load(MessageID); ok {
+		return relatedID.(string)
+	}
+	return ""
 }
 
 func HandleSendPrivateMsgSSE(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
