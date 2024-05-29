@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
@@ -265,6 +266,60 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 				richMediaMessage, ok := groupReply.(*dto.RichMediaMessage)
 				if !ok {
 					mylog.Printf("Error: Expected RichMediaMessage type for key %s.", key)
+					// 定义一个map来存储关键字
+					keyMap := map[string]bool{
+						"markdown":      true,
+						"qqmusic":       true,
+						"local_image":   true,
+						"local_record":  true,
+						"url_image":     true,
+						"url_images":    true,
+						"base64_record": true,
+						"base64_image":  true,
+					}
+					// key是 for key, urls := range foundItems { 这里的key
+					if _, exists := keyMap[key]; exists {
+						// 进行类型断言
+						groupMessage, ok := groupReply.(*dto.MessageToCreate)
+						if !ok {
+							mylog.Println("Error: Expected MessageToCreate type.")
+							return "", nil // 或其他错误处理
+						}
+						//重新为err赋值
+						resp, err = apiv2.PostC2CMessage(context.TODO(), UserID, groupMessage)
+						if err != nil {
+							mylog.Printf("发送 MessageToCreate 私聊信息失败: %v", err)
+							// 错误保存到本地
+							if config.GetSaveError() {
+								mylog.ErrLogToFile("type", "PostGroupMessage")
+								mylog.ErrInterfaceToFile("request", groupMessage)
+								mylog.ErrLogToFile("error", err.Error())
+							}
+						}
+						if err != nil && strings.Contains(err.Error(), `"code":22009`) {
+							mylog.Printf("私信主动转被动待实现")
+							// var pair echo.MessageGroupPair
+							// pair.Group = message.Params.GroupID.(string)
+							// pair.GroupMessage = groupMessage
+							// echo.PushGlobalStack(pair)
+						} else if err != nil && strings.Contains(err.Error(), `"code":40034025`) {
+							//请求参数event_id无效 重试
+							groupMessage.EventID = ""
+							//重新为err赋值
+							resp, err = apiv2.PostC2CMessage(context.TODO(), UserID, groupMessage)
+							if err != nil {
+								mylog.Printf("发送 MessageToCreate 私聊信息失败 on code 40034025: %v", err)
+								// 错误保存到本地
+								if config.GetSaveError() {
+									mylog.ErrLogToFile("type", "PostGroupMessage")
+									mylog.ErrInterfaceToFile("request", groupMessage)
+									mylog.ErrLogToFile("error", err.Error())
+								}
+							}
+						}
+						//发送成功回执
+						retmsg, _ = SendC2CResponse(client, err, &message, resp)
+					}
 					continue // 跳过这个项，继续下一个
 				}
 				message_return, err := apiv2.PostC2CMessage(context.TODO(), UserID, richMediaMessage)
