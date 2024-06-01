@@ -1713,6 +1713,11 @@ func processImgUrl(input string) string {
 func postGroupMessageWithRetry(apiv2 openapi.OpenAPI, groupID string, groupMessage *dto.MessageToCreate) (resp *dto.GroupMessageResponse, err error) {
 	retryCount := 3 // 设置最大重试次数为3
 	for i := 0; i < retryCount; i++ {
+		// 递增msgid
+		msgseq := echo.GetMappingSeq(groupMessage.MsgID)
+		echo.AddMappingSeq(groupMessage.MsgID, msgseq+1)
+		groupMessage.MsgSeq = msgseq + 1
+
 		resp, err = apiv2.PostGroupMessage(context.TODO(), groupID, groupMessage)
 		if err != nil && strings.Contains(err.Error(), "context deadline exceeded") {
 			mylog.Printf("超时重试第 %d 次: %v", i+1, err)
@@ -1728,9 +1733,9 @@ func postGroupMessageWithRetry(apiv2 openapi.OpenAPI, groupID string, groupMessa
 			if config.GetSaveError() {
 				mylog.ErrLogToFile("type", "PostGroupMessage-context-deadline-exceeded-retry-"+strconv.Itoa(i+1)+"-successed")
 				mylog.ErrInterfaceToFile("request", groupMessage)
-				mylog.ErrLogToFile("msgid", resp.Message.ID)
-				retAsString := strconv.Itoa(resp.Message.Ret)
-				mylog.ErrLogToFile("ret", retAsString)
+				if resp != nil {
+					mylog.ErrLogToFile("msgid", resp.Message.ID)
+				}
 			}
 		}
 		break
