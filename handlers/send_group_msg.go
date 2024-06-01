@@ -337,6 +337,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				pair.GroupMessage = groupMessage
 				echo.PushGlobalStack(pair)
 			} else if err != nil && strings.Contains(err.Error(), `"code":40034025`) {
+				// event_id无效的时候
 				groupMessage.EventID = ""
 				resp, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
 				if err != nil {
@@ -348,6 +349,8 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 						mylog.ErrLogToFile("error", err.Error())
 					}
 				}
+			} else if err != nil && strings.Contains(err.Error(), "context deadline exceeded") {
+				postGroupMessageWithRetry(apiv2, message.Params.GroupID.(string), groupMessage)
 			}
 
 			// 发送成功回执
@@ -401,6 +404,8 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 						mylog.ErrLogToFile("error", err.Error())
 					}
 				}
+			} else if err != nil && strings.Contains(err.Error(), "context deadline exceeded") {
+				postGroupMessageWithRetry(apiv2, message.Params.GroupID.(string), groupMessage)
 			}
 			//发送成功回执
 			retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
@@ -469,6 +474,8 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 									mylog.ErrLogToFile("error", err.Error())
 								}
 							}
+						} else if err != nil && strings.Contains(err.Error(), "context deadline exceeded") {
+							postGroupMessageWithRetry(apiv2, message.Params.GroupID.(string), groupMessage)
 						}
 						//发送成功回执
 						retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
@@ -507,6 +514,8 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 							if err != nil {
 								mylog.Printf("发送文本报错信息失败: %v", err)
 							}
+						} else if err != nil && strings.Contains(err.Error(), "context deadline exceeded") {
+							postGroupMessageWithRetry(apiv2, message.Params.GroupID.(string), groupMessage)
 						}
 					}
 					// 错误保存到本地
@@ -554,6 +563,8 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 						if err != nil {
 							mylog.Printf("发送图片失败: %v", err)
 						}
+					} else if err != nil && strings.Contains(err.Error(), "context deadline exceeded") {
+						postGroupMessageWithRetry(apiv2, message.Params.GroupID.(string), groupMessage)
 					}
 				}
 				//发送成功回执
@@ -1425,9 +1436,13 @@ func auto_md(message callapi.ActionMessage, messageText string, richMediaMessage
 			// 处理 Markdown
 			CustomTemplateID := config.GetCustomTemplateID()
 			imgURL := richMediaMessage.URL
+			// 处理来自nt图床的链接
+			imgURL = processImgUrl(imgURL)
 			height, width, err := images.GetImageDimensions(imgURL)
 			if err != nil {
-				mylog.Printf("获取图片宽高出错")
+				height = 480
+				width = 480
+				mylog.Printf("获取图片宽高出错,默认宽高480x480")
 			}
 			imgDesc := fmt.Sprintf("图片 #%dpx #%dpx", width, height)
 
@@ -1681,4 +1696,44 @@ func checkDataLabelPrefixExcept(whiteLabel string) bool {
 		}
 	}
 	return false
+}
+
+func processImgUrl(input string) string {
+	// 将指定的URL前缀替换
+	processed := strings.ReplaceAll(input, "https://multimedia.nt.qq.com.cn", "http://multimedia.nt.qq.com")
+
+	// 仅当输入字符串包含 "multimedia.nt.qq" 时，才替换下划线为 "%5f"
+	if strings.Contains(processed, "multimedia.nt.qq") {
+		processed = strings.ReplaceAll(processed, "_", "%5f")
+	}
+
+	return processed
+}
+
+func postGroupMessageWithRetry(apiv2 openapi.OpenAPI, groupID string, groupMessage *dto.MessageToCreate) (resp *dto.GroupMessageResponse, err error) {
+	retryCount := 3 // 设置最大重试次数为3
+	for i := 0; i < retryCount; i++ {
+		resp, err = apiv2.PostGroupMessage(context.TODO(), groupID, groupMessage)
+		if err != nil && strings.Contains(err.Error(), "context deadline exceeded") {
+			mylog.Printf("超时重试第 %d 次: %v", i+1, err)
+			if config.GetSaveError() {
+				mylog.ErrLogToFile("type", "PostGroupMessage-context-deadline-exceeded-retry-"+strconv.Itoa(i+1))
+				mylog.ErrInterfaceToFile("request", groupMessage)
+				mylog.ErrLogToFile("error", err.Error())
+			}
+			time.Sleep(1 * time.Second) // 重试间隔1秒
+			continue
+		} else {
+			mylog.Printf("超时重试第 %d 次成功: %v", i+1, err)
+			if config.GetSaveError() {
+				mylog.ErrLogToFile("type", "PostGroupMessage-context-deadline-exceeded-retry-"+strconv.Itoa(i+1)+"-successed")
+				mylog.ErrInterfaceToFile("request", groupMessage)
+				mylog.ErrLogToFile("msgid", resp.Message.ID)
+				retAsString := strconv.Itoa(resp.Message.Ret)
+				mylog.ErrLogToFile("ret", retAsString)
+			}
+		}
+		break
+	}
+	return resp, err
 }
