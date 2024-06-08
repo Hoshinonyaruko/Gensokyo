@@ -72,6 +72,6 @@ func (p *Processors) ProcessGroupDelBot(data *dto.GroupAddBotEvent) error {
 	}
 	groupMsgMap := structToMap(Notice)
 	//上报信息到onebotv11应用端(正反ws)
-	p.BroadcastMessageToAll(groupMsgMap)
+	go p.BroadcastMessageToAll(groupMsgMap, p.Apiv2, data)
 	return nil
 }

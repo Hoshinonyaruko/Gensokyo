@@ -95,12 +95,13 @@ type Settings struct {
 	AutoWithdrawTime    int                  `yaml:"auto_withdraw_time"`
 	VisualPrefixsBypass []string             `yaml:"visual_prefixs_bypass"`
 	//开发增强类
-	DevlopAcDir string `yaml:"develop_access_token_dir"`
-	DevBotid    string `yaml:"develop_bot_id"`
-	SandBoxMode bool   `yaml:"sandbox_mode"`
-	DevMessgeID bool   `yaml:"dev_message_id"`
-	SendError   bool   `yaml:"send_error"`
-	SaveError   bool   `yaml:"save_error"`
+	DevlopAcDir     string `yaml:"develop_access_token_dir"`
+	DevBotid        string `yaml:"develop_bot_id"`
+	SandBoxMode     bool   `yaml:"sandbox_mode"`
+	DevMessgeID     bool   `yaml:"dev_message_id"`
+	SendError       bool   `yaml:"send_error"`
+	SaveError       bool   `yaml:"save_error"`
+	DowntimeMessage string `yaml:"downtime_message"`
 	//增长营销类
 	SelfIntroduce []string `yaml:"self_introduce"`
 	//api修改

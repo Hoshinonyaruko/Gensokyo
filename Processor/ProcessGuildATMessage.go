@@ -132,7 +132,7 @@ func (p *Processors) ProcessGuildATMessage(data *dto.WSATMessageData) error {
 		msgMap := structToMap(onebotMsg)
 
 		//上报信息到onebotv11应用端(正反ws)
-		p.BroadcastMessageToAll(msgMap)
+		go p.BroadcastMessageToAll(msgMap, p.Apiv2, data)
 	} else {
 		// GlobalChannelToGroup为true时的处理逻辑
 		//将频道转化为一个群
@@ -298,7 +298,7 @@ func (p *Processors) ProcessGuildATMessage(data *dto.WSATMessageData) error {
 		// Convert OnebotGroupMessage to map and send
 		groupMsgMap := structToMap(groupMsg)
 		//上报信息到onebotv11应用端(正反ws)
-		p.BroadcastMessageToAll(groupMsgMap)
+		go p.BroadcastMessageToAll(groupMsgMap, p.Apiv2, data)
 
 	}
 

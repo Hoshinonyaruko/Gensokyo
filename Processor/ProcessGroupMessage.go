@@ -188,6 +188,6 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 	// Convert OnebotGroupMessage to map and send
 	groupMsgMap := structToMap(groupMsg)
 	//上报信息到onebotv11应用端(正反ws)
-	p.BroadcastMessageToAll(groupMsgMap)
+	go p.BroadcastMessageToAll(groupMsgMap, p.Apiv2, data)
 	return nil
 }

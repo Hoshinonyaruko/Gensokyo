@@ -2292,3 +2292,13 @@ func GetNativeMD() bool {
 	}
 	return instance.Settings.NativeMD
 }
+
+// 获取DowntimeMessage
+func GetDowntimeMessage() string {
+	mu.Lock()
+	defer mu.Unlock()
+	if instance != nil {
+		return instance.Settings.DowntimeMessage
+	}
+	return ""
+}
