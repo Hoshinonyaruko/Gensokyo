@@ -150,7 +150,7 @@ func processWSMessage(client *WebSocketServerClient, msg []byte) {
 
 	mylog.Println("Received from WebSocket onebotv11 client:", wsclient.TruncateMessage(message, 500))
 	// 调用callapi
-	callapi.CallAPIFromDict(client, client.API, client.APIv2, message)
+	go callapi.CallAPIFromDict(client, client.API, client.APIv2, message)
 }
 
 // 发信息给client

@@ -189,7 +189,7 @@ func (client *WebSocketClient) recvMessage(msg []byte) {
 	}
 	mylog.Println("Received from onebotv11 server:", TruncateMessage(message, 800))
 	// 调用callapi
-	callapi.CallAPIFromDict(client, client.api, client.apiv2, message)
+	go callapi.CallAPIFromDict(client, client.api, client.apiv2, message)
 }
 
 // 截断信息

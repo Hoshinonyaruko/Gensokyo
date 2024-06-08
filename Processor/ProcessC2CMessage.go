@@ -154,7 +154,7 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 		// Convert OnebotGroupMessage to map and send
 		privateMsgMap := structToMap(privateMsg)
 		//上报信息到onebotv11应用端(正反ws)
-		p.BroadcastMessageToAll(privateMsgMap)
+		go p.BroadcastMessageToAll(privateMsgMap, p.Apiv2, data)
 		//组合FriendData
 		struserid := strconv.FormatInt(userid64, 10)
 		userdata := structs.FriendData{
@@ -296,7 +296,7 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 		// Convert OnebotGroupMessage to map and send
 		groupMsgMap := structToMap(groupMsg)
 		//上报信息到onebotv11应用端(正反ws)
-		p.BroadcastMessageToAll(groupMsgMap)
+		go p.BroadcastMessageToAll(groupMsgMap, p.Apiv2, data)
 
 		//组合FriendData
 		struserid := strconv.FormatInt(userid64, 10)

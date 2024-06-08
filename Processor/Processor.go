@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
@@ -230,35 +231,101 @@ func (p *Processors) SendMessageToAllClients(message map[string]interface{}) err
 }
 
 // 方便快捷的发信息函数
-func (p *Processors) BroadcastMessageToAll(message map[string]interface{}) error {
-	var errors []string
+func (p *Processors) BroadcastMessageToAll(message map[string]interface{}, api openapi.MessageAPI, data interface{}) error {
+	var wg sync.WaitGroup
+	errorCh := make(chan string, len(p.Wsclient)+len(p.WsServerClients))
+	defer close(errorCh)
 
-	// 发送到我们作为客户端的Wsclient
+	// 并发发送到我们作为客户端的Wsclient
 	for _, client := range p.Wsclient {
-		//mylog.Printf("第%v个Wsclient", test)
-		err := client.SendMessage(message)
-		if err != nil {
-			errors = append(errors, fmt.Sprintf("error sending private message via wsclient: %v", err))
-		}
+		wg.Add(1)
+		go func(c callapi.WebSocketServerClienter) {
+			defer wg.Done()
+			if err := c.SendMessage(message); err != nil {
+				errorCh <- fmt.Sprintf("error sending message via wsclient: %v", err)
+			}
+		}(client)
 	}
 
-	// 发送到我们作为服务器连接到我们的WsServerClients
+	// 并发发送到我们作为服务器连接到我们的WsServerClients
 	for _, serverClient := range p.WsServerClients {
-		err := serverClient.SendMessage(message)
-		if err != nil {
-			errors = append(errors, fmt.Sprintf("error sending private message via WsServerClient: %v", err))
+		wg.Add(1)
+		go func(sc callapi.WebSocketServerClienter) {
+			defer wg.Done()
+			if err := sc.SendMessage(message); err != nil {
+				errorCh <- fmt.Sprintf("error sending message via WsServerClient: %v", err)
+			}
+		}(serverClient)
+	}
+
+	wg.Wait() // 等待所有goroutine完成
+
+	var errors []string
+	failed := 0
+	for len(errorCh) > 0 {
+		err := <-errorCh
+		errors = append(errors, err)
+		failed++
+	}
+
+	// 检查是否所有尝试都失败了
+	if failed == len(p.Wsclient)+len(p.WsServerClients) {
+		// 处理全部失败的情况
+		fmt.Println("All message sending attempts failed.")
+		downtimemessgae := config.GetDowntimeMessage()
+		switch v := data.(type) {
+		case *dto.WSGroupATMessageData:
+			msgtocreate := &dto.MessageToCreate{
+				Content: downtimemessgae,
+				MsgID:   v.ID,
+				MsgSeq:  1,
+				MsgType: 0, // 默认文本类型
+			}
+			api.PostGroupMessage(context.Background(), v.GroupID, msgtocreate)
+		case *dto.WSATMessageData:
+			msgtocreate := &dto.MessageToCreate{
+				Content: downtimemessgae,
+				MsgID:   v.ID,
+				MsgSeq:  1,
+				MsgType: 0, // 默认文本类型
+			}
+			api.PostMessage(context.Background(), v.ChannelID, msgtocreate)
+		case *dto.WSMessageData:
+			msgtocreate := &dto.MessageToCreate{
+				Content: downtimemessgae,
+				MsgID:   v.ID,
+				MsgSeq:  1,
+				MsgType: 0, // 默认文本类型
+			}
+			api.PostMessage(context.Background(), v.ChannelID, msgtocreate)
+		case *dto.WSDirectMessageData:
+			msgtocreate := &dto.MessageToCreate{
+				Content: downtimemessgae,
+				MsgID:   v.ID,
+				MsgSeq:  1,
+				MsgType: 0, // 默认文本类型
+			}
+			api.PostMessage(context.Background(), v.GuildID, msgtocreate)
+		case *dto.WSC2CMessageData:
+			msgtocreate := &dto.MessageToCreate{
+				Content: downtimemessgae,
+				MsgID:   v.ID,
+				MsgSeq:  1,
+				MsgType: 0, // 默认文本类型
+			}
+			api.PostC2CMessage(context.Background(), v.Author.ID, msgtocreate)
 		}
 	}
 
-	// 在循环结束后处理记录的错误
+	// 判断是否填写了反向post地址
+	if !allEmpty(config.GetPostUrl()) {
+		go PostMessageToUrls(message)
+	}
+
 	if len(errors) > 0 {
 		return fmt.Errorf(strings.Join(errors, "; "))
 	}
 
-	//判断是否填写了反向post地址
-	if !allEmpty(config.GetPostUrl()) {
-		PostMessageToUrls(message)
-	}
 	return nil
 }
 
@@ -272,59 +339,70 @@ func allEmpty(addresses []string) bool {
 	return true
 }
 
-// 上报信息给反向Http
+// PostMessageToUrls 使用并发 goroutines 上报信息给多个反向 HTTP URL
 func PostMessageToUrls(message map[string]interface{}) {
 	// 获取上报 URL 列表
 	postUrls := config.GetPostUrl()
 
 	// 检查 postUrls 是否为空
-	if len(postUrls) > 0 {
-
-		// 转换 message 为 JSON 字符串
-		jsonString, err := handlers.ConvertMapToJSONString(message)
-		if err != nil {
-			mylog.Printf("Error converting message to JSON: %v", err)
-			return
-		}
-
-		for _, url := range postUrls {
-			// 创建请求体
-			reqBody := bytes.NewBufferString(jsonString)
-
-			// 创建 POST 请求
-			req, err := http.NewRequest("POST", url, reqBody)
-			if err != nil {
-				mylog.Printf("Error creating POST request to %s: %v", url, err)
-				continue
-			}
-
-			// 设置请求头
-			req.Header.Set("Content-Type", "application/json")
-			// 设置 X-Self-ID
-			var selfid string
-			if config.GetUseUin() {
-				selfid = config.GetUinStr()
-			} else {
-				selfid = config.GetAppIDStr()
-			}
-
-			req.Header.Set("X-Self-ID", selfid)
-
-			// 发送请求
-			client := &http.Client{}
-			resp, err := client.Do(req)
-			if err != nil {
-				mylog.Printf("Error sending POST request to %s: %v", url, err)
-				continue
-			}
-
-			// 处理响应
-			defer resp.Body.Close()
-			// 可以添加更多的响应处理逻辑，如检查状态码等
-
-			mylog.Printf("Posted to %s successfully", url)
-		}
+	if len(postUrls) == 0 {
+		return
 	}
+
+	// 转换 message 为 JSON 字符串
+	jsonString, err := handlers.ConvertMapToJSONString(message)
+	if err != nil {
+		mylog.Printf("Error converting message to JSON: %v", err)
+		return
+	}
+
+	// 使用 WaitGroup 等待所有 goroutines 完成
+	var wg sync.WaitGroup
+	for _, url := range postUrls {
+		wg.Add(1)
+		// 启动一个 goroutine
+		go func(url string) {
+			defer wg.Done() // 确保减少 WaitGroup 的计数器
+			sendPostRequest(jsonString, url)
+		}(url)
+	}
+	wg.Wait() // 等待所有 goroutine 完成
+}
+
+// sendPostRequest 发送单个 POST 请求
+func sendPostRequest(jsonString, url string) {
+	// 创建请求体
+	reqBody := bytes.NewBufferString(jsonString)
+
+	// 创建 POST 请求
+	req, err := http.NewRequest("POST", url, reqBody)
+	if err != nil {
+		mylog.Printf("Error creating POST request to %s: %v", url, err)
+		return
+	}
+
+	// 设置请求头
+	req.Header.Set("Content-Type", "application/json")
+	// 设置 X-Self-ID
+	var selfid string
+	if config.GetUseUin() {
+		selfid = config.GetUinStr()
+	} else {
+		selfid = config.GetAppIDStr()
+	}
+	req.Header.Set("X-Self-ID", selfid)
+
+	// 发送请求
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		mylog.Printf("Error sending POST request to %s: %v", url, err)
+		return
+	}
+	defer resp.Body.Close() // 确保释放网络资源
+
+	// 可以在此处添加更多的响应处理逻辑
+	mylog.Printf("Posted to %s successfully", url)
 }
 
 func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}, Type string) error {

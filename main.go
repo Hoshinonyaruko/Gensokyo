@@ -48,6 +48,7 @@ func main() {
 	// 定义faststart命令行标志。默认为false。
 	fastStart := flag.Bool("faststart", false, "start without initialization if set")
 	tidy := flag.Bool("tidy", false, "backup and tidy your config.yml")
+	m := flag.Bool("m", false, "Maintenance mode")
 
 	// 解析命令行参数到定义的标志。
 	flag.Parse()
@@ -115,6 +116,12 @@ func main() {
 	logLevel := mylog.GetLogLevelFromConfig(config.GetLogLevel())
 	loggerAdapter := mylog.NewMyLogAdapter(logLevel, config.GetSaveLogs())
 	botgo.SetLogger(loggerAdapter)
+
+	if *m {
+		// 维护模式
+		conf.Settings.WsAddress = []string{"ws://127.0.0.1:50000"}
+		conf.Settings.EnableWsServer = false
+	}
 
 	// 创建webui数据库
 	webui.InitializeDB()
