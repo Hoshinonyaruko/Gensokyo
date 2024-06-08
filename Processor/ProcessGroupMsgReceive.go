@@ -93,7 +93,7 @@ func (p *Processors) ProcessGroupMsgRecive(data *dto.GroupMsgReceiveEvent) error
 		noticeMap := structToMap(notice)
 
 		//上报信息到onebotv11应用端(正反ws)
-		p.BroadcastMessageToAll(noticeMap)
+		go p.BroadcastMessageToAll(noticeMap, p.Apiv2, data)
 
 		// 转换appid
 		AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
@@ -205,7 +205,7 @@ func (p *Processors) ProcessGroupMsgRecive(data *dto.GroupMsgReceiveEvent) error
 			// Convert OnebotGroupMessage to map and send
 			groupMsgMap := structToMap(groupMsg)
 			//上报信息到onebotv11应用端(正反ws)
-			p.BroadcastMessageToAll(groupMsgMap)
+			go p.BroadcastMessageToAll(groupMsgMap, p.Apiv2, data)
 
 			// 转换appid
 			AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
