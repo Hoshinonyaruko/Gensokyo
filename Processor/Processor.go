@@ -268,52 +268,55 @@ func (p *Processors) BroadcastMessageToAll(message map[string]interface{}, api o
 		failed++
 	}
 
-	// 检查是否所有尝试都失败了
-	if failed == len(p.Wsclient)+len(p.WsServerClients) {
-		// 处理全部失败的情况
-		fmt.Println("All message sending attempts failed.")
-		downtimemessgae := config.GetDowntimeMessage()
-		switch v := data.(type) {
-		case *dto.WSGroupATMessageData:
-			msgtocreate := &dto.MessageToCreate{
-				Content: downtimemessgae,
-				MsgID:   v.ID,
-				MsgSeq:  1,
-				MsgType: 0, // 默认文本类型
+	// 仅对连接正反ws的bot应用这个判断
+	if !p.Settings.HttpOnlyBot {
+		// 检查是否所有尝试都失败了
+		if failed == len(p.Wsclient)+len(p.WsServerClients) {
+			// 处理全部失败的情况
+			fmt.Println("All ws event sending attempts failed.")
+			downtimemessgae := config.GetDowntimeMessage()
+			switch v := data.(type) {
+			case *dto.WSGroupATMessageData:
+				msgtocreate := &dto.MessageToCreate{
+					Content: downtimemessgae,
+					MsgID:   v.ID,
+					MsgSeq:  1,
+					MsgType: 0, // 默认文本类型
+				}
+				api.PostGroupMessage(context.Background(), v.GroupID, msgtocreate)
+			case *dto.WSATMessageData:
+				msgtocreate := &dto.MessageToCreate{
+					Content: downtimemessgae,
+					MsgID:   v.ID,
+					MsgSeq:  1,
+					MsgType: 0, // 默认文本类型
+				}
+				api.PostMessage(context.Background(), v.ChannelID, msgtocreate)
+			case *dto.WSMessageData:
+				msgtocreate := &dto.MessageToCreate{
+					Content: downtimemessgae,
+					MsgID:   v.ID,
+					MsgSeq:  1,
+					MsgType: 0, // 默认文本类型
+				}
+				api.PostMessage(context.Background(), v.ChannelID, msgtocreate)
+			case *dto.WSDirectMessageData:
+				msgtocreate := &dto.MessageToCreate{
+					Content: downtimemessgae,
+					MsgID:   v.ID,
+					MsgSeq:  1,
+					MsgType: 0, // 默认文本类型
+				}
+				api.PostMessage(context.Background(), v.GuildID, msgtocreate)
+			case *dto.WSC2CMessageData:
+				msgtocreate := &dto.MessageToCreate{
+					Content: downtimemessgae,
+					MsgID:   v.ID,
+					MsgSeq:  1,
+					MsgType: 0, // 默认文本类型
+				}
+				api.PostC2CMessage(context.Background(), v.Author.ID, msgtocreate)
 			}
-			api.PostGroupMessage(context.Background(), v.GroupID, msgtocreate)
-		case *dto.WSATMessageData:
-			msgtocreate := &dto.MessageToCreate{
-				Content: downtimemessgae,
-				MsgID:   v.ID,
-				MsgSeq:  1,
-				MsgType: 0, // 默认文本类型
-			}
-			api.PostMessage(context.Background(), v.ChannelID, msgtocreate)
-		case *dto.WSMessageData:
-			msgtocreate := &dto.MessageToCreate{
-				Content: downtimemessgae,
-				MsgID:   v.ID,
-				MsgSeq:  1,
-				MsgType: 0, // 默认文本类型
-			}
-			api.PostMessage(context.Background(), v.ChannelID, msgtocreate)
-		case *dto.WSDirectMessageData:
-			msgtocreate := &dto.MessageToCreate{
-				Content: downtimemessgae,
-				MsgID:   v.ID,
-				MsgSeq:  1,
-				MsgType: 0, // 默认文本类型
-			}
-			api.PostMessage(context.Background(), v.GuildID, msgtocreate)
-		case *dto.WSC2CMessageData:
-			msgtocreate := &dto.MessageToCreate{
-				Content: downtimemessgae,
-				MsgID:   v.ID,
-				MsgSeq:  1,
-				MsgType: 0, // 默认文本类型
-			}
-			api.PostC2CMessage(context.Background(), v.Author.ID, msgtocreate)
 		}
 	}
 

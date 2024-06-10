@@ -318,8 +318,24 @@ func main() {
 					p = Processor.NewProcessor(api, apiV2, &conf.Settings, wsClients)
 				}
 			} else {
-				log.Println("提示,目前只启动了正向ws或httpapi")
+				// p一定需要初始化
 				p = Processor.NewProcessorV2(api, apiV2, &conf.Settings)
+				// 如果只启动了http api
+				if !conf.Settings.EnableWsServer {
+					if conf.Settings.HttpAddress != "" {
+						// 对全局生效
+						conf.Settings.HttpOnlyBot = true
+						log.Println("提示,目前只启动了httpapi,正反向ws均未配置.")
+					} else {
+						log.Println("提示,目前你配置了个寂寞,httpapi没设置,正反ws都没配置.")
+					}
+				} else {
+					if conf.Settings.HttpAddress != "" {
+						log.Println("提示,目前启动了正向ws和httpapi,未连接反向ws")
+					} else {
+						log.Println("提示,目前启动了正向ws,未连接反向ws,httpapi未开启")
+					}
+				}
 			}
 		} else {
 			// 设置颜色为红色
@@ -327,7 +343,6 @@ func main() {
 			// 输出红色文本
 			red.Println("请设置正确的appid、token、clientsecret再试")
 		}
-
 	}
 
 	//图片上传 调用次数限制

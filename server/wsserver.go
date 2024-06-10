@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -20,6 +21,7 @@ type WebSocketServerClient struct {
 	Conn  *websocket.Conn
 	API   openapi.OpenAPI
 	APIv2 openapi.OpenAPI
+	mu    sync.Mutex // 互斥锁保护 conn
 }
 
 var upgrader = websocket.Upgrader{
@@ -155,6 +157,9 @@ func processWSMessage(client *WebSocketServerClient, msg []byte) {
 
 // 发信息给client
 func (c *WebSocketServerClient) SendMessage(message map[string]interface{}) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	msgBytes, err := json.Marshal(message)
 	if err != nil {
 		mylog.Println("Error marshalling message:", err)

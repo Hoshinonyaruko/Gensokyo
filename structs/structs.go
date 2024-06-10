@@ -141,7 +141,8 @@ type Settings struct {
 	EnableChangeWord  bool   `yaml:"enableChangeWord"`
 	DefaultChangeWord string `yaml:"defaultChangeWord"`
 	//错误临时修复类
-	Fix11300 bool `yaml:"fix_11300"`
+	Fix11300    bool `yaml:"fix_11300"`
+	HttpOnlyBot bool `yaml:"http_only_bot"`
 	//内置指令
 	BindPrefix   string   `yaml:"bind_prefix"`
 	MePrefix     string   `yaml:"me_prefix"`
