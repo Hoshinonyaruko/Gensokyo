@@ -526,7 +526,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 						mylog.Printf("Error marshaling mdContentMap to JSON:%v", err)
 					}
 					encoded := base64.StdEncoding.EncodeToString(mdContentBytes)
-					messageText = "[CQ:markdown,data=" + encoded + "]"
+					messageText = "[CQ:markdown,data=base64://" + encoded + "]"
 				} else if mdContentStr, isString := mdContent.(string); isString {
 					// mdContent是string
 					if strings.HasPrefix(mdContentStr, "base64://") {
@@ -549,7 +549,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 							mylog.Printf("Error marshaling jsonMap to JSON:%v", err)
 						}
 						encoded := base64.StdEncoding.EncodeToString(mdContentBytes)
-						messageText = "[CQ:markdown,data=" + encoded + "]"
+						messageText = "[CQ:markdown,data=base64://" + encoded + "]"
 					}
 				}
 			} else {
