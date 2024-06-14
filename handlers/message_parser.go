@@ -517,7 +517,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 			qqNumber, _ := message["data"].(map[string]interface{})["qq"].(string)
 			messageText = "[CQ:at,qq=" + qqNumber + "]"
 		case "markdown":
-			mdContent, ok := message["data"].(map[string]interface{})["data"]
+			mdContent, ok := message["data"]
 			if ok {
 				if mdContentMap, isMap := mdContent.(map[string]interface{}); isMap {
 					// mdContent是map[string]interface{}，按map处理
