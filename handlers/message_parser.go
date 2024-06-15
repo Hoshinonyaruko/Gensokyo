@@ -1377,6 +1377,11 @@ func parseMDData(mdData []byte) (*dto.Markdown, *keyboard.MessageKeyboard, error
 		kb = &keyboard.MessageKeyboard{
 			Content: &keyboard.CustomKeyboard{Rows: temp.Rows},
 		}
+	} else if temp.Keyboard.ID != "" {
+		// 处理嵌套在 Keyboard 中的 ID(当使用按钮模板时)
+		kb = &keyboard.MessageKeyboard{
+			ID: temp.Keyboard.ID,
+		}
 	}
 
 	return md, kb, nil
