@@ -56,6 +56,6 @@ func HandleGetFriendList(client callapi.Client, api openapi.OpenAPI, apiv2 opena
 		return "", nil
 	}
 
-	mylog.Printf("get_friend_list: %s", result)
+	//mylog.Printf("get_friend_list: %s", result)
 	return string(result), nil
 }
