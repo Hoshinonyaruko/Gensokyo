@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
@@ -1589,6 +1590,20 @@ func auto_md(message callapi.ActionMessage, messageText string, richMediaMessage
 						actiontype = 0        // 链接类型
 						permission = &keyboard.Permission{
 							Type: 2, // 所有人可操作
+						}
+					}
+				case strings.HasPrefix(whiteLabel, "$"):
+					// 只有5%的概率执行以下代码
+					if rand.Float64() < 0.05 {
+						// 分割whiteLabel来获取显示内容和URL
+						parts := strings.SplitN(whiteLabel[1:], " ", 2) // [1:] 用于去除白名单标签开头的'%'
+						if len(parts) == 2 {
+							whiteLabel = parts[0] // 显示内容
+							actiondata = parts[1] // URL
+							actiontype = 0        // 链接类型
+							permission = &keyboard.Permission{
+								Type: 2, // 所有人可操作
+							}
 						}
 					}
 				case strings.HasPrefix(whiteLabel, "^"):

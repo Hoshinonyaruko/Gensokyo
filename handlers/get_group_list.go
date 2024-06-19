@@ -159,7 +159,7 @@ func GetGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 	}
 	outputMap := structToMap(groupList)
 
-	mylog.Printf("getGroupList(频道): %+v\n", outputMap)
+	//mylog.Printf("getGroupList(频道): %+v\n", outputMap)
 
 	err = client.SendMessage(outputMap)
 	if err != nil {
@@ -172,7 +172,7 @@ func GetGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 		return "", nil
 	}
 
-	mylog.Printf("get_group_list: %s", result)
+	//mylog.Printf("get_group_list: %s", result)
 	return string(result), nil
 }
 
