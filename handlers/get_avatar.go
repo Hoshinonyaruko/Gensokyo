@@ -32,6 +32,10 @@ func GetAvatar(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI
 		_, originalUserID, err = idmap.RetrieveRowByIDv2Pro(message.Params.GroupID.(string), message.Params.UserID.(string))
 		if err != nil {
 			mylog.Printf("Error1 retrieving original GroupID: %v", err)
+			_, originalUserID, err = idmap.RetrieveRowByIDv2Pro("690426430", message.Params.UserID.(string))
+			if err != nil {
+				mylog.Printf("Error reading private originalUserID: %v", err)
+			}
 		}
 	} else {
 		originalUserID, err = idmap.RetrieveRowByIDv2(message.Params.UserID.(string))
