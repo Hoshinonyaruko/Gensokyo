@@ -3,7 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/base64"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -463,7 +463,7 @@ func downloadImageAndConvertToBase64(url string) (string, error) {
 	defer resp.Body.Close()
 
 	// 读取响应的内容
-	data, err := ioutil.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err // 返回错误
 	}

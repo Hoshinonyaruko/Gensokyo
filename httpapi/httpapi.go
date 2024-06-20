@@ -66,6 +66,14 @@ func CombinedMiddleware(api openapi.OpenAPI, apiV2 openapi.OpenAPI) gin.HandlerF
 			handleDeleteMsg(c, api, apiV2)
 			return
 		}
+		if c.Request.URL.Path == "/get_avatar" {
+			handleGetAvatar(c, api, apiV2)
+			return
+		}
+		if c.Request.URL.Path == "/get_login_info" {
+			handleGetLoginInfo(c, api, apiV2)
+			return
+		}
 
 		// 调用c.Next()以继续处理请求链
 		c.Next()
@@ -576,4 +584,69 @@ func handleDeleteMsg(c *gin.Context, api openapi.OpenAPI, apiV2 openapi.OpenAPI)
 		c.JSON(http.StatusOK, gin.H{"message": retmsg})
 	}
 
+}
+
+// handleGetAvatar 处理get_avatar的请求
+func handleGetAvatar(c *gin.Context, api openapi.OpenAPI, apiV2 openapi.OpenAPI) {
+	var req struct {
+		Echo    string `json:"echo" form:"echo"` // Echo值用于标识消息
+		GroupID int64  `json:"group_id" form:"group_id"`
+		UserID  int64  `json:"user_id" form:"user_id"`
+	}
+
+	// 根据请求方法解析参数
+	if c.Request.Method == http.MethodGet {
+		// 从URL查询参数解析
+		if err := c.ShouldBindQuery(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	} else {
+		// 从JSON或表单数据解析
+		if err := c.ShouldBind(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	// 创建 ActionMessage 实例
+	message := callapi.ActionMessage{
+		Action: "get_avatar",
+		Echo:   req.Echo,
+		Params: callapi.ParamsContent{
+			GroupID: strconv.FormatInt(req.GroupID, 10), // 注意这里需要转换类型，因为 GroupID 是 int64
+			UserID:  strconv.FormatInt(req.UserID, 10),
+		},
+	}
+
+	// 调用处理函数
+	client := &HttpAPIClient{} // 假设HttpAPIClient实现了callapi.Client接口
+	retmsg, err := handlers.GetAvatar(client, api, apiV2, message)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 返回处理结果
+	c.Header("Content-Type", "application/json")
+	c.String(http.StatusOK, retmsg)
+}
+
+func handleGetLoginInfo(c *gin.Context, api openapi.OpenAPI, apiV2 openapi.OpenAPI) {
+	// 创建 ActionMessage 实例
+	message := callapi.ActionMessage{
+		Action: "get_login_info",
+	}
+
+	// 调用处理函数
+	client := &HttpAPIClient{} // 假设HttpAPIClient实现了callapi.Client接口
+	retmsg, err := handlers.GetLoginInfo(client, api, apiV2, message)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 返回处理结果
+	c.Header("Content-Type", "application/json")
+	c.String(http.StatusOK, retmsg)
 }

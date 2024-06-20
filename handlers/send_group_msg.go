@@ -1540,6 +1540,7 @@ func auto_md(message callapi.ActionMessage, messageText string, richMediaMessage
 				var actiontype keyboard.ActionType
 				var permission *keyboard.Permission
 				var actiondata string
+				var skip bool
 				//检查是否设置了enter数组
 				enter := checkDataLabelPrefix(dataLabel)
 				//例外规则
@@ -1605,6 +1606,8 @@ func auto_md(message callapi.ActionMessage, messageText string, richMediaMessage
 								Type: 2, // 所有人可操作
 							}
 						}
+					} else {
+						skip = true
 					}
 				case strings.HasPrefix(whiteLabel, "^"):
 					// 分割whiteLabel来获取显示内容和URL
@@ -1625,32 +1628,34 @@ func auto_md(message callapi.ActionMessage, messageText string, richMediaMessage
 					}
 				}
 
-				// 创建按钮
-				button := &keyboard.Button{
-					RenderData: &keyboard.RenderData{
-						Label:        whiteLabel,
-						VisitedLabel: whiteLabel,
-						Style:        1, //蓝色边缘
-					},
-					Action: &keyboard.Action{
-						Type:          actiontype,
-						Permission:    permission,
-						Data:          actiondata,
-						UnsupportTips: "请升级新版手机QQ",
-						Enter:         enter,
-					},
-				}
+				if !skip {
+					// 创建按钮
+					button := &keyboard.Button{
+						RenderData: &keyboard.RenderData{
+							Label:        whiteLabel,
+							VisitedLabel: whiteLabel,
+							Style:        1, //蓝色边缘
+						},
+						Action: &keyboard.Action{
+							Type:          actiontype,
+							Permission:    permission,
+							Data:          actiondata,
+							UnsupportTips: "请升级新版手机QQ",
+							Enter:         enter,
+						},
+					}
 
-				// 如果当前行为空或已满（4个按钮），则创建一个新行
-				if currentRow == nil || buttonCount == 4 {
-					currentRow = &keyboard.Row{}
-					customKeyboard.Rows = append(customKeyboard.Rows, currentRow)
-					buttonCount = 0 // 重置按钮计数
-				}
+					// 如果当前行为空或已满（4个按钮），则创建一个新行
+					if currentRow == nil || buttonCount == 4 {
+						currentRow = &keyboard.Row{}
+						customKeyboard.Rows = append(customKeyboard.Rows, currentRow)
+						buttonCount = 0 // 重置按钮计数
+					}
 
-				// 将按钮添加到当前行
-				currentRow.Buttons = append(currentRow.Buttons, button)
-				buttonCount++
+					// 将按钮添加到当前行
+					currentRow.Buttons = append(currentRow.Buttons, button)
+					buttonCount++
+				}
 			}
 			// 在循环结束后，最后一行可能不满4个按钮，但已经被正确处理
 

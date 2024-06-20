@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/config"
@@ -20,7 +19,7 @@ type LoginInfoResponse struct {
 
 type LoginInfoData struct {
 	Nickname string `json:"nickname"`
-	UserID   string `json:"user_id"` // Assuming UserID is a string type based on the pseudocode
+	UserID   int64  `json:"user_id"` // Assuming UserID is a string type based on the pseudocode
 }
 
 func init() {
@@ -40,12 +39,12 @@ func GetLoginInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 		globalBotID = config.GetAppID()
 	}
 
-	userIDStr := fmt.Sprintf("%d", globalBotID)
+	//userIDStr := fmt.Sprintf("%d", globalBotID)
 	botname = config.GetCustomBotName()
 
 	response.Data = LoginInfoData{
 		Nickname: botname,
-		UserID:   userIDStr,
+		UserID:   int64(globalBotID),
 	}
 	response.Message = ""
 	response.RetCode = 0
