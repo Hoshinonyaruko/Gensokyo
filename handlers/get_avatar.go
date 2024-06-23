@@ -18,7 +18,7 @@ type GetAvatarResponse struct {
 }
 
 func init() {
-	callapi.RegisterHandler("get_avatar", GetStatus)
+	callapi.RegisterHandler("get_avatar", GetAvatar)
 }
 
 func GetAvatar(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
