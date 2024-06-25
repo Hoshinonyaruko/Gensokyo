@@ -48,6 +48,7 @@ func main() {
 	// 定义faststart命令行标志。默认为false。
 	fastStart := flag.Bool("faststart", false, "start without initialization if set")
 	tidy := flag.Bool("tidy", false, "backup and tidy your config.yml")
+	c := flag.Bool("c", false, "clean ids bucket, must backup idmap.db first!")
 	m := flag.Bool("m", false, "Maintenance mode")
 
 	// 解析命令行参数到定义的标志。
@@ -62,6 +63,9 @@ func main() {
 		config.CreateAndWriteConfigTemp()
 		log.Println("配置文件已更新为新版,当前配置文件已备份.如产生问题请到群196173384反馈开发者。")
 		return
+	}
+	if *c {
+		idmap.ClearBucket("ids")
 	}
 	if _, err := os.Stat("config.yml"); os.IsNotExist(err) {
 		var ip string
