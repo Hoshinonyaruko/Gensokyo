@@ -71,6 +71,39 @@ func InitializeDB() {
 	}
 }
 
+func ClearBucket(bucketName string) {
+	// 打开数据库文件
+	db, err := bbolt.Open(DBName, 0600, nil)
+	if err != nil {
+		log.Fatalf("Error opening DB: %v", err)
+	}
+	defer db.Close()
+
+	// 清空指定的bucket
+	err = db.Update(func(tx *bbolt.Tx) error {
+		// 获取指定的bucket
+		bucket := tx.Bucket([]byte(bucketName))
+		if bucket == nil {
+			return nil // 如果bucket不存在，直接返回nil
+		}
+
+		// 删除bucket中的所有键值对
+		err := bucket.ForEach(func(k, v []byte) error {
+			return bucket.Delete(k)
+		})
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if err != nil {
+		log.Fatalf("Error clearing bucket %s: %v", bucketName, err)
+	} else {
+		mylog.Printf("ids清理成功.")
+	}
+}
+
 func CloseDB() {
 	db.Close()
 }
