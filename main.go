@@ -208,6 +208,12 @@ func main() {
 			defer idmap.CloseDB()
 			defer botstats.CloseDB()
 
+			if *c {
+				mylog.Printf("开始清理ids\n")
+				idmap.ClearBucket("ids")
+				mylog.Printf("ids清理完成\n")
+			}
+
 			if configURL == "" && !fix11300 { //初始化handlers
 				handlers.BotID = me.ID
 			} else { //初始化handlers
