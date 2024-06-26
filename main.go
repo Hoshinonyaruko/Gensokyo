@@ -64,9 +64,6 @@ func main() {
 		log.Println("配置文件已更新为新版,当前配置文件已备份.如产生问题请到群196173384反馈开发者。")
 		return
 	}
-	if *c {
-		idmap.ClearBucket("ids")
-	}
 	if _, err := os.Stat("config.yml"); os.IsNotExist(err) {
 		var ip string
 		var err error
@@ -207,6 +204,12 @@ func main() {
 			//关闭时候释放数据库
 			defer idmap.CloseDB()
 			defer botstats.CloseDB()
+
+			if *c {
+				mylog.Printf("开始清理ids\n")
+				idmap.ClearBucket("ids")
+				mylog.Printf("ids清理完成\n")
+			}
 
 			if configURL == "" && !fix11300 { //初始化handlers
 				handlers.BotID = me.ID
