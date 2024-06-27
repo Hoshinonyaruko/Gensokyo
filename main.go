@@ -64,9 +64,6 @@ func main() {
 		log.Println("配置文件已更新为新版,当前配置文件已备份.如产生问题请到群196173384反馈开发者。")
 		return
 	}
-	if *c {
-		idmap.ClearBucket("ids")
-	}
 	if _, err := os.Stat("config.yml"); os.IsNotExist(err) {
 		var ip string
 		var err error
