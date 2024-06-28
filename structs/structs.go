@@ -148,10 +148,12 @@ type Settings struct {
 	MePrefix     string   `yaml:"me_prefix"`
 	UnlockPrefix string   `yaml:"unlock_prefix"`
 	LinkPrefix   string   `yaml:"link_prefix"`
+	AutoLink     bool     `yaml:"auto_link"`
 	MusicPrefix  string   `yaml:"music_prefix"`
 	LinkBots     []string `yaml:"link_bots"`
 	LinkText     string   `yaml:"link_text"`
 	LinkPic      string   `yaml:"link_pic"`
+	LinkLines    int      `yaml:"link_lines"`
 	//HTTP API配置
 	HttpAddress         string   `yaml:"http_address"`
 	AccessToken         string   `yaml:"http_access_token"`

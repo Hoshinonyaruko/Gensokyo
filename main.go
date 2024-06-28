@@ -209,6 +209,7 @@ func main() {
 				mylog.Printf("开始清理ids\n")
 				idmap.ClearBucket("ids")
 				mylog.Printf("ids清理完成\n")
+				return
 			}
 
 			if configURL == "" && !fix11300 { //初始化handlers
