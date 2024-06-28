@@ -1104,9 +1104,11 @@ func generateMdByConfig() (md *dto.Markdown, kb *keyboard.MessageKeyboard) {
 	linkBots := config.GetLinkBots()
 	imgURL := config.GetLinkPic()
 
-	//超过16个时候随机显示
-	if len(linkBots) > 16 {
-		linkBots = getRandomSelection(linkBots, 16)
+	linknum := config.GetLinkNum()
+
+	//超过n个时候随机显示
+	if len(linkBots) > linknum {
+		linkBots = getRandomSelection(linkBots, linknum)
 	}
 
 	var mdParams []*dto.MarkdownParams
