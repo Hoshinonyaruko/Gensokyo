@@ -238,6 +238,24 @@ func GetIDHandler(c *gin.Context) {
 
 		// 如果删除成功，返回成功响应
 		c.JSON(http.StatusOK, gin.H{"status": "success"})
+	case 16:
+		newRow, err := idmap.StoreCachev2(idOrRow)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"row": newRow})
+
+	case 17:
+		id, err := idmap.RetrieveRowByCachev2(idOrRow)
+		if err == idmap.ErrKeyNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "ID not found"})
+			return
+		} else if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"id": id})
 	}
 
 }

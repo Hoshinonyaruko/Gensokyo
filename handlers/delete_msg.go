@@ -18,7 +18,7 @@ func init() {
 func DeleteMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
 
 	//还原msgid
-	RealMsgID, err := idmap.RetrieveRowByIDv2(message.Params.MessageID.(string))
+	RealMsgID, err := idmap.RetrieveRowByCachev2(message.Params.MessageID.(string))
 	if err != nil {
 		mylog.Printf("error retrieving real RChannelID: %v", err)
 	}

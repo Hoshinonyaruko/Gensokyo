@@ -68,7 +68,7 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 		//1,idmap还原真实userid,
 		//发信息使用的是userid
 
-		messageID64, err := idmap.StoreIDv2(data.ID)
+		messageID64, err := idmap.StoreCachev2(data.ID)
 		if err != nil {
 			log.Fatalf("Error storing ID: %v", err)
 		}
@@ -205,7 +205,7 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 		//框架内指令
 		p.HandleFrameworkCommand(messageText, data, "group_private")
 		//映射str的messageID到int
-		messageID64, err := idmap.StoreIDv2(data.ID)
+		messageID64, err := idmap.StoreCachev2(data.ID)
 		if err != nil {
 			mylog.Printf("Error storing ID: %v", err)
 			return nil
