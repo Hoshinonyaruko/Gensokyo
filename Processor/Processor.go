@@ -928,6 +928,31 @@ func SendMessageMd(md *dto.Markdown, kb *keyboard.MessageKeyboard, data interfac
 	return nil
 }
 
+// SendMessageMdAddBot  发送Md消息在AddBot事件
+func SendMessageMdAddBot(md *dto.Markdown, kb *keyboard.MessageKeyboard, data *dto.GroupAddBotEvent, api openapi.OpenAPI, apiv2 openapi.OpenAPI) error {
+
+	// 处理群组消息
+	msgseq := echo.GetMappingSeq(data.EventID)
+	echo.AddMappingSeq(data.ID, msgseq+1)
+	Message := &dto.MessageToCreate{
+		Content:  "markdown",
+		EventID:  data.EventID,
+		MsgSeq:   msgseq,
+		Markdown: md,
+		Keyboard: kb,
+		MsgType:  2, //md信息
+	}
+
+	Message.Timestamp = time.Now().Unix() // 设置时间戳
+	_, err := apiv2.PostGroupMessage(context.TODO(), data.GroupOpenID, Message)
+	if err != nil {
+		mylog.Printf("发送文本群组信息失败: %v", err)
+		return err
+	}
+
+	return nil
+}
+
 // autobind 函数接受 interface{} 类型的数据
 // commit by 紫夜 2023-11-19
 func (p *Processors) Autobind(data interface{}) error {
@@ -1084,30 +1109,50 @@ func generateMdByConfig() (md *dto.Markdown, kb *keyboard.MessageKeyboard) {
 		linkBots = getRandomSelection(linkBots, 16)
 	}
 
-	//组合 mdParams
 	var mdParams []*dto.MarkdownParams
-	if imgURL != "" {
-		height, width, err := images.GetImageDimensions(imgURL)
-		if err != nil {
-			mylog.Printf("获取图片宽高出错")
+	if !config.GetNativeMD() {
+		//组合 mdParams
+		if imgURL != "" {
+			height, width, err := images.GetImageDimensions(imgURL)
+			if err != nil {
+				mylog.Printf("获取图片宽高出错")
+			}
+			imgDesc := fmt.Sprintf("图片 #%dpx #%dpx", width, height)
+			// 创建 MarkdownParams 的实例
+			mdParams = []*dto.MarkdownParams{
+				{Key: "img_dec", Values: []string{imgDesc}},
+				{Key: "img_url", Values: []string{imgURL}},
+				{Key: "text_end", Values: []string{mdtext}},
+			}
+		} else {
+			mdParams = []*dto.MarkdownParams{
+				{Key: "text_end", Values: []string{mdtext}},
+			}
 		}
-		imgDesc := fmt.Sprintf("图片 #%dpx #%dpx", width, height)
-		// 创建 MarkdownParams 的实例
-		mdParams = []*dto.MarkdownParams{
-			{Key: "img_dec", Values: []string{imgDesc}},
-			{Key: "img_url", Values: []string{imgURL}},
-			{Key: "text_end", Values: []string{mdtext}},
+
+		// 组合模板 Markdown
+		md = &dto.Markdown{
+			CustomTemplateID: CustomTemplateID,
+			Params:           mdParams,
 		}
 	} else {
-		mdParams = []*dto.MarkdownParams{
-			{Key: "text_end", Values: []string{mdtext}},
+		// 使用原生Markdown格式
+		var content string
+		if imgURL != "" {
+			height, width, err := images.GetImageDimensions(imgURL)
+			if err != nil {
+				mylog.Printf("获取图片宽高出错")
+			}
+			imgDesc := fmt.Sprintf("图片 #%dpx #%dpx", width, height)
+			content = fmt.Sprintf("![%s](%s)\n%s", imgDesc, imgURL, mdtext)
+		} else {
+			content = mdtext
 		}
-	}
 
-	// 组合模板 Markdown
-	md = &dto.Markdown{
-		CustomTemplateID: CustomTemplateID,
-		Params:           mdParams,
+		// 原生 Markdown
+		md = &dto.Markdown{
+			Content: content,
+		}
 	}
 
 	// 创建自定义键盘
@@ -1117,30 +1162,52 @@ func generateMdByConfig() (md *dto.Markdown, kb *keyboard.MessageKeyboard) {
 
 	for _, bot := range linkBots {
 		parts := strings.SplitN(bot, "-", 3)
-		if len(parts) < 3 {
+		if len(parts) != 3 && len(parts) != 2 {
 			continue // 跳过无效的格式
 		}
-		name := parts[2]
-		botuin := parts[1]
-		botappid := parts[0]
-		boturl := handlers.BuildQQBotShareLink(botuin, botappid)
+		var button *keyboard.Button
+		if len(parts) == 3 {
+			name := parts[2]
+			botuin := parts[1]
+			botappid := parts[0]
+			boturl := handlers.BuildQQBotShareLink(botuin, botappid)
 
-		button := &keyboard.Button{
-			RenderData: &keyboard.RenderData{
-				Label:        name,
-				VisitedLabel: name,
-				Style:        1, // 蓝色边缘
-			},
-			Action: &keyboard.Action{
-				Type:          0,                             // 链接类型
-				Permission:    &keyboard.Permission{Type: 2}, // 所有人可操作
-				Data:          boturl,
-				UnsupportTips: "请升级新版手机QQ",
-			},
+			button = &keyboard.Button{
+				RenderData: &keyboard.RenderData{
+					Label:        name,
+					VisitedLabel: name,
+					Style:        1, // 蓝色边缘
+				},
+				Action: &keyboard.Action{
+					Type:          0,                             // 链接类型
+					Permission:    &keyboard.Permission{Type: 2}, // 所有人可操作
+					Data:          boturl,
+					UnsupportTips: "请升级新版手机QQ",
+				},
+			}
+		} else if len(parts) == 2 {
+			boturl := parts[0]
+			name := parts[1]
+
+			button = &keyboard.Button{
+				RenderData: &keyboard.RenderData{
+					Label:        name,
+					VisitedLabel: name,
+					Style:        1, // 蓝色边缘
+				},
+				Action: &keyboard.Action{
+					Type:          0,                             // 链接类型
+					Permission:    &keyboard.Permission{Type: 2}, // 所有人可操作
+					Data:          boturl,
+					UnsupportTips: "请升级新版手机QQ",
+				},
+			}
 		}
 
-		// 如果当前行为空或已满（4个按钮），则创建一个新行
-		if currentRow == nil || buttonCount == 4 {
+		lines := config.GetLinkLines()
+
+		// 如果当前行为空或已满（lines个按钮），则创建一个新行
+		if currentRow == nil || buttonCount == lines {
 			currentRow = &keyboard.Row{}
 			customKeyboard.Rows = append(customKeyboard.Rows, currentRow)
 			buttonCount = 0

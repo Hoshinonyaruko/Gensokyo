@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
@@ -77,6 +78,7 @@ func ClearBucket(bucketName string) {
 		// 获取指定的bucket
 		bucket := tx.Bucket([]byte(bucketName))
 		if bucket == nil {
+			mylog.Printf("ids表不存在.")
 			return nil // 如果bucket不存在，直接返回nil
 		}
 
@@ -94,7 +96,55 @@ func ClearBucket(bucketName string) {
 		log.Fatalf("Error clearing bucket %s: %v", bucketName, err)
 	} else {
 		mylog.Printf("ids清理成功.")
+		err := Compaction("idmap.db", "idmap_compacted.db")
+		if err != nil {
+			log.Fatalf("Failed to compact database: %v", err)
+		} else {
+			log.Println("Database compaction successful.")
+			// 可选：替换旧数据库文件
+			// os.Remove("idmap.db")
+			// os.Rename("idmap_compacted.db", "idmap.db")
+			log.Println("请手动备份原始idmap.db(可选)并将idmap_compacted.db改名为idmap.db")
+		}
 	}
+}
+
+// Compaction 创建一个新的数据库文件并复制现有的数据到这个新文件中
+func Compaction(sourceDBPath, targetDBPath string) error {
+	// 创建目标数据库文件
+	targetDB, err := bbolt.Open(targetDBPath, 0600, &bbolt.Options{Timeout: 1 * time.Second})
+	if err != nil {
+		return err
+	}
+	defer targetDB.Close()
+
+	// 从源数据库复制数据到目标数据库
+	err = db.View(func(tx *bbolt.Tx) error {
+		return tx.ForEach(func(name []byte, b *bbolt.Bucket) error {
+			// 在目标数据库中创建相同的bucket
+			return targetDB.Update(func(tx2 *bbolt.Tx) error {
+				bucket, err := tx2.CreateBucketIfNotExists(name)
+				if err != nil {
+					return err
+				}
+				// 复制所有键值对
+				return b.ForEach(func(k, v []byte) error {
+					return bucket.Put(k, v)
+				})
+			})
+		})
+	})
+
+	if err != nil {
+		return err
+	}
+
+	// 确保所有操作都已完成
+	if err := targetDB.Sync(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func CloseDB() {
