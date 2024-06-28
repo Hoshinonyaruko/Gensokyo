@@ -2302,3 +2302,28 @@ func GetDowntimeMessage() string {
 	}
 	return ""
 }
+
+// 获取GetAutoLink的值
+func GetAutoLink() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to AutoLink value.")
+		return false
+	}
+	return instance.Settings.AutoLink
+}
+
+// 获取GetLinkLines的值
+func GetLinkLines() int {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to LinkLines value.")
+		return 2 //默认2个一行
+	}
+
+	return instance.Settings.LinkLines
+}

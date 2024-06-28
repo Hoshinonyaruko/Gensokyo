@@ -159,7 +159,7 @@ func (p *Processors) ProcessGroupAddBot(data *dto.GroupAddBotEvent) error {
 
 	// 创建 ActionMessage 实例
 	message := callapi.ActionMessage{
-		Action: "send_group_msg",
+		Action: "send_group_msg_group",
 		Params: callapi.ParamsContent{
 			GroupID: strconv.FormatInt(GroupID64, 10), // 转换 GroupID 类型
 			UserID:  strconv.FormatInt(userid64, 10),
@@ -172,7 +172,13 @@ func (p *Processors) ProcessGroupAddBot(data *dto.GroupAddBotEvent) error {
 	_, err = handlers.HandleSendGroupMsg(client, p.Api, p.Apiv2, message)
 	if err != nil {
 		mylog.Printf("自我介绍发送失败%v", err)
-		return nil
 	}
+
+	//link指令
+	if config.GetAutoLink() {
+		md, kb := generateMdByConfig()
+		SendMessageMdAddBot(md, kb, data, p.Api, p.Apiv2)
+	}
+
 	return nil
 }

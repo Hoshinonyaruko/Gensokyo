@@ -84,6 +84,12 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		mylog.Printf("send_group_msgs接收到错误action: %v", message)
 		return "", nil
 	}
+
+	// 内部逻辑 ProcessGroupAddBot.go 中定义的 通过http和ws无法触发 锁定类型
+	if message.Action == "send_group_msg_group" {
+		msgType = "group"
+	}
+
 	mylog.Printf("send_group_msg获取到信息类型:%v", msgType)
 	var idInt64 int64
 	var err error
