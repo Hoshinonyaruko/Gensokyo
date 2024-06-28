@@ -196,6 +196,7 @@ settings:
   link_text : ""                    #友情链接文本 不可为空!
   link_pic : ""                     #友情链接图片 可为空 需url图片 可带端口 不填可能会有显示错误
   link_lines : 2                    #内置的/link指令按钮列数(默认一行2个按钮)
+  link_num : 6                      #在link_bots随机选n个bot上友情链接,在link_bots中随机n个,避免用户选择困难,少即是多
 
   #HTTP API配置-正向http
   http_address: ""                  #http监听地址 与websocket独立 示例:0.0.0.0:5700 为空代表不开启

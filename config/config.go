@@ -2327,3 +2327,16 @@ func GetLinkLines() int {
 
 	return instance.Settings.LinkLines
 }
+
+// 获取GetLinkNum的值
+func GetLinkNum() int {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to LinkNum value.")
+		return 6 //默认6个
+	}
+
+	return instance.Settings.LinkNum
+}
