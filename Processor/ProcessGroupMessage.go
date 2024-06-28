@@ -78,7 +78,7 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 	//框架内指令
 	p.HandleFrameworkCommand(messageText, data, "group")
 	//映射str的messageID到int
-	messageID64, err := idmap.StoreIDv2(data.ID)
+	messageID64, err := idmap.StoreCachev2(data.ID)
 	if err != nil {
 		mylog.Printf("Error storing ID: %v", err)
 		return nil

@@ -195,7 +195,7 @@ func (p *Processors) ProcessGuildATMessage(data *dto.WSATMessageData) error {
 		echostr := fmt.Sprintf("%s_%d_%d", AppIDString, s, currentTimeMillis)
 
 		//映射str的messageID到int
-		messageID64, err := idmap.StoreIDv2(data.ID)
+		messageID64, err := idmap.StoreCachev2(data.ID)
 		if err != nil {
 			mylog.Printf("Error storing ID: %v", err)
 			return nil

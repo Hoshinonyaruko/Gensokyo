@@ -48,7 +48,10 @@ func main() {
 	// 定义faststart命令行标志。默认为false。
 	fastStart := flag.Bool("faststart", false, "start without initialization if set")
 	tidy := flag.Bool("tidy", false, "backup and tidy your config.yml")
-	c := flag.Bool("c", false, "clean ids bucket, must backup idmap.db first!")
+	cleanids := flag.Bool("clean_ids", false, "clean msg_id in ids bucket.")
+	delids := flag.Bool("del_ids", false, "delete ids bucket, must backup idmap.db first!")
+	delcache := flag.Bool("del_cache", false, "delete cache bucket, it is safe")
+	compaction := flag.Bool("compaction", false, "compaction for apply db changes.")
 	m := flag.Bool("m", false, "Maintenance mode")
 
 	// 解析命令行参数到定义的标志。
@@ -205,10 +208,28 @@ func main() {
 			defer idmap.CloseDB()
 			defer botstats.CloseDB()
 
-			if *c {
-				mylog.Printf("开始清理ids\n")
-				idmap.ClearBucket("ids")
+			if *delids {
+				mylog.Printf("开始删除ids\n")
+				idmap.DeleteBucket("ids")
+				mylog.Printf("ids删除完成\n")
+				return
+			}
+			if *delcache {
+				mylog.Printf("开始删除cache\n")
+				idmap.DeleteBucket("cache")
+				mylog.Printf("cache删除完成\n")
+				return
+			}
+			if *cleanids {
+				mylog.Printf("开始清理ids中的msg_id\n")
+				idmap.CleanBucket("ids")
 				mylog.Printf("ids清理完成\n")
+				return
+			}
+			if *compaction {
+				mylog.Printf("开始整理idmap.db\n")
+				idmap.CompactionIdmap()
+				mylog.Printf("idmap.db整理完成\n")
 				return
 			}
 

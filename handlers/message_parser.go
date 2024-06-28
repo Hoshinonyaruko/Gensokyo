@@ -146,7 +146,7 @@ func SendResponse(client callapi.Client, err error, message *callapi.ActionMessa
 	// 设置响应值
 	response := ServerResponse{}
 	if resp != nil {
-		messageID64, mapErr = idmap.StoreIDv2(resp.Message.ID)
+		messageID64, mapErr = idmap.StoreCachev2(resp.Message.ID)
 		if mapErr != nil {
 			mylog.Printf("Error storing ID: %v", mapErr)
 			return "", nil
@@ -246,7 +246,7 @@ func SendGuildResponse(client callapi.Client, err error, message *callapi.Action
 	// 设置响应值
 	response := ServerResponse{}
 	if resp != nil {
-		messageID64, mapErr = idmap.StoreIDv2(resp.ID)
+		messageID64, mapErr = idmap.StoreCachev2(resp.ID)
 		if mapErr != nil {
 			mylog.Printf("Error storing ID: %v", mapErr)
 			return "", nil
@@ -304,7 +304,7 @@ func SendC2CResponse(client callapi.Client, err error, message *callapi.ActionMe
 	// 设置响应值
 	response := ServerResponse{}
 	if resp != nil {
-		messageID64, mapErr = idmap.StoreIDv2(resp.Message.ID)
+		messageID64, mapErr = idmap.StoreCachev2(resp.Message.ID)
 		if mapErr != nil {
 			mylog.Printf("Error storing ID: %v", mapErr)
 			return "", nil
@@ -361,7 +361,7 @@ func SendGuildPrivateResponse(client callapi.Client, err error, message *callapi
 	// 设置响应值
 	response := ServerResponse{}
 	if resp != nil {
-		messageID64, mapErr = idmap.StoreIDv2(resp.ID)
+		messageID64, mapErr = idmap.StoreCachev2(resp.ID)
 		if mapErr != nil {
 			mylog.Printf("Error storing ID: %v", mapErr)
 			return "", nil
