@@ -1228,7 +1228,31 @@ func generateMdByConfig() (md *dto.Markdown, kb *keyboard.MessageKeyboard) {
 	return md, kb
 }
 
-func getRandomSelection(slice []string, max int) []string {
+// getRandomSelection 处理bots数组，分类选择随机bots
+func getRandomSelection(bots []string, max int) []string {
+	threePartBots := []string{}
+	twoPartBots := []string{}
+
+	// 分类
+	for _, bot := range bots {
+		parts := strings.SplitN(bot, "-", 3)
+		if len(parts) == 3 {
+			threePartBots = append(threePartBots, bot)
+		} else if len(parts) == 2 {
+			twoPartBots = append(twoPartBots, bot)
+		}
+	}
+
+	// 对每个分类应用随机选择
+	selectedThreePartBots := selectRandomItems(threePartBots, max)
+	selectedTwoPartBots := selectRandomItems(twoPartBots, max)
+
+	// 合并结果
+	return append(selectedThreePartBots, selectedTwoPartBots...)
+}
+
+// selectRandomItems 从给定slice中随机选择最多max个元素
+func selectRandomItems(slice []string, max int) []string {
 	if len(slice) <= max {
 		return slice
 	}
