@@ -1543,6 +1543,24 @@ func auto_md(message callapi.ActionMessage, messageText string, richMediaMessage
 					}
 				}
 
+				//在虚拟二级指令白名单,设置@前缀,代表仅触发其本身
+				//如果@前缀指令包含了空格 则只显示和应用空格右侧的文本
+				if strings.HasPrefix(whiteLabel, "@") {
+					// 移除whiteLabel前端的"@"
+					whiteLabel = strings.TrimPrefix(whiteLabel, "@")
+					// 找到最后一个空格的位置
+					lastSpaceIndex := strings.LastIndex(whiteLabel, " ")
+					if lastSpaceIndex != -1 {
+						// 先存储空格左侧的字符串到dataLabel
+						dataLabel = whiteLabel[:lastSpaceIndex]
+						// 然后更新whiteLabel为空格右侧的子字符串
+						whiteLabel = whiteLabel[lastSpaceIndex+1:]
+					} else {
+						// 如果没有找到空格，将整个字符串赋给dataLabel
+						dataLabel = whiteLabel
+					}
+				}
+
 				var actiontype keyboard.ActionType
 				var permission *keyboard.Permission
 				var actiondata string

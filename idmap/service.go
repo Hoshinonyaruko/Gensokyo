@@ -113,9 +113,15 @@ func CleanBucket(bucketName string) {
 			return fmt.Errorf("bucket %s not found", bucketName)
 		}
 
-		// 遍历并检查id的长度
+		// 使用游标遍历bucket
 		c := b.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
+			// 检查键或值是否包含冒号
+			if bytes.Contains(k, []byte(":")) || bytes.Contains(v, []byte(":")) {
+				continue // 忽略包含冒号的键值对
+			}
+
+			// 检查值id的长度
 			id := string(v)
 			if len(id) != 32 {
 				if err := c.Delete(); err != nil {
@@ -125,9 +131,13 @@ func CleanBucket(bucketName string) {
 			}
 		}
 
-		// 遍历并检查reverseKey的长度
-		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+		// 再次遍历处理reverseKey的情况
+		for k, v := c.First(); k != nil; k, v = c.Next() {
 			if strings.HasPrefix(string(k), "row-") {
+				if bytes.Contains(k, []byte(":")) || bytes.Contains(v, []byte(":")) {
+					continue // 忽略包含冒号的键值对
+				}
+
 				id := string(b.Get(k))
 				if len(id) != 32 {
 					if err := b.Delete(k); err != nil {
