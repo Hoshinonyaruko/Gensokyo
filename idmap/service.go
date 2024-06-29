@@ -113,7 +113,7 @@ func CleanBucket(bucketName string) {
 			return fmt.Errorf("bucket %s not found", bucketName)
 		}
 
-		// 使用游标遍历bucket
+		// 使用游标遍历bucket 正向键 k:v 32位openid:大宽int64 64位msgid:大宽int6
 		c := b.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			// 检查键或值是否包含冒号
@@ -121,7 +121,7 @@ func CleanBucket(bucketName string) {
 				continue // 忽略包含冒号的键值对
 			}
 
-			// 检查值id的长度
+			// 检查值id的长度 这里是正向键
 			id := string(k)
 			if len(id) != 32 {
 				if err := c.Delete(); err != nil {
@@ -131,14 +131,14 @@ func CleanBucket(bucketName string) {
 			}
 		}
 
-		// 再次遍历处理reverseKey的情况
+		// 再次遍历处理reverseKey的情况 反向键 row-整数:string 32位openid/64位msgid
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			if strings.HasPrefix(string(k), "row-") {
 				if bytes.Contains(k, []byte(":")) || bytes.Contains(v, []byte(":")) {
 					continue // 忽略包含冒号的键值对
 				}
-
-				id := string(b.Get(k))
+				// 这里检查反向键是否是32位
+				id := string(v)
 				if len(id) != 32 {
 					if err := b.Delete(k); err != nil {
 						return err
