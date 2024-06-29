@@ -122,7 +122,7 @@ func CleanBucket(bucketName string) {
 			}
 
 			// 检查值id的长度
-			id := string(v)
+			id := string(k)
 			if len(id) != 32 {
 				if err := c.Delete(); err != nil {
 					return err
