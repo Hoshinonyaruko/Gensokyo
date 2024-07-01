@@ -117,7 +117,7 @@ func CleanBucket(bucketName string) {
 		c := b.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			// 检查键或值是否包含冒号
-			if bytes.Contains(k, []byte(":")) || bytes.Contains(v, []byte(":")) {
+			if bytes.Contains(k, []byte(":")) || bytes.Contains(v, []byte(":")) || bytes.Contains(k, []byte("row-")) {
 				continue // 忽略包含冒号的键值对
 			}
 
