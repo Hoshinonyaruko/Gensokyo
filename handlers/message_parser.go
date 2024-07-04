@@ -416,8 +416,13 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 		if config.GetEnableChangeWord() {
 			messageText = acnode.CheckWordOUT(messageText)
 		}
-		// 解析[CQ:avatar,qq=123456]
-		messageText = ProcessCQAvatar(paramsMessage.GroupID.(string), messageText)
+		if paramsMessage.GroupID == nil {
+			// 解析[CQ:avatar,qq=123456]
+			messageText = ProcessCQAvatarNoGroupID(messageText)
+		} else {
+			// 解析[CQ:avatar,qq=123456]
+			messageText = ProcessCQAvatar(paramsMessage.GroupID.(string), messageText)
+		}
 	case []interface{}:
 		//多个映射组成的切片
 		mylog.Printf("params.message is a slice (segment_type_koishi)\n")
@@ -454,7 +459,11 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 				segmentContent = "[CQ:at,qq=" + qqNumber + "]"
 			case "avatar":
 				qqNumber, _ := segmentMap["data"].(map[string]interface{})["qq"].(string)
-				segmentContent, _ = GetAvatarCQCode(paramsMessage.GroupID.(string), qqNumber)
+				if paramsMessage.GroupID == nil {
+					segmentContent, _ = GetAvatarCQCodeNoGroupID(qqNumber)
+				} else {
+					segmentContent, _ = GetAvatarCQCode(paramsMessage.GroupID.(string), qqNumber)
+				}
 			case "markdown":
 				mdContent, ok := segmentMap["data"].(map[string]interface{})["data"]
 				if ok {
@@ -525,7 +534,11 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 			messageText = "[CQ:at,qq=" + qqNumber + "]"
 		case "avatar":
 			qqNumber, _ := message["data"].(map[string]interface{})["qq"].(string)
-			messageText, _ = GetAvatarCQCode(paramsMessage.GroupID.(string), qqNumber)
+			if paramsMessage.GroupID == nil {
+				messageText, _ = GetAvatarCQCodeNoGroupID(qqNumber)
+			} else {
+				messageText, _ = GetAvatarCQCode(paramsMessage.GroupID.(string), qqNumber)
+			}
 		case "markdown":
 			mdContent, ok := message["data"].(map[string]interface{})["data"]
 			if ok {
