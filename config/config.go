@@ -2340,3 +2340,15 @@ func GetLinkNum() int {
 
 	return instance.Settings.LinkNum
 }
+
+// 获取GetDoNotReplaceAppid的值
+func GetDoNotReplaceAppid() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to DoNotReplaceAppid value.")
+		return false
+	}
+	return instance.Settings.DoNotReplaceAppid
+}

@@ -184,6 +184,7 @@ settings:
   #错误临时修复类
   fix_11300: false                  #修复11300报错,需要在develop_bot_id填入自己机器人的appid. 11300原因暂时未知,临时修复方案.
   http_only_bot : false             #这个配置项会自动配置,请不要修改,保持false.
+  do_not_replace_appid : false      #在频道内机器人尝试at自己回at不到,保持false.群内机器人有发送用户头像url的需求时,true(因为用户头像url包含了appid,如果false就会出错.)
   
   #内置指令类
   bind_prefix : "/bind"             #需设置   #增强配置项  master_id 可触发
