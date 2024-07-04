@@ -233,7 +233,7 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		if messageText != "" {
 			msgseq := echo.GetMappingSeq(messageID)
 			echo.AddMappingSeq(messageID, msgseq+1)
-			groupReply := generateGroupMessage(messageID, eventID, nil, messageText, msgseq+1, apiv2, message.Params.GroupID.(string))
+			groupReply := generatePrivateMessage(messageID, eventID, nil, messageText, msgseq+1, apiv2, message.Params.UserID.(string))
 
 			// 进行类型断言
 			groupMessage, ok := groupReply.(*dto.MessageToCreate)
