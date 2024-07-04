@@ -585,8 +585,13 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 		mylog.Println("Unsupported message format: params.message field is not a string, map or slice")
 	}
 
-	//处理at
-	messageText = transformMessageTextAt(messageText, paramsMessage.GroupID.(string))
+	if paramsMessage.GroupID == nil {
+		//处理at
+		messageText = transformMessageTextAtNoGroupID(messageText)
+	} else {
+		//处理at
+		messageText = transformMessageTextAt(messageText, paramsMessage.GroupID.(string))
+	}
 
 	//mylog.Printf(messageText)
 
@@ -677,6 +682,49 @@ func transformMessageTextAt(messageText string, groupid string) string {
 			var err error
 			if config.GetIdmapPro() {
 				_, realUserID, err = idmap.RetrieveRowByIDv2Pro(groupid, submatches[1])
+			} else {
+				realUserID, err = idmap.RetrieveRowByIDv2(submatches[1])
+			}
+			if err != nil {
+				// 如果出错，也替换成相应的格式，但使用原始QQ号
+				mylog.Printf("Error retrieving user ID: %v", err)
+				return "<@!" + submatches[1] + ">"
+			}
+
+			// 在这里检查 GetRemoveBotAtGroup 和 realUserID 的长度
+			if config.GetRemoveBotAtGroup() && len(realUserID) == 32 {
+				return ""
+			}
+
+			return "<@!" + realUserID + ">"
+		}
+		return m
+	})
+	return messageText
+}
+
+// at处理
+func transformMessageTextAtNoGroupID(messageText string) string {
+	// DoNotReplaceAppid=false(默认频道bot,需要自己at自己时,否则改成true)
+	if !config.GetDoNotReplaceAppid() {
+		// 首先，将AppID替换为BotID
+		messageText = strings.ReplaceAll(messageText, AppID, BotID)
+	}
+
+	// 去除所有[CQ:reply,id=数字] todo 更好的处理办法
+	replyRE := regexp.MustCompile(`\[CQ:reply,id=\d+\]`)
+	messageText = replyRE.ReplaceAllString(messageText, "")
+
+	// 使用正则表达式来查找所有[CQ:at,qq=数字]的模式
+	re := regexp.MustCompile(`\[CQ:at,qq=(\d+)\]`)
+	messageText = re.ReplaceAllStringFunc(messageText, func(m string) string {
+		submatches := re.FindStringSubmatch(m)
+		if len(submatches) > 1 {
+			var realUserID string
+			var err error
+			if config.GetIdmapPro() {
+				// 这是个魔法数 代表私聊
+				_, realUserID, err = idmap.RetrieveRowByIDv2Pro("690426430", submatches[1])
 			} else {
 				realUserID, err = idmap.RetrieveRowByIDv2(submatches[1])
 			}
