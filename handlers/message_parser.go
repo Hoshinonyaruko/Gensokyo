@@ -416,6 +416,8 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 		if config.GetEnableChangeWord() {
 			messageText = acnode.CheckWordOUT(messageText)
 		}
+		// 解析[CQ:avatar,qq=123456]
+		messageText = ProcessCQAvatar(paramsMessage.GroupID.(string), messageText)
 	case []interface{}:
 		//多个映射组成的切片
 		mylog.Printf("params.message is a slice (segment_type_koishi)\n")
@@ -450,6 +452,9 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 			case "at":
 				qqNumber, _ := segmentMap["data"].(map[string]interface{})["qq"].(string)
 				segmentContent = "[CQ:at,qq=" + qqNumber + "]"
+			case "avatar":
+				qqNumber, _ := segmentMap["data"].(map[string]interface{})["qq"].(string)
+				segmentContent, _ = GetAvatarCQCode(paramsMessage.GroupID.(string), qqNumber)
 			case "markdown":
 				mdContent, ok := segmentMap["data"].(map[string]interface{})["data"]
 				if ok {
@@ -518,6 +523,9 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 		case "at":
 			qqNumber, _ := message["data"].(map[string]interface{})["qq"].(string)
 			messageText = "[CQ:at,qq=" + qqNumber + "]"
+		case "avatar":
+			qqNumber, _ := message["data"].(map[string]interface{})["qq"].(string)
+			messageText, _ = GetAvatarCQCode(paramsMessage.GroupID.(string), qqNumber)
 		case "markdown":
 			mdContent, ok := message["data"].(map[string]interface{})["data"]
 			if ok {
@@ -563,8 +571,9 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 	default:
 		mylog.Println("Unsupported message format: params.message field is not a string, map or slice")
 	}
+
 	//处理at
-	messageText = transformMessageTextAt(messageText)
+	messageText = transformMessageTextAt(messageText, paramsMessage.GroupID.(string))
 
 	//mylog.Printf(messageText)
 
@@ -635,9 +644,12 @@ func isIPAddress(address string) bool {
 }
 
 // at处理
-func transformMessageTextAt(messageText string) string {
-	// 首先，将AppID替换为BotID
-	messageText = strings.ReplaceAll(messageText, AppID, BotID)
+func transformMessageTextAt(messageText string, groupid string) string {
+	// DoNotReplaceAppid=false(默认频道bot,需要自己at自己时,否则改成true)
+	if !config.GetDoNotReplaceAppid() {
+		// 首先，将AppID替换为BotID
+		messageText = strings.ReplaceAll(messageText, AppID, BotID)
+	}
 
 	// 去除所有[CQ:reply,id=数字] todo 更好的处理办法
 	replyRE := regexp.MustCompile(`\[CQ:reply,id=\d+\]`)
@@ -648,7 +660,13 @@ func transformMessageTextAt(messageText string) string {
 	messageText = re.ReplaceAllStringFunc(messageText, func(m string) string {
 		submatches := re.FindStringSubmatch(m)
 		if len(submatches) > 1 {
-			realUserID, err := idmap.RetrieveRowByIDv2(submatches[1])
+			var realUserID string
+			var err error
+			if config.GetIdmapPro() {
+				_, realUserID, err = idmap.RetrieveRowByIDv2Pro(groupid, submatches[1])
+			} else {
+				realUserID, err = idmap.RetrieveRowByIDv2(submatches[1])
+			}
 			if err != nil {
 				// 如果出错，也替换成相应的格式，但使用原始QQ号
 				mylog.Printf("Error retrieving user ID: %v", err)
@@ -758,7 +776,7 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 		//处理前 先去前后空
 		messageText = strings.TrimSpace(msg.Content)
 	}
-	var originmessageText = messageText
+
 	//mylog.Printf("1[%v]", messageText)
 
 	// 将messageText里的BotID替换成AppID
@@ -802,6 +820,8 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 			messageText = strings.TrimSpace(messageText)
 		}
 	}
+
+	var originmessageText = messageText
 	//mylog.Printf("2[%v]", messageText)
 
 	// 检查是否需要移除前缀
