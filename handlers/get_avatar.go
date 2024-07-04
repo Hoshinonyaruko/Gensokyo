@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/config"
@@ -15,6 +16,7 @@ type GetAvatarResponse struct {
 	Message string      `json:"message"`
 	RetCode int         `json:"retcode"`
 	Echo    interface{} `json:"echo"`
+	UserID  int64       `json:"user_id"`
 }
 
 func init() {
@@ -46,9 +48,12 @@ func GetAvatar(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI
 
 	avatarurl, _ := GenerateAvatarURLV2(originalUserID)
 
+	useridstr := message.Params.UserID.(string)
+
 	response.Message = avatarurl
 	response.RetCode = 0
 	response.Echo = message.Echo
+	response.UserID, _ = strconv.ParseInt(useridstr, 10, 64)
 
 	outputMap := structToMap(response)
 
