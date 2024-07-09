@@ -67,11 +67,19 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 		//收到私聊信息调用的具体还原步骤
 		//1,idmap还原真实userid,
 		//发信息使用的是userid
-
-		messageID64, err := idmap.StoreCachev2(data.ID)
-		if err != nil {
-			log.Fatalf("Error storing ID: %v", err)
+		var messageID64 int64
+		if config.GetMemoryMsgid() {
+			messageID64, err = echo.StoreCacheInMemory(data.ID)
+			if err != nil {
+				log.Fatalf("Error storing ID: %v", err)
+			}
+		} else {
+			messageID64, err = idmap.StoreCachev2(data.ID)
+			if err != nil {
+				log.Fatalf("Error storing ID: %v", err)
+			}
 		}
+
 		messageID := int(messageID64)
 		if config.GetAutoBind() {
 			if len(data.Attachments) > 0 && data.Attachments[0].URL != "" {
@@ -205,10 +213,17 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 		//框架内指令
 		p.HandleFrameworkCommand(messageText, data, "group_private")
 		//映射str的messageID到int
-		messageID64, err := idmap.StoreCachev2(data.ID)
-		if err != nil {
-			mylog.Printf("Error storing ID: %v", err)
-			return nil
+		var messageID64 int64
+		if config.GetMemoryMsgid() {
+			messageID64, err = echo.StoreCacheInMemory(data.ID)
+			if err != nil {
+				log.Fatalf("Error storing ID: %v", err)
+			}
+		} else {
+			messageID64, err = idmap.StoreCachev2(data.ID)
+			if err != nil {
+				log.Fatalf("Error storing ID: %v", err)
+			}
 		}
 		messageID := int(messageID64)
 		//todo 判断array模式 然后对Message处理成array格式

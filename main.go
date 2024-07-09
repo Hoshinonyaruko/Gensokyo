@@ -21,6 +21,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/acnode"
 	"github.com/hoshinonyaruko/gensokyo/botstats"
 	"github.com/hoshinonyaruko/gensokyo/config"
+	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/handlers"
 	"github.com/hoshinonyaruko/gensokyo/httpapi"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
@@ -532,6 +533,11 @@ func main() {
 		}()
 	}
 
+	//杂七杂八的地方
+	if conf.Settings.MemoryMsgid {
+		echo.StartCleanupRoutine()
+	}
+
 	// 使用color库输出天蓝色的文本
 	cyan := color.New(color.FgCyan)
 	cyan.Printf("欢迎来到Gensokyo, 控制台地址: %s\n", webuiURL)
@@ -552,6 +558,11 @@ func main() {
 		if err != nil {
 			log.Printf("Error closing WebSocket connection: %v\n", err)
 		}
+	}
+
+	// 停止内存清理线程
+	if conf.Settings.MemoryMsgid {
+		echo.StopCleanupRoutine()
 	}
 
 	// 关闭BoltDB数据库

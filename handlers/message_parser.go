@@ -146,11 +146,20 @@ func SendResponse(client callapi.Client, err error, message *callapi.ActionMessa
 	// 设置响应值
 	response := ServerResponse{}
 	if resp != nil {
-		messageID64, mapErr = idmap.StoreCachev2(resp.Message.ID)
-		if mapErr != nil {
-			mylog.Printf("Error storing ID: %v", mapErr)
-			return "", nil
+		if config.GetMemoryMsgid() {
+			messageID64, mapErr = echo.StoreCacheInMemory(resp.Message.ID)
+			if mapErr != nil {
+				mylog.Printf("Error storing ID: %v", mapErr)
+				return "", nil
+			}
+		} else {
+			messageID64, mapErr = idmap.StoreCachev2(resp.Message.ID)
+			if mapErr != nil {
+				mylog.Printf("Error storing ID: %v", mapErr)
+				return "", nil
+			}
 		}
+
 		response.Data.MessageID = int(messageID64)
 		// 发送成功 增加今日发信息数
 		botstats.RecordMessageSent()
@@ -246,10 +255,18 @@ func SendGuildResponse(client callapi.Client, err error, message *callapi.Action
 	// 设置响应值
 	response := ServerResponse{}
 	if resp != nil {
-		messageID64, mapErr = idmap.StoreCachev2(resp.ID)
-		if mapErr != nil {
-			mylog.Printf("Error storing ID: %v", mapErr)
-			return "", nil
+		if config.GetMemoryMsgid() {
+			messageID64, mapErr = echo.StoreCacheInMemory(resp.ID)
+			if mapErr != nil {
+				mylog.Printf("Error storing ID: %v", mapErr)
+				return "", nil
+			}
+		} else {
+			messageID64, mapErr = idmap.StoreCachev2(resp.ID)
+			if mapErr != nil {
+				mylog.Printf("Error storing ID: %v", mapErr)
+				return "", nil
+			}
 		}
 		response.Data.MessageID = int(messageID64)
 		// 发送成功 增加今日发信息数
@@ -304,10 +321,18 @@ func SendC2CResponse(client callapi.Client, err error, message *callapi.ActionMe
 	// 设置响应值
 	response := ServerResponse{}
 	if resp != nil {
-		messageID64, mapErr = idmap.StoreCachev2(resp.Message.ID)
-		if mapErr != nil {
-			mylog.Printf("Error storing ID: %v", mapErr)
-			return "", nil
+		if config.GetMemoryMsgid() {
+			messageID64, mapErr = echo.StoreCacheInMemory(resp.Message.ID)
+			if mapErr != nil {
+				mylog.Printf("Error storing ID: %v", mapErr)
+				return "", nil
+			}
+		} else {
+			messageID64, mapErr = idmap.StoreCachev2(resp.Message.ID)
+			if mapErr != nil {
+				mylog.Printf("Error storing ID: %v", mapErr)
+				return "", nil
+			}
 		}
 		response.Data.MessageID = int(messageID64)
 		// 发送成功 增加今日发信息数
@@ -361,10 +386,18 @@ func SendGuildPrivateResponse(client callapi.Client, err error, message *callapi
 	// 设置响应值
 	response := ServerResponse{}
 	if resp != nil {
-		messageID64, mapErr = idmap.StoreCachev2(resp.ID)
-		if mapErr != nil {
-			mylog.Printf("Error storing ID: %v", mapErr)
-			return "", nil
+		if config.GetMemoryMsgid() {
+			messageID64, mapErr = echo.StoreCacheInMemory(resp.ID)
+			if mapErr != nil {
+				mylog.Printf("Error storing ID: %v", mapErr)
+				return "", nil
+			}
+		} else {
+			messageID64, mapErr = idmap.StoreCachev2(resp.ID)
+			if mapErr != nil {
+				mylog.Printf("Error storing ID: %v", mapErr)
+				return "", nil
+			}
 		}
 		response.Data.MessageID = int(messageID64)
 	} else {
