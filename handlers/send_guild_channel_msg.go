@@ -18,6 +18,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/echo"
 
 	"github.com/tencent-connect/botgo/dto"
+	"github.com/tencent-connect/botgo/dto/keyboard"
 	"github.com/tencent-connect/botgo/openapi"
 )
 
@@ -163,10 +164,33 @@ func HandleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 					MsgType: 0,
 				}
 				newMessage.Timestamp = time.Now().Unix() // 设置时间戳
-
-				if _, err = api.PostMessage(context.TODO(), channelID.(string), newMessage); err != nil {
-					mylog.Printf("发送图文混合信息失败: %v", err)
+				var transmd bool
+				var md *dto.Markdown
+				var kb *keyboard.MessageKeyboard
+				//判断是否需要自动转换md
+				if config.GetTwoWayEcho() {
+					// 初始化 RichMediaMessage 结构体指针
+					var richMediaMessage *dto.RichMediaMessage = &dto.RichMediaMessage{}
+					richMediaMessage.Content = messageText
+					richMediaMessage.URL = Reply.Image
+					md, kb, transmd = auto_md(message, messageText, richMediaMessage)
 				}
+
+				if transmd {
+					newMessage.Content = ""
+					newMessage.Image = ""
+					newMessage.Markdown = md
+					newMessage.Keyboard = kb
+					newMessage.MsgType = 2 //md信息
+					if _, err = api.PostMessage(context.TODO(), channelID.(string), newMessage); err != nil {
+						mylog.Printf("发送图文混合信息失败: %v", err)
+					}
+				} else {
+					if _, err = api.PostMessage(context.TODO(), channelID.(string), newMessage); err != nil {
+						mylog.Printf("发送图文混合信息失败: %v", err)
+					}
+				}
+
 				// 检查是否是 40003 错误
 				if err != nil && strings.Contains(err.Error(), `"code":40003`) && len(newMessage.Image) > 0 {
 					// 从 newMessage.Image 中提取图片地址
@@ -439,6 +463,52 @@ func GenerateReplyMessage(id string, foundItems map[string][]string, messageText
 			MsgType: 0, // Default type for text
 		}
 		isBase64 = true
+	} else if qqmusic, ok := foundItems["qqmusic"]; ok && len(qqmusic) > 0 {
+		// 转换qq音乐id到一个md
+		music_id := qqmusic[0]
+		markdown, keyboard, err := parseQQMuiscMDData(music_id)
+		if err != nil {
+			mylog.Printf("failed to parseMDData: %v", err)
+			return nil, false
+		}
+		if markdown != nil {
+			msgtocreate := &dto.MessageToCreate{
+				MsgID:    id,
+				MsgSeq:   msgseq,
+				Markdown: markdown,
+				Keyboard: keyboard,
+				MsgType:  2,
+			}
+			return msgtocreate, false
+		} else {
+			msgtocreate := &dto.MessageToCreate{
+				MsgID:    id,
+				MsgSeq:   msgseq,
+				Keyboard: keyboard,
+				MsgType:  2,
+			}
+			return msgtocreate, false
+		}
+	} else if mdContent, ok := foundItems["markdown"]; ok && len(mdContent) > 0 {
+		// 解码base64 markdown数据
+		mdData, err := base64.StdEncoding.DecodeString(mdContent[0])
+		if err != nil {
+			mylog.Printf("failed to decode base64 md: %v", err)
+			return nil, false
+		}
+		markdown, keyboard, err := parseMDData(mdData)
+		if err != nil {
+			mylog.Printf("failed to parseMDData: %v", err)
+			return nil, false
+		}
+		msgtocreate := &dto.MessageToCreate{
+			MsgID:    id,
+			MsgSeq:   msgseq,
+			Markdown: markdown,
+			Keyboard: keyboard,
+			MsgType:  2,
+		}
+		return msgtocreate, false
 	} else {
 		// 发文本信息
 		reply = dto.MessageToCreate{
