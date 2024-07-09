@@ -59,6 +59,8 @@ type globalMessageGroup struct {
 var (
 	globalSyncMapMsgid    sync.Map
 	globalReverseMapMsgid sync.Map // 用于存储反向键值对
+	cleanupTicker         *time.Ticker
+	onceMsgid             sync.Once
 )
 
 // 初始化一个全局栈实例
@@ -325,4 +327,39 @@ func GetCacheIDFromMemoryByRowID(rowID string) (string, bool) {
 		return value.(string), true
 	}
 	return "", false
+}
+
+// StartCleanupRoutine 启动定时清理函数，每5分钟清空 globalSyncMapMsgid 和 globalReverseMapMsgid
+func StartCleanupRoutine() {
+	onceMsgid.Do(func() {
+		cleanupTicker = time.NewTicker(5 * time.Minute)
+
+		// 启动一个协程执行清理操作
+		go func() {
+			for range cleanupTicker.C {
+				fmt.Println("Starting cleanup...")
+
+				// 清空 sync.Map
+				globalSyncMapMsgid.Range(func(key, value interface{}) bool {
+					globalSyncMapMsgid.Delete(key)
+					return true
+				})
+
+				// 清空反向映射 sync.Map
+				globalReverseMapMsgid.Range(func(key, value interface{}) bool {
+					globalReverseMapMsgid.Delete(key)
+					return true
+				})
+
+				fmt.Println("Cleanup completed.")
+			}
+		}()
+	})
+}
+
+// StopCleanupRoutine 停止定时清理函数
+func StopCleanupRoutine() {
+	if cleanupTicker != nil {
+		cleanupTicker.Stop()
+	}
 }
