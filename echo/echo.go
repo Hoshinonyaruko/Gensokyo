@@ -1,12 +1,14 @@
 package echo
 
 import (
+	"fmt"
 	"math/rand"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/config"
+	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/tencent-connect/botgo/dto"
 )
 
@@ -52,6 +54,12 @@ type globalMessageGroup struct {
 	mu    sync.Mutex
 	stack []MessageGroupPair
 }
+
+// 使用 sync.Map 作为内存存储
+var (
+	globalSyncMapMsgid    sync.Map
+	globalReverseMapMsgid sync.Map // 用于存储反向键值对
+)
 
 // 初始化一个全局栈实例
 var globalMessageGroupStack = &globalMessageGroup{
@@ -272,4 +280,49 @@ func RemoveFromGlobalStack(index int) {
 	}
 
 	globalMessageGroupStack.stack = append(globalMessageGroupStack.stack[:index], globalMessageGroupStack.stack[index+1:]...)
+}
+
+// StoreCacheInMemory 根据 ID 将映射存储在内存中的 sync.Map 中
+func StoreCacheInMemory(id string) (int64, error) {
+	var newRow int64
+
+	// 检查是否已存在映射
+	if value, ok := globalSyncMapMsgid.Load(id); ok {
+		newRow = value.(int64)
+		return newRow, nil
+	}
+
+	// 生成新的行号
+	var err error
+	maxDigits := 18 // int64 的位数上限-1
+	for digits := 9; digits <= maxDigits; digits++ {
+		newRow, err = idmap.GenerateRowID(id, digits)
+		if err != nil {
+			return 0, err
+		}
+
+		// 检查新生成的行号是否重复
+		if _, exists := globalSyncMapMsgid.LoadOrStore(id, newRow); !exists {
+			// 存储反向键值对
+			globalReverseMapMsgid.Store(newRow, id)
+			// 找到了一个唯一的行号，可以跳出循环
+			break
+		}
+
+		// 如果到达了最大尝试次数还没有找到唯一的行号，则返回错误
+		if digits == maxDigits {
+			return 0, fmt.Errorf("unable to find a unique row ID after %d attempts", maxDigits-8)
+		}
+	}
+
+	return newRow, nil
+}
+
+// GetIDFromRowID 根据行号获取原始 ID
+func GetCacheIDFromMemoryByRowID(rowID string) (string, bool) {
+	introwID, _ := strconv.ParseInt(rowID, 10, 64)
+	if value, ok := globalReverseMapMsgid.Load(introwID); ok {
+		return value.(string), true
+	}
+	return "", false
 }

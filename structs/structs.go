@@ -102,6 +102,7 @@ type Settings struct {
 	SendError       bool   `yaml:"send_error"`
 	SaveError       bool   `yaml:"save_error"`
 	DowntimeMessage string `yaml:"downtime_message"`
+	MemoryMsgid     bool   `yaml:"memory_msgid"`
 	//增长营销类
 	SelfIntroduce []string `yaml:"self_introduce"`
 	//api修改

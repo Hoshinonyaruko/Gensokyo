@@ -2352,3 +2352,15 @@ func GetDoNotReplaceAppid() bool {
 	}
 	return instance.Settings.DoNotReplaceAppid
 }
+
+// 获取GetMemoryMsgid的值
+func GetMemoryMsgid() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to MemoryMsgid value.")
+		return false
+	}
+	return instance.Settings.MemoryMsgid
+}
