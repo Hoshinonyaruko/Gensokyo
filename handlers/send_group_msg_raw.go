@@ -160,7 +160,15 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 
 		if isNumeric(messageID) && messageID != "0" {
 			// 当messageID是字符串形式的数字时，执行转换
-			RealMsgID, err := idmap.RetrieveRowByCachev2(messageID)
+			var RealMsgID string
+			var err error
+			if config.GetMemoryMsgid() {
+				//从内存取
+				RealMsgID, _ = echo.GetCacheIDFromMemoryByRowID(messageID)
+			} else {
+				RealMsgID, err = idmap.RetrieveRowByCachev2(messageID)
+			}
+
 			if err != nil {
 				mylog.Printf("error retrieving real MessageID: %v", err)
 			} else {

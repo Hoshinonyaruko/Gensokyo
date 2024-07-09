@@ -95,9 +95,17 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 		//3,通过idmap用channelid获取guildid,
 		//发信息使用的是guildid
 		//todo 优化数据库读写次数
-		messageID64, err := idmap.StoreCachev2(data.ID)
-		if err != nil {
-			log.Fatalf("Error storing ID: %v", err)
+		var messageID64 int64
+		if config.GetMemoryMsgid() {
+			messageID64, err = echo.StoreCacheInMemory(data.ID)
+			if err != nil {
+				log.Fatalf("Error storing ID: %v", err)
+			}
+		} else {
+			messageID64, err = idmap.StoreCachev2(data.ID)
+			if err != nil {
+				log.Fatalf("Error storing ID: %v", err)
+			}
 		}
 		messageID := int(messageID64)
 		//转换at
@@ -344,10 +352,17 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 
 			//userid := int(userid64)
 			//映射str的messageID到int
-			messageID64, err := idmap.StoreCachev2(data.ID)
-			if err != nil {
-				mylog.Printf("Error storing ID: %v", err)
-				return nil
+			var messageID64 int64
+			if config.GetMemoryMsgid() {
+				messageID64, err = echo.StoreCacheInMemory(data.ID)
+				if err != nil {
+					log.Fatalf("Error storing ID: %v", err)
+				}
+			} else {
+				messageID64, err = idmap.StoreCachev2(data.ID)
+				if err != nil {
+					log.Fatalf("Error storing ID: %v", err)
+				}
 			}
 			messageID := int(messageID64)
 			// 如果在Array模式下, 则处理Message为Segment格式

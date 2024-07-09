@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
+	"github.com/hoshinonyaruko/gensokyo/config"
+	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/tencent-connect/botgo/openapi"
@@ -16,12 +18,21 @@ func init() {
 }
 
 func DeleteMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
+	var RealMsgID string
+	var err error
 
-	//还原msgid
-	RealMsgID, err := idmap.RetrieveRowByCachev2(message.Params.MessageID.(string))
-	if err != nil {
-		mylog.Printf("error retrieving real RChannelID: %v", err)
+	// 如果从内存取
+	if config.GetMemoryMsgid() {
+		//还原msgid
+		RealMsgID, _ = echo.GetCacheIDFromMemoryByRowID(message.Params.MessageID.(string))
+	} else {
+		//还原msgid
+		RealMsgID, err = idmap.RetrieveRowByCachev2(message.Params.MessageID.(string))
+		if err != nil {
+			mylog.Printf("error retrieving real RChannelID: %v", err)
+		}
 	}
+
 	//重新赋值
 	message.Params.MessageID = RealMsgID
 	//撤回频道信息
