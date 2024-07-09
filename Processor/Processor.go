@@ -579,7 +579,7 @@ func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}
 	}
 
 	//link指令
-	if Type == "group" && strings.HasPrefix(cleanedMessage, config.GetLinkPrefix()) {
+	if strings.HasPrefix(cleanedMessage, config.GetLinkPrefix()) {
 		md, kb := generateMdByConfig()
 		SendMessageMd(md, kb, data, Type, p.Api, p.Apiv2)
 	}
@@ -845,7 +845,6 @@ func SendMessageMd(md *dto.Markdown, kb *keyboard.MessageKeyboard, data interfac
 		msgseq := echo.GetMappingSeq(msg.ID)
 		echo.AddMappingSeq(msg.ID, msgseq+1)
 		Message := &dto.MessageToCreate{
-			Content:  "markdown",
 			MsgID:    msg.ID,
 			MsgSeq:   msgseq,
 			Markdown: md,
@@ -889,7 +888,6 @@ func SendMessageMd(md *dto.Markdown, kb *keyboard.MessageKeyboard, data interfac
 		msgseq := echo.GetMappingSeq(msg.ID)
 		echo.AddMappingSeq(msg.ID, msgseq+1)
 		Message := &dto.MessageToCreate{
-			Content:  "markdown",
 			MsgID:    msg.ID,
 			MsgSeq:   msgseq,
 			Markdown: md,
