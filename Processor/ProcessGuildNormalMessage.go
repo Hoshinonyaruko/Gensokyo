@@ -302,6 +302,8 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 		echo.AddMsgType(AppIDString, ChannelID64, "guild")
 		//懒message_id池
 		echo.AddLazyMessageId(strconv.FormatInt(ChannelID64, 10), data.ID, time.Now())
+		//测试
+		echo.AddLazyMessageId(data.ChannelID, data.ID, time.Now())
 		//懒message_id池
 		//echo.AddLazyMessageId(strconv.FormatInt(userid64, 10), data.ID, time.Now())
 		//echo.AddLazyMessageIdv2(strconv.FormatInt(ChannelID64, 10), strconv.FormatInt(userid64, 10), data.ID, time.Now())
