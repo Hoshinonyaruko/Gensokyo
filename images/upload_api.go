@@ -181,7 +181,8 @@ func originalUploadBehavior(base64Image string) (string, error) {
 		protocol = "https"
 	}
 
-	if config.GetLotusValue() {
+	// 如果lotus为真
+	if config.GetLotusValue() && !config.GetLotusWithoutUploadPic() {
 		serverDir := config.GetServer_dir()
 		url := fmt.Sprintf("%s://%s:%s/uploadpic", protocol, serverDir, serverPort)
 
@@ -264,7 +265,7 @@ func originalUploadBehaviorRecord(base64Image string) (string, error) {
 		protocol = "https"
 	}
 
-	if config.GetLotusValue() {
+	if config.GetLotusValue() && !config.GetLotusWithoutUploadPic() {
 		serverDir := config.GetServer_dir()
 		url := fmt.Sprintf("%s://%s:%s/uploadrecord", protocol, serverDir, serverPort)
 

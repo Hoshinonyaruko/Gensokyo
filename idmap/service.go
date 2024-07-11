@@ -2,6 +2,7 @@ package idmap
 
 import (
 	"bytes"
+	"context"
 	"crypto/md5"
 	"encoding/binary"
 	"encoding/hex"
@@ -19,8 +20,13 @@ import (
 
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
+	proto "github.com/hoshinonyaruko/gensokyo/proto"
 	"github.com/hoshinonyaruko/gensokyo/structs"
 	"go.etcd.io/bbolt"
+)
+
+var (
+	GrpcClient proto.IDMapServiceClient // 全局的 gRPC 客户端
 )
 
 var (
@@ -434,7 +440,16 @@ func SimplifiedStoreID(id string) (int64, error) {
 
 // SimplifiedStoreID 根据a储存b 储存一半
 func SimplifiedStoreIDv2(id string) (int64, error) {
-	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
+	//是否使用grpc
+	if config.GetLotusGrpc() && config.GetLotusValue() {
+		// 使用 gRPC 调用
+		req := &proto.SimplifiedStoreIDRequest{IdOrRow: id}
+		resp, err := GrpcClient.SimplifiedStoreIDV2(context.Background(), req)
+		if err != nil {
+			return 0, fmt.Errorf("gRPC call failed: %v", err)
+		}
+		return resp.Row, nil
+	} else if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
@@ -522,7 +537,16 @@ func StoreIDPro(id string, subid string) (int64, int64, error) {
 
 // StoreIDv2 根据a储存b
 func StoreIDv2(id string) (int64, error) {
-	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
+	//是否使用grpc
+	if config.GetLotusGrpc() && config.GetLotusValue() {
+		// 使用 gRPC 调用
+		req := &proto.StoreIDRequest{IdOrRow: id}
+		resp, err := GrpcClient.StoreIDV2(context.Background(), req)
+		if err != nil {
+			return 0, fmt.Errorf("gRPC call failed: %v", err)
+		}
+		return resp.Row, nil
+	} else if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
@@ -564,7 +588,15 @@ func StoreIDv2(id string) (int64, error) {
 
 // StoreCachev2 根据a储存b
 func StoreCachev2(id string) (int64, error) {
-	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
+	if config.GetLotusGrpc() && config.GetLotusValue() {
+		// 使用 gRPC 调用
+		req := &proto.StoreCacheRequest{IdOrRow: id}
+		resp, err := GrpcClient.StoreCacheV2(context.Background(), req)
+		if err != nil {
+			return 0, fmt.Errorf("gRPC call failed: %v", err)
+		}
+		return resp.Row, nil
+	} else if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
@@ -606,7 +638,15 @@ func StoreCachev2(id string) (int64, error) {
 
 // 群号 然后 用户号
 func StoreIDv2Pro(id string, subid string) (int64, int64, error) {
-	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
+	if config.GetLotusGrpc() && config.GetLotusValue() {
+		// 使用 gRPC 调用
+		req := &proto.StoreIDProRequest{IdOrRow: id, Subid: subid}
+		resp, err := GrpcClient.StoreIDV2Pro(context.Background(), req)
+		if err != nil {
+			return 0, 0, fmt.Errorf("gRPC call failed: %v", err)
+		}
+		return resp.Row, resp.SubRow, nil
+	} else if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
@@ -691,7 +731,15 @@ func RetrieveRowByCache(rowid string) (string, error) {
 
 // 群号 然后 用户号
 func RetrieveRowByIDv2Pro(newRowID string, newSubRowID string) (string, string, error) {
-	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
+	if config.GetLotusGrpc() && config.GetLotusValue() {
+		// 使用 gRPC 调用
+		req := &proto.RetrieveRowByIDProRequest{IdOrRow: newRowID, Subid: newSubRowID}
+		resp, err := GrpcClient.RetrieveRowByIDV2Pro(context.Background(), req)
+		if err != nil {
+			return "", "", fmt.Errorf("gRPC call failed: %v", err)
+		}
+		return resp.Id, resp.Subid, nil
+	} else if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
@@ -772,8 +820,15 @@ func RetrieveRowByIDv2(rowid string) (string, error) {
 	if portValue == "443" {
 		protocol = "https"
 	}
-
-	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
+	if config.GetLotusGrpc() && config.GetLotusValue() {
+		// 使用 gRPC 调用
+		req := &proto.RetrieveRowByIDRequest{IdOrRow: rowid}
+		resp, err := GrpcClient.RetrieveRowByIDV2(context.Background(), req)
+		if err != nil {
+			return "", fmt.Errorf("gRPC call failed: %v", err)
+		}
+		return resp.Id, nil
+	} else if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 
@@ -814,8 +869,15 @@ func RetrieveRowByCachev2(rowid string) (string, error) {
 	if portValue == "443" {
 		protocol = "https"
 	}
-
-	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
+	if config.GetLotusGrpc() && config.GetLotusValue() {
+		// 使用 gRPC 调用
+		req := &proto.RetrieveRowByCacheRequest{IdOrRow: rowid}
+		resp, err := GrpcClient.RetrieveRowByCacheV2(context.Background(), req)
+		if err != nil {
+			return "", fmt.Errorf("gRPC call failed: %v", err)
+		}
+		return resp.Id, nil
+	} else if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 
@@ -870,7 +932,15 @@ func WriteConfig(sectionName, keyName, value string) error {
 
 // WriteConfigv2 根据a以b为类别储存c
 func WriteConfigv2(sectionName, keyName, value string) error {
-	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
+	if config.GetLotusGrpc() && config.GetLotusValue() {
+		// 使用 gRPC 调用
+		req := &proto.WriteConfigRequest{Section: sectionName, Subtype: keyName, Value: value}
+		_, err := GrpcClient.WriteConfigV2(context.Background(), req)
+		if err != nil {
+			return err
+		}
+		return nil
+	} else if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
@@ -957,7 +1027,15 @@ func DeleteConfigv2(sectionName, keyName string) error {
 		protocol = "https"
 	}
 
-	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
+	if config.GetLotusGrpc() && config.GetLotusValue() {
+		// 使用 gRPC 调用
+		req := &proto.DeleteConfigRequest{Section: sectionName, Subtype: keyName}
+		_, err := GrpcClient.DeleteConfigV2(context.Background(), req)
+		if err != nil {
+			return fmt.Errorf("gRPC call failed: %v", err)
+		}
+		return nil
+	} else if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 
@@ -997,8 +1075,15 @@ func ReadConfigv2(sectionName, keyName string) (string, error) {
 	if portValue == "443" {
 		protocol = "https"
 	}
-
-	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
+	if config.GetLotusGrpc() && config.GetLotusValue() {
+		// 使用 gRPC 调用
+		req := &proto.ReadConfigRequest{Section: sectionName, Subtype: keyName}
+		resp, err := GrpcClient.ReadConfigV2(context.Background(), req)
+		if err != nil {
+			return "", fmt.Errorf("gRPC call failed: %v", err)
+		}
+		return resp.Value, nil
+	} else if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 
@@ -1135,7 +1220,18 @@ func RetrieveVirtualValue(realValue string) (string, string, error) {
 
 // 更新真实值对应的虚拟值
 func UpdateVirtualValuev2(oldRowValue, newRowValue int64) error {
-	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
+	if config.GetLotusGrpc() && config.GetLotusValue() {
+		// 使用 gRPC 调用
+		req := &proto.UpdateVirtualValueRequest{
+			OldVirtualValue: oldRowValue,
+			NewVirtualValue: newRowValue,
+		}
+		_, err := GrpcClient.UpdateVirtualValueV2(context.Background(), req)
+		if err != nil {
+			return fmt.Errorf("gRPC call failed: %v", err)
+		}
+		return nil
+	} else if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 构建请求URL
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
@@ -1162,7 +1258,17 @@ func UpdateVirtualValuev2(oldRowValue, newRowValue int64) error {
 
 // RetrieveRealValuev2 根据虚拟值获取真实值
 func RetrieveRealValuev2(virtualValue int64) (string, string, error) {
-	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
+	if config.GetLotusGrpc() && config.GetLotusValue() {
+		// 使用 gRPC 调用
+		req := &proto.RetrieveRealValueRequest{
+			VirtualValue: virtualValue,
+		}
+		resp, err := GrpcClient.RetrieveRealValueV2(context.Background(), req)
+		if err != nil {
+			return "", "", err
+		}
+		return resp.Virtual, resp.Real, nil
+	} else if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
 		protocol := "http"
@@ -1197,7 +1303,17 @@ func RetrieveRealValuev2(virtualValue int64) (string, string, error) {
 
 // RetrieveVirtualValuev2 根据真实值获取虚拟值
 func RetrieveVirtualValuev2(realValue string) (string, string, error) {
-	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
+	if config.GetLotusGrpc() && config.GetLotusValue() {
+		// 使用 gRPC 调用
+		req := &proto.RetrieveVirtualValueRequest{
+			RealValue: realValue,
+		}
+		resp, err := GrpcClient.RetrieveVirtualValueV2(context.Background(), req)
+		if err != nil {
+			return "", "", err
+		}
+		return resp.Real, resp.Virtual, nil
+	} else if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
@@ -1239,7 +1355,19 @@ func RetrieveVirtualValuev2(realValue string) (string, string, error) {
 
 // 根据2个真实值 获取2个虚拟值 群号 然后 用户号
 func RetrieveVirtualValuev2Pro(realValue string, realValueSub string) (string, string, error) {
-	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
+	//是否使用grpc
+	if config.GetLotusGrpc() && config.GetLotusValue() {
+		// 使用 gRPC 调用
+		req := &proto.RetrieveVirtualValueProRequest{
+			IdOrRow: realValue,
+			Subid:   realValueSub,
+		}
+		resp, err := GrpcClient.RetrieveVirtualValueV2Pro(context.Background(), req)
+		if err != nil {
+			return "", "", err
+		}
+		return resp.FirstValue, resp.SecondValue, nil
+	} else if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
@@ -1353,7 +1481,18 @@ func RetrieveRealValuePro(virtualValue1, virtualValue2 int64) (string, string, e
 
 // RetrieveRealValuesv2Pro 根据两个虚拟值获取两个真实值 群号 然后 用户号
 func RetrieveRealValuesv2Pro(virtualValue int64, virtualValueSub int64) (string, string, error) {
-	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
+	if config.GetLotusGrpc() && config.GetLotusValue() {
+		// 使用 gRPC 调用
+		req := &proto.RetrieveRealValueRequestPro{
+			VirtualValue:    virtualValue,
+			VirtualValueSub: virtualValueSub,
+		}
+		resp, err := GrpcClient.RetrieveRealValueV2Pro(context.Background(), req)
+		if err != nil {
+			return "", "", err
+		}
+		return resp.Virtual, resp.Real, nil
+	} else if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
@@ -1436,7 +1575,20 @@ func UpdateVirtualValuePro(oldVirtualValue1, newVirtualValue1, oldVirtualValue2,
 
 // UpdateVirtualValuev2Pro 根据配置更新两对虚拟值 旧群 新群 旧用户 新用户
 func UpdateVirtualValuev2Pro(oldVirtualValue1, newVirtualValue1, oldVirtualValue2, newVirtualValue2 int64) error {
-	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
+	if config.GetLotusGrpc() && config.GetLotusValue() {
+		// 使用 gRPC 调用
+		req := &proto.UpdateVirtualValueProRequest{
+			OldVirtualValue_1: oldVirtualValue1,
+			NewVirtualValue_1: newVirtualValue1,
+			OldVirtualValue_2: oldVirtualValue2,
+			NewVirtualValue_2: newVirtualValue2,
+		}
+		_, err := GrpcClient.UpdateVirtualValueV2Pro(context.Background(), req)
+		if err != nil {
+			return err
+		}
+		return nil
+	} else if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 构建请求URL
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
@@ -1526,7 +1678,17 @@ func FindSubKeysById(id string) ([]string, error) {
 
 // FindSubKeysByIdPro 根据1个值获取key中的k:v给出k获取所有v，通过网络调用
 func FindSubKeysByIdPro(id string) ([]string, error) {
-	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
+	if config.GetLotusGrpc() && config.GetLotusValue() {
+		// 使用 gRPC 调用
+		req := &proto.FindSubKeysRequest{
+			Id: id,
+		}
+		resp, err := GrpcClient.FindSubKeysByIdPro(context.Background(), req)
+		if err != nil {
+			return nil, err
+		}
+		return resp.Keys, nil
+	} else if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()

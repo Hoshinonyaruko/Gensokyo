@@ -4,6 +4,7 @@ package Processor
 import (
 	"context"
 	"fmt"
+	"log"
 	"strconv"
 	"sync"
 	"time"
@@ -136,10 +137,22 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 				IsBindedGroupId = idmap.CheckValuev2(GroupID64)
 			}
 
-			//平台事件,不是真实信息,无需messageID
-			messageID64 := 123
+			//映射str的messageID到int
+			var messageID64 int64
+			if config.GetMemoryMsgid() {
+				messageID64, err = echo.StoreCacheInMemory(data.ID)
+				if err != nil {
+					log.Fatalf("Error storing ID: %v", err)
+				}
+			} else {
+				messageID64, err = idmap.StoreCachev2(data.ID)
+				if err != nil {
+					log.Fatalf("Error storing ID: %v", err)
+				}
+			}
 
 			messageID := int(messageID64)
+
 			var selfid64 int64
 			if config.GetUseUin() {
 				selfid64 = config.GetUinint64()
