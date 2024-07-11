@@ -4,8 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
+	"github.com/hoshinonyaruko/gensokyo/config"
+	"github.com/hoshinonyaruko/gensokyo/echo"
+	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/tencent-connect/botgo/openapi"
 )
@@ -28,6 +32,30 @@ func HandlePutInteraction(client callapi.Client, api openapi.OpenAPI, apiv2 open
 	interactionID, ok := message.Echo.(string)
 	if !ok {
 		return "", fmt.Errorf("echo is not a string")
+	}
+
+	// 检查字符串是否仅包含数字 将数字形式的interactionID转换为真实的形式
+	isNumeric := func(s string) bool {
+		return regexp.MustCompile(`^\d+$`).MatchString(s)
+	}
+
+	if isNumeric(interactionID) && interactionID != "0" {
+		// 当interactionID是字符串形式的数字时，执行转换
+		var RealinteractionID string
+		var err error
+		if config.GetMemoryMsgid() {
+			//从内存取
+			RealinteractionID, _ = echo.GetCacheIDFromMemoryByRowID(interactionID)
+		} else {
+			RealinteractionID, err = idmap.RetrieveRowByCachev2(interactionID)
+		}
+
+		if err != nil {
+			mylog.Printf("error retrieving real interactionID: %v", err)
+		} else {
+			// 重新赋值，RealinteractionID的类型与message.Params.interactionID兼容
+			interactionID = RealinteractionID
+		}
 	}
 
 	// 根据 PostType 解析出 code 的值

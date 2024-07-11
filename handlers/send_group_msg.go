@@ -2045,10 +2045,12 @@ func auto_md(message callapi.ActionMessage, messageText string, richMediaMessage
 			messageText = strings.ReplaceAll(messageText, "\r\n", "\r")
 			// 将所有的\n替换为\r
 			messageText = strings.ReplaceAll(messageText, "\n", "\r")
-			// 检查messageText是否以\r开头
-			if !strings.HasPrefix(messageText, "\r") {
-				messageText = "\r" + messageText
-			}
+
+			// // 检查messageText是否以\r开头
+			// if !strings.HasPrefix(messageText, "\r") {
+			// 	messageText = "\r" + messageText
+			// }
+
 			if config.GetEntersAsBlock() {
 				messageText = strings.ReplaceAll(messageText, "\r", " ")
 			}

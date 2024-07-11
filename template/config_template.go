@@ -52,6 +52,9 @@ settings:
   lotus: false                                       # lotus特性默认为false,当为true时,将会连接到另一个lotus为false的gensokyo。使用它提供的图床和idmaps服务(场景:同一个机器人在不同服务器运行,或内网需要发送base64图)。如果需要发送base64图片,需要设置正确的公网server_dir和开放对应的port, lotus鉴权 设置后,从gsk需要保持相同密码来访问主gsk
   lotus_password : "" 
   lotus_without_idmaps: false       #lotus只通过url,图片上传,语音,不通过id转换,在本地当前gsk维护idmaps转换.
+  lotus_without_uploadpic : false   #lotus只转换id,不进行图片上传.
+  lotus_grpc : false                #实验特性,使用grpc进行lotus连接.提高性能.
+  lotus_grpc_port : 50051           #grpc的端口,连接与被连接需保持一致.并且在防火墙放通此端口.
 
   #增强配置项                                           
   master_id : ["1","2"]             #群场景尚未开放获取管理员和列表能力,手动从日志中获取需要设置为管理,的user_id并填入(适用插件有权限判断场景)
