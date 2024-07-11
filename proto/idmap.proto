@@ -1,0 +1,179 @@
+syntax = "proto3";
+
+option go_package = "github.com/hoshinonyaruko/gensokyo/proto";
+
+// 定义服务
+service IDMapService {
+    rpc StoreIDV2(StoreIDRequest) returns (StoreIDResponse);
+    rpc RetrieveRowByIDV2(RetrieveRowByIDRequest) returns (RetrieveRowByIDResponse);
+    rpc WriteConfigV2(WriteConfigRequest) returns (WriteConfigResponse);
+    rpc ReadConfigV2(ReadConfigRequest) returns (ReadConfigResponse);
+    rpc UpdateVirtualValueV2(UpdateVirtualValueRequest) returns (UpdateVirtualValueResponse);
+    rpc RetrieveRealValueV2(RetrieveRealValueRequest) returns (RetrieveRealValueResponse);
+    rpc RetrieveRealValueV2Pro(RetrieveRealValueRequestPro) returns (RetrieveRealValueResponsePro);
+    rpc RetrieveVirtualValueV2(RetrieveVirtualValueRequest) returns (RetrieveVirtualValueResponse);
+    rpc StoreIDV2Pro(StoreIDProRequest) returns (StoreIDProResponse);
+    rpc RetrieveRowByIDV2Pro(RetrieveRowByIDProRequest) returns (RetrieveRowByIDProResponse);
+    rpc RetrieveVirtualValueV2Pro(RetrieveVirtualValueProRequest) returns (RetrieveVirtualValueProResponse);
+    rpc UpdateVirtualValueV2Pro(UpdateVirtualValueProRequest) returns (UpdateVirtualValueProResponse);
+    rpc SimplifiedStoreIDV2(SimplifiedStoreIDRequest) returns (SimplifiedStoreIDResponse);
+    rpc FindSubKeysByIdPro(FindSubKeysRequest) returns (FindSubKeysResponse);
+    rpc DeleteConfigV2(DeleteConfigRequest) returns (DeleteConfigResponse);
+    rpc StoreCacheV2(StoreCacheRequest) returns (StoreCacheResponse);
+    rpc RetrieveRowByCacheV2(RetrieveRowByCacheRequest) returns (RetrieveRowByCacheResponse);
+}
+
+// 定义请求消息和响应消息
+message StoreIDRequest {
+    string id_or_row = 1;
+}
+
+message StoreIDResponse {
+    int64 row = 1;
+}
+
+message RetrieveRowByIDRequest {
+    string id_or_row = 1;
+}
+
+message RetrieveRowByIDResponse {
+    string id = 1;
+}
+
+message WriteConfigRequest {
+    string section = 1;
+    string subtype = 2;
+    string value = 3;
+}
+
+message WriteConfigResponse {
+    string status = 1;
+}
+
+message ReadConfigRequest {
+    string section = 1;
+    string subtype = 2;
+}
+
+message ReadConfigResponse {
+    string value = 1;
+}
+
+message UpdateVirtualValueRequest {
+    int64 old_virtual_value = 1;
+    int64 new_virtual_value = 2;
+}
+
+message UpdateVirtualValueResponse {
+    string status = 1;
+}
+
+message RetrieveRealValueRequest {
+    int64 virtual_value = 1;
+}
+
+message RetrieveRealValueRequestPro {
+    int64 virtual_value = 1;
+    int64 virtual_value_sub = 2;
+}
+
+message RetrieveRealValueResponse {
+    string virtual = 1;
+    string real = 2;
+}
+
+message RetrieveRealValueResponsePro {
+    string virtual = 1;
+    string real = 2;
+}
+
+message RetrieveVirtualValueRequest {
+    string real_value = 1;
+}
+
+message RetrieveVirtualValueResponse {
+    string real = 1;
+    string virtual = 2;
+}
+
+message StoreIDProRequest {
+    string id_or_row = 1;
+    string subid = 2;
+}
+
+message StoreIDProResponse {
+    int64 row = 1;
+    int64 sub_row = 2;
+}
+
+message RetrieveRowByIDProRequest {
+    string id_or_row = 1;
+    string subid = 2;
+}
+
+message RetrieveRowByIDProResponse {
+    string id = 1;
+    string subid = 2;
+}
+
+message RetrieveVirtualValueProRequest {
+    string id_or_row = 1;
+    string subid = 2;
+}
+
+message RetrieveVirtualValueProResponse {
+    string first_value = 1;
+    string second_value = 2;
+}
+
+message UpdateVirtualValueProRequest {
+    int64 old_virtual_value_1 = 1;
+    int64 new_virtual_value_1 = 2;
+    int64 old_virtual_value_2 = 3;
+    int64 new_virtual_value_2 = 4;
+}
+
+message UpdateVirtualValueProResponse {
+    string message = 1;
+}
+
+message SimplifiedStoreIDRequest {
+    string id_or_row = 1;
+}
+
+message SimplifiedStoreIDResponse {
+    int64 row = 1;
+}
+
+message FindSubKeysRequest {
+    string id = 1;
+}
+
+message FindSubKeysResponse {
+    repeated string keys = 1;
+}
+
+message DeleteConfigRequest {
+    string section = 1;
+    string subtype = 2;
+}
+
+message DeleteConfigResponse {
+    string status = 1;
+}
+
+message StoreCacheRequest {
+    string id_or_row = 1;
+}
+
+message StoreCacheResponse {
+    int64 row = 1;
+}
+
+message RetrieveRowByCacheRequest {
+    string id_or_row = 1;
+}
+
+message RetrieveRowByCacheResponse {
+    string id = 1;
+}

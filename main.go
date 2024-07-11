@@ -7,10 +7,12 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -32,8 +34,10 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/url"
 	"github.com/hoshinonyaruko/gensokyo/webui"
 	"github.com/hoshinonyaruko/gensokyo/wsclient"
+	"google.golang.org/grpc"
 
 	"github.com/gin-gonic/gin"
+	proto "github.com/hoshinonyaruko/gensokyo/proto"
 	"github.com/tencent-connect/botgo"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/event"
@@ -395,7 +399,42 @@ func main() {
 		hr = gin.New()
 		hr.Use(gin.Recovery())
 	}
-	r.GET("/getid", server.GetIDHandler)
+	if !conf.Settings.LotusGrpc {
+		r.GET("/getid", server.GetIDHandler)
+	} else {
+		if conf.Settings.Lotus {
+			// 根据配置决定是否初始化 gRPC 客户端
+			if config.GetLotusGrpc() {
+				serverDir := config.GetServer_dir()
+				port := conf.Settings.LotusGrpcPort
+				conn, err := grpc.NewClient(serverDir+":"+strconv.Itoa(port), grpc.WithInsecure())
+				if err != nil {
+					panic(fmt.Sprintf("failed to connect to gRPC server: %v", err))
+				} else {
+					fmt.Printf("成功连接到GRPC服务器: %v\n", serverDir+":50051")
+				}
+				//初始化idmap中的全局grpc变量
+				idmap.GrpcClient = proto.NewIDMapServiceClient(conn)
+			}
+		} else {
+			// 初始化 gRPC 服务器
+			port := conf.Settings.LotusGrpcPort
+			lis, err := net.Listen("tcp", ":"+strconv.Itoa(port)) // gRPC 监听地址
+			if err != nil {
+				log.Fatalf("failed to listen: %v", err)
+			}
+
+			grpcServer := grpc.NewServer()
+
+			// 注册 gRPC 服务
+			proto.RegisterIDMapServiceServer(grpcServer, &idmap.Server{})
+
+			log.Println("Starting gRPC server on port :" + strconv.Itoa(port)) // gRPC 端口
+			if err := grpcServer.Serve(lis); err != nil {
+				log.Fatalf("failed to serve: %v", err)
+			}
+		}
+	}
 	r.GET("/updateport", server.HandleIpupdate)
 	r.POST("/uploadpic", server.UploadBase64ImageHandler(rateLimiter))
 	r.POST("/uploadpicv2", server.UploadBase64ImageHandlerV2(rateLimiter, apiV2))

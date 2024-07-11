@@ -2364,3 +2364,27 @@ func GetMemoryMsgid() bool {
 	}
 	return instance.Settings.MemoryMsgid
 }
+
+// 获取GetLotusGrpc的值
+func GetLotusGrpc() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to LotusGrpc value.")
+		return false
+	}
+	return instance.Settings.LotusGrpc
+}
+
+// 获取LotusWithoutUploadPic的值
+func GetLotusWithoutUploadPic() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to LotusWithoutUploadPic value.")
+		return false
+	}
+	return instance.Settings.LotusWithoutUploadPic
+}

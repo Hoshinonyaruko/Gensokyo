@@ -34,12 +34,15 @@ type Settings struct {
 	HashID                                   bool   `yaml:"hash_id"`
 	IdmapPro                                 bool   `yaml:"idmap_pro"`
 	//gensokyo互联类
-	Server_dir         string `yaml:"server_dir"`
-	Port               string `yaml:"port"`
-	BackupPort         string `yaml:"backup_port"`
-	Lotus              bool   `yaml:"lotus"`
-	LotusPassword      string `yaml:"lotus_password"`
-	LotusWithoutIdmaps bool   `yaml:"lotus_without_idmaps"`
+	Server_dir            string `yaml:"server_dir"`
+	Port                  string `yaml:"port"`
+	BackupPort            string `yaml:"backup_port"`
+	Lotus                 bool   `yaml:"lotus"`
+	LotusPassword         string `yaml:"lotus_password"`
+	LotusWithoutIdmaps    bool   `yaml:"lotus_without_idmaps"`
+	LotusWithoutUploadPic bool   `yaml:"lotus_without_uploadpic"`
+	LotusGrpc             bool   `yaml:"lotus_grpc"`
+	LotusGrpcPort         int    `yaml:"lotus_grpc_port"`
 	//增强配置
 	MasterID         []string `yaml:"master_id"`
 	RecordSampleRate int      `yaml:"record_sampleRate"`
