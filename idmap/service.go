@@ -1,26 +1,20 @@
-package idmap
-
 import (
 	"bytes"
 	"crypto/md5"
-	"encoding/binary"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/hoshinonyaruko/gensokyo/structs"
-	"go.etcd.io/bbolt"
+	"golang.org/x/net/context"
 )
 
 var (
@@ -31,72 +25,33 @@ var (
 )
 
 const (
-	DBName          = "idmap.db"
-	BucketName      = "ids"
-	CacheBucketName = "cache"
-	ConfigBucket    = "config"
-	UserInfoBucket  = "UserInfo"
-	CounterKey      = "currentRow"
+	RedisAddr       = "localhost:6379"
+	RedisPassword   = ""
+	RedisDB         = 0
 )
 
-var db *bbolt.DB
+var rdb *redis.Client
+var ctx = context.Background()
 
 var ErrKeyNotFound = errors.New("key not found")
 
 func InitializeDB() {
-	var err error
-	// 打开数据库文件
-	db, err = bbolt.Open(DBName, 0600, nil)
-	if err != nil {
-		log.Fatalf("Error opening DB: %v", err)
-	}
-
-	// 在数据库中创建必要的buckets
-	err = db.Update(func(tx *bbolt.Tx) error {
-		// 创建默认的Bucket
-		if _, err := tx.CreateBucketIfNotExists([]byte(BucketName)); err != nil {
-			return err
-		}
-		// 创建存储用户信息的Bucket
-		if _, err := tx.CreateBucketIfNotExists([]byte(UserInfoBucket)); err != nil {
-			return err
-		}
-		// 创建配置数据的Bucket
-		if _, err := tx.CreateBucketIfNotExists([]byte(ConfigBucket)); err != nil {
-			return err
-		}
-		// 创建储存缓存的Bucket
-		if _, err := tx.CreateBucketIfNotExists([]byte(CacheBucketName)); err != nil {
-			return err
-		}
-		return nil
+	rdb = redis.NewClient(&redis.Options{
+		Addr:     RedisAddr,
+		Password: RedisPassword,
+		DB:       RedisDB,
 	})
 
+	// 测试连接
+	_, err := rdb.Ping(ctx).Result()
 	if err != nil {
-		log.Fatalf("Error setting up buckets: %v", err)
+		log.Fatalf("Error connecting to Redis: %v", err)
 	}
 }
 
 func DeleteBucket(bucketName string) {
 	// 清空指定的bucket
-	err := db.Update(func(tx *bbolt.Tx) error {
-		// 获取指定的bucket
-		bucket := tx.Bucket([]byte(bucketName))
-		if bucket == nil {
-			mylog.Printf(bucketName + "表不存在.")
-			return nil // 如果bucket不存在，直接返回nil
-		}
-
-		// 删除bucket中的所有键值对
-		err := bucket.ForEach(func(k, v []byte) error {
-			return bucket.Delete(k)
-		})
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-
+	err := rdb.Del(ctx, bucketName).Err()
 	if err != nil {
 		log.Fatalf("Error clearing bucket %s: %v", bucketName, err)
 	} else {
@@ -107,107 +62,68 @@ func DeleteBucket(bucketName string) {
 func CleanBucket(bucketName string) {
 	var deleteCount int
 
-	err := db.Update(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(bucketName))
-		if b == nil {
-			return fmt.Errorf("bucket %s not found", bucketName)
+	// 获取所有键
+	keys, err := rdb.HKeys(ctx, bucketName).Result()
+	if err != nil {
+		log.Fatalf("Failed to retrieve keys from bucket %s: %v", bucketName, err)
+	}
+
+	for _, k := range keys {
+		// 获取值
+		v, err := rdb.HGet(ctx, bucketName, k).Result()
+		if err != nil {
+			continue
 		}
 
-		// 使用游标遍历bucket 正向键 k:v 32位openid:大宽int64 64位msgid:大宽int6
-		c := b.Cursor()
-		for k, v := c.First(); k != nil; k, v = c.Next() {
-			// 检查键或值是否包含冒号
-			if bytes.Contains(k, []byte(":")) || bytes.Contains(v, []byte(":")) || bytes.Contains(k, []byte("row-")) {
+		// 检查键或值是否包含冒号
+		if strings.Contains(k, ":") || strings.Contains(v, ":") || strings.Contains(k, "row-") {
+			continue // 忽略包含冒号的键值对
+		}
+
+		// 检查值id的长度
+		if len(k) != 32 {
+			err := rdb.HDel(ctx, bucketName, k).Err()
+			if err != nil {
+				log.Fatalf("Failed to delete key %s from bucket %s: %v", k, bucketName, err)
+			}
+			deleteCount++
+		}
+	}
+
+	// 再次遍历处理reverseKey的情况
+	for _, k := range keys {
+		if strings.HasPrefix(k, "row-") {
+			v, err := rdb.HGet(ctx, bucketName, k).Result()
+			if err != nil {
+				continue
+			}
+
+			if strings.Contains(k, ":") || strings.Contains(v, ":") {
 				continue // 忽略包含冒号的键值对
 			}
 
-			// 检查值id的长度 这里是正向键
-			id := string(k)
-			if len(id) != 32 {
-				if err := c.Delete(); err != nil {
-					return err
+			// 这里检查反向键是否是32位
+			if len(v) != 32 {
+				err := rdb.HDel(ctx, bucketName, k).Err()
+				if err != nil {
+					log.Fatalf("Failed to delete key %s from bucket %s: %v", k, bucketName, err)
 				}
 				deleteCount++
 			}
 		}
-
-		// 再次遍历处理reverseKey的情况 反向键 row-整数:string 32位openid/64位msgid
-		for k, v := c.First(); k != nil; k, v = c.Next() {
-			if strings.HasPrefix(string(k), "row-") {
-				if bytes.Contains(k, []byte(":")) || bytes.Contains(v, []byte(":")) {
-					continue // 忽略包含冒号的键值对
-				}
-				// 这里检查反向键是否是32位
-				id := string(v)
-				if len(id) != 32 {
-					if err := b.Delete(k); err != nil {
-						return err
-					}
-					deleteCount++
-				}
-			}
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		log.Fatalf("Failed to clean bucket %s: %v", bucketName, err)
 	}
 
 	log.Printf("Cleaned %d entries from bucket %s.", deleteCount, bucketName)
 }
 
 func CompactionIdmap() {
-	err := Compaction("idmap.db", "idmap_compacted.db")
-	if err != nil {
-		log.Fatalf("Failed to compact database: %v", err)
-	} else {
-		log.Println("Database compaction successful.")
-		log.Println("请手动备份原始idmap.db(可选)并将idmap_compacted.db改名为idmap.db")
-	}
-}
-
-// Compaction 创建一个新的数据库文件并复制现有的数据到这个新文件中
-func Compaction(sourceDBPath, targetDBPath string) error {
-	// 创建目标数据库文件
-	targetDB, err := bbolt.Open(targetDBPath, 0600, &bbolt.Options{Timeout: 1 * time.Second})
-	if err != nil {
-		return err
-	}
-	defer targetDB.Close()
-
-	// 从源数据库复制数据到目标数据库
-	err = db.View(func(tx *bbolt.Tx) error {
-		return tx.ForEach(func(name []byte, b *bbolt.Bucket) error {
-			// 在目标数据库中创建相同的bucket
-			return targetDB.Update(func(tx2 *bbolt.Tx) error {
-				bucket, err := tx2.CreateBucketIfNotExists(name)
-				if err != nil {
-					return err
-				}
-				// 复制所有键值对
-				return b.ForEach(func(k, v []byte) error {
-					return bucket.Put(k, v)
-				})
-			})
-		})
-	})
-
-	if err != nil {
-		return err
-	}
-
-	// 确保所有操作都已完成
-	if err := targetDB.Sync(); err != nil {
-		return err
-	}
-
-	return nil
+	log.Println("Compaction is not applicable for Redis. Please ensure the data integrity manually.")
 }
 
 func CloseDB() {
-	db.Close()
+	if err := rdb.Close(); err != nil {
+		log.Fatalf("Failed to close Redis connection: %v", err)
+	}
 }
 
 func GenerateRowID(id string, length int) (int64, error) {
@@ -243,7 +159,7 @@ func GenerateRowID(id string, length int) (int64, error) {
 	return rowID, nil
 }
 
-// 检查id和value是否是转换关系
+
 func CheckValue(id string, value int64) bool {
 	// 计算int64值的长度
 	length := len(strconv.FormatInt(value, 10))
@@ -273,24 +189,31 @@ func CheckValuev2(value int64) bool {
 func StoreID(id string) (int64, error) {
 	var newRow int64
 
-	err := db.Update(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(BucketName))
-
+	// 使用Redis事务来保证数据一致性
+	err := rdb.Watch(ctx, func(tx *redis.Tx) error {
 		// 检查ID是否已经存在
-		existingRowBytes := b.Get([]byte(id))
-		if existingRowBytes != nil {
-			newRow = int64(binary.BigEndian.Uint64(existingRowBytes))
+		existingRowStr, err := tx.HGet(ctx, BucketName, id).Result()
+		if err == nil {
+			newRow, err = strconv.ParseInt(existingRowStr, 10, 64)
+			if err != nil {
+				return err
+			}
 			return nil
 		}
-		//写入虚拟值
+
 		if !config.GetHashIDValue() {
 			// 如果ID不存在，则为它分配一个新的行号 数字递增
-			currentRowBytes := b.Get([]byte(CounterKey))
-			if currentRowBytes == nil {
+			currentRowStr, err := tx.Get(ctx, CounterKey).Result()
+			if err == redis.Nil {
 				newRow = 1
+			} else if err != nil {
+				return err
 			} else {
-				currentRow := binary.BigEndian.Uint64(currentRowBytes)
-				newRow = int64(currentRow) + 1
+				currentRow, err := strconv.ParseInt(currentRowStr, 10, 64)
+				if err != nil {
+					return err
+				}
+				newRow = currentRow + 1
 			}
 		} else {
 			// 生成新的行号
@@ -303,7 +226,11 @@ func StoreID(id string) (int64, error) {
 				}
 				// 检查新生成的行号是否重复
 				rowKey := fmt.Sprintf("row-%d", newRow)
-				if b.Get([]byte(rowKey)) == nil {
+				exists, err := tx.HExists(ctx, BucketName, rowKey).Result()
+				if err != nil {
+					return err
+				}
+				if !exists {
 					// 找到了一个唯一的行号，可以跳出循环
 					break
 				}
@@ -314,156 +241,172 @@ func StoreID(id string) (int64, error) {
 			}
 		}
 
-		rowBytes := make([]byte, 8)
-		binary.BigEndian.PutUint64(rowBytes, uint64(newRow))
-		//写入递增值
-		if !config.GetHashIDValue() {
-			b.Put([]byte(CounterKey), rowBytes)
-		}
-		//真实对应虚拟 用来直接判断是否存在,并快速返回
-		b.Put([]byte(id), rowBytes)
-
-		reverseKey := fmt.Sprintf("row-%d", newRow)
-		b.Put([]byte(reverseKey), []byte(id))
-
-		return nil
-	})
+		// 使用事务来写入数据
+		_, err = tx.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
+			if !config.GetHashIDValue() {
+				pipe.Set(ctx, CounterKey, newRow, 0)
+			}
+			pipe.HSet(ctx, BucketName, id, newRow)
+			reverseKey := fmt.Sprintf("row-%d", newRow)
+			pipe.HSet(ctx, BucketName, reverseKey, id)
+			return nil
+		})
+		return err
+	}, BucketName)
 
 	return newRow, err
 }
 
 // 根据a储存b
-func StoreCache(id string) (int64, error) {
+func StoreCache(id string) (int64, error) \{
 	var newRow int64
 
-	err := db.Update(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(CacheBucketName))
-
+	// 使用Redis事务来保证数据一致性
+	err := rdb.Watch(ctx, func(tx *redis.Tx) error \{
 		// 检查ID是否已经存在
-		existingRowBytes := b.Get([]byte(id))
-		if existingRowBytes != nil {
-			newRow = int64(binary.BigEndian.Uint64(existingRowBytes))
+		existingRowStr, err := tx.HGet(ctx, CacheBucketName, id).Result()
+		if err == nil \{
+			newRow, err = strconv.ParseInt(existingRowStr, 10, 64)
+			if err != nil \{
+				return err
+			}
 			return nil
 		}
-		//写入虚拟值
-		if !config.GetHashIDValue() {
+
+		if !config.GetHashIDValue() \{
 			// 如果ID不存在，则为它分配一个新的行号 数字递增
-			currentRowBytes := b.Get([]byte(CounterKey))
-			if currentRowBytes == nil {
+			currentRowStr, err := tx.Get(ctx, CounterKey).Result()
+			if err == redis.Nil \{
 				newRow = 1
-			} else {
-				currentRow := binary.BigEndian.Uint64(currentRowBytes)
-				newRow = int64(currentRow) + 1
+			} else if err != nil \{
+				return err
+			} else \{
+				currentRow, err := strconv.ParseInt(currentRowStr, 10, 64)
+				if err != nil \{
+					return err
+				}
+				newRow = currentRow + 1
 			}
-		} else {
+		} else \{
 			// 生成新的行号
 			var err error
 			maxDigits := 18 // int64的位数上限-1
-			for digits := 9; digits <= maxDigits; digits++ {
+			for digits := 9; digits <= maxDigits; digits++ \{
 				newRow, err = GenerateRowID(id, digits)
-				if err != nil {
+				if err != nil \{
 					return err
 				}
 				// 检查新生成的行号是否重复
 				rowKey := fmt.Sprintf("row-%d", newRow)
-				if b.Get([]byte(rowKey)) == nil {
+				exists, err := tx.HExists(ctx, CacheBucketName, rowKey).Result()
+				if err != nil \{
+					return err
+				}
+				if !exists \{
 					// 找到了一个唯一的行号，可以跳出循环
 					break
 				}
 				// 如果到达了最大尝试次数还没有找到唯一的行号，则返回错误
-				if digits == maxDigits {
+				if digits == maxDigits \{
 					return fmt.Errorf("unable to find a unique row ID after %d attempts", maxDigits-8)
 				}
 			}
 		}
 
-		rowBytes := make([]byte, 8)
-		binary.BigEndian.PutUint64(rowBytes, uint64(newRow))
-		//写入递增值
-		if !config.GetHashIDValue() {
-			b.Put([]byte(CounterKey), rowBytes)
-		}
-		//真实对应虚拟 用来直接判断是否存在,并快速返回
-		b.Put([]byte(id), rowBytes)
-
-		reverseKey := fmt.Sprintf("row-%d", newRow)
-		b.Put([]byte(reverseKey), []byte(id))
-
-		return nil
-	})
+		// 使用事务来写入数据
+		_, err = tx.TxPipelined(ctx, func(pipe redis.Pipeliner) error \{
+			if !config.GetHashIDValue() \{
+				pipe.Set(ctx, CounterKey, newRow, 0)
+			}
+			pipe.HSet(ctx, CacheBucketName, id, newRow)
+			reverseKey := fmt.Sprintf("row-%d", newRow)
+			pipe.HSet(ctx, CacheBucketName, reverseKey, id)
+			return nil
+		})
+		return err
+	}, CacheBucketName)
 
 	return newRow, err
 }
 
-func SimplifiedStoreID(id string) (int64, error) {
+func SimplifiedStoreID(id string) (int64, error) \{
 	var newRow int64
 
-	err := db.Update(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(BucketName))
-
+	// 使用Redis事务来保证数据一致性
+	err := rdb.Watch(ctx, func(tx *redis.Tx) error \{
 		// 生成新的行号
 		var err error
 		newRow, err = GenerateRowID(id, 9)
-		if err != nil {
+		if err != nil \{
 			return err
 		}
 
 		// 检查新生成的行号是否重复
 		rowKey := fmt.Sprintf("row-%d", newRow)
-		if b.Get([]byte(rowKey)) != nil {
+		exists, err := tx.HExists(ctx, BucketName, rowKey).Result()
+		if err != nil \{
+			return err
+		}
+		if exists \{
 			// 如果行号重复，使用10位数字生成行号
 			newRow, err = GenerateRowID(id, 10)
-			if err != nil {
+			if err != nil \{
 				return err
 			}
 			rowKey = fmt.Sprintf("row-%d", newRow)
 			// 再次检查重复性，如果还是重复，则返回错误
-			if b.Get([]byte(rowKey)) != nil {
+			exists, err = tx.HExists(ctx, BucketName, rowKey).Result()
+			if err != nil \{
+				return err
+			}
+			if exists \{
 				return fmt.Errorf("unable to find a unique row ID 195")
 			}
 		}
 
 		// 只写入反向键
-		b.Put([]byte(rowKey), []byte(id))
+		_, err = tx.TxPipelined(ctx, func(pipe redis.Pipeliner) error \{
+			pipe.HSet(ctx, BucketName, rowKey, id)
+			return nil
+		})
 
-		return nil
-	})
+		return err
+	}, BucketName)
 
 	return newRow, err
 }
 
-// SimplifiedStoreID 根据a储存b 储存一半
-func SimplifiedStoreIDv2(id string) (int64, error) {
-	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
+func SimplifiedStoreIDv2(id string) (int64, error) \{
+	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() \{
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
 
 		// 根据portValue确定协议
 		protocol := "http"
-		if portValue == "443" {
+		if portValue == "443" \{
 			protocol = "https"
 		}
 
 		// 构建请求URL
 		url := fmt.Sprintf("%s://%s:%s/getid?type=13&id=%s", protocol, serverDir, portValue, id)
 		resp, err := http.Get(url)
-		if err != nil {
+		if err != nil \{
 			return 0, fmt.Errorf("failed to send request: %v", err)
 		}
 		defer resp.Body.Close()
 
 		// 解析响应
-		var response map[string]interface{}
-		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		var response map[string]interface\{}
+		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil \{
 			return 0, fmt.Errorf("failed to decode response: %v", err)
 		}
-		if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode != http.StatusOK \{
 			return 0, fmt.Errorf("error response from server: %s", response["error"])
 		}
 
 		rowValue, ok := response["row"].(float64)
-		if !ok {
+		if !ok \{
 			return 0, fmt.Errorf("invalid response format")
 		}
 
@@ -653,43 +596,20 @@ func StoreIDv2Pro(id string, subid string) (int64, int64, error) {
 
 // 根据b得到a
 func RetrieveRowByID(rowid string) (string, error) {
-	var id string
-	err := db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(BucketName))
-
-		// 根据行号检索ID
-		idBytes := b.Get([]byte("row-" + rowid))
-		if idBytes == nil {
-			return ErrKeyNotFound
-		}
-		id = string(idBytes)
-
-		return nil
-	})
-
+	id, err := rdb.HGet(ctx, BucketName, "row-" + rowid).Result()
+	if err == redis.Nil {
+		return "", ErrKeyNotFound
+	}
 	return id, err
 }
 
-// 根据b得到a
 func RetrieveRowByCache(rowid string) (string, error) {
-	var id string
-	err := db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(CacheBucketName))
-
-		// 根据行号检索ID
-		idBytes := b.Get([]byte("row-" + rowid))
-		if idBytes == nil {
-			return ErrKeyNotFound
-		}
-		id = string(idBytes)
-
-		return nil
-	})
-
+	id, err := rdb.HGet(ctx, CacheBucketName, "row-" + rowid).Result()
+	if err == redis.Nil {
+		return "", ErrKeyNotFound
+	}
 	return id, err
 }
-
-// 群号 然后 用户号
 func RetrieveRowByIDv2Pro(newRowID string, newSubRowID string) (string, string, error) {
 	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
@@ -736,35 +656,27 @@ func RetrieveRowByIDv2Pro(newRowID string, newSubRowID string) (string, string, 
 	return RetrieveRowByIDPro(newRowID, newSubRowID)
 }
 
-// 群号 还有用户号
 func RetrieveRowByIDPro(newRowID, newSubRowID string) (string, string, error) {
 	var id, subid string
 
-	err := db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(BucketName))
+	reverseKey := fmt.Sprintf("%s:%s", newRowID, newSubRowID)
+	reverseValue, err := rdb.HGet(ctx, BucketName, reverseKey).Result()
+	if err == redis.Nil {
+		return "", "", ErrKeyNotFound
+	} else if err != nil {
+		return "", "", err
+	}
 
-		// 根据新的行号和子行号检索ID和SubID
-		reverseKey := fmt.Sprintf("%s:%s", newRowID, newSubRowID)
-		reverseValueBytes := b.Get([]byte(reverseKey))
-		if reverseValueBytes == nil {
-			return ErrKeyNotFound
-		}
+	parts := strings.Split(reverseValue, ":")
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("invalid format for reverse key value")
+	}
 
-		reverseValue := string(reverseValueBytes)
-		parts := strings.Split(reverseValue, ":")
-		if len(parts) != 2 {
-			return fmt.Errorf("invalid format for reverse key value")
-		}
+	id, subid = parts[0], parts[1]
 
-		id, subid = parts[0], parts[1]
-
-		return nil
-	})
-
-	return id, subid, err
+	return id, subid, nil
 }
 
-// RetrieveRowByIDv2 根据b得到a
 func RetrieveRowByIDv2(rowid string) (string, error) {
 	// 根据portValue确定协议
 	protocol := "http"
@@ -806,7 +718,6 @@ func RetrieveRowByIDv2(rowid string) (string, error) {
 	return RetrieveRowByID(rowid)
 }
 
-// RetrieveRowByCachev2 根据b得到a
 func RetrieveRowByCachev2(rowid string) (string, error) {
 	// 根据portValue确定协议
 	protocol := "http"
@@ -844,31 +755,20 @@ func RetrieveRowByCachev2(rowid string) (string, error) {
 		return idValue, nil
 	}
 
-	// 如果lotus为假,就保持原来的RetrieveRowByIDv2的方法
+	// 如果lotus为假,就保持原来的RetrieveRowByCache的方法
 	return RetrieveRowByCache(rowid)
 }
 
-// 根据a 以b为类别 储存c
 func WriteConfig(sectionName, keyName, value string) error {
-	return db.Update(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(ConfigBucket)) // 直接获取bucket
-		if b == nil {
-			mylog.Printf("Bucket %s not found", ConfigBucket)
-			return fmt.Errorf("bucket %s not found", ConfigBucket)
-		}
-
-		key := joinSectionAndKey(sectionName, keyName)
-		err := b.Put(key, []byte(value))
-		if err != nil {
-			mylog.Printf("Error putting data into bucket with key %s: %v", key, err)
-			return fmt.Errorf("failed to put data into bucket with key %s: %w", key, err)
-		}
-		//log.Printf("Data saved successfully with key %s, value %s", key, value)
-		return nil
-	})
+	key := joinSectionAndKey(sectionName, keyName)
+	err := rdb.HSet(ctx, ConfigBucket, key, value).Err()
+	if err != nil {
+		mylog.Printf("Error putting data into bucket with key %s: %v", key, err)
+		return fmt.Errorf("failed to put data into bucket with key %s: %w", key, err)
+	}
+	return nil
 }
 
-// WriteConfigv2 根据a以b为类别储存c
 func WriteConfigv2(sectionName, keyName, value string) error {
 	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
 		// 使用网络请求方式
@@ -904,49 +804,35 @@ func WriteConfigv2(sectionName, keyName, value string) error {
 		return nil
 	}
 
-	// 如果lotus为假,则使用原始方法在本地写入配置
+	// 如果lotus为假,则使用Redis写入配置
 	return WriteConfig(sectionName, keyName, value)
 }
 
 // 根据a和b取出c
+
 func ReadConfig(sectionName, keyName string) (string, error) {
-	var result string
-	err := db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(ConfigBucket))
-		if b == nil {
-			return fmt.Errorf("bucket not found")
-		}
+	key := joinSectionAndKey(sectionName, keyName)
+	result, err := rdb.HGet(ctx, ConfigBucket, key).Result()
+	if err == redis.Nil {
+		return "", fmt.Errorf("key '%s' in section '%s' does not exist", keyName, sectionName)
+	} else if err != nil {
+		return "", err
+	}
 
-		key := joinSectionAndKey(sectionName, keyName)
-		v := b.Get(key)
-		if v == nil {
-			return fmt.Errorf("key '%s' in section '%s' does not exist", keyName, sectionName)
-		}
-
-		result = string(v)
-		return nil
-	})
-
-	return result, err
+	return result, nil
 }
+
 
 // DeleteConfig根据sectionName和keyName删除指定的键值对
 func DeleteConfig(sectionName, keyName string) error {
-	return db.Update(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(ConfigBucket))
-		if b == nil {
-			return fmt.Errorf("bucket %s does not exist", ConfigBucket)
-		}
-
-		key := joinSectionAndKey(sectionName, keyName)
-		err := b.Delete(key)
-		if err != nil {
-			return fmt.Errorf("failed to delete data with key %s: %w", key, err)
-		}
-
-		return nil
-	})
+	key := joinSectionAndKey(sectionName, keyName)
+	err := rdb.HDel(ctx, ConfigBucket, key).Err()
+	if err != nil {
+		return fmt.Errorf("failed to delete data with key %s: %w", key, err)
+	}
+	return nil
 }
+
 
 // DeleteConfigv2 根据sectionName和keyName远程删除配置
 func DeleteConfigv2(sectionName, keyName string) error {
@@ -985,12 +871,12 @@ func DeleteConfigv2(sectionName, keyName string) error {
 		}
 	}
 
-	// 如果lotus为假,则使用原始方法在本地删除配置
-	return DeleteConfig(sectionName, keyName) // 假设你已经有了一个本地删除的方法
+	// 如果lotus为假,则使用Redis删除配置
+	return DeleteConfig(sectionName, keyName)
 }
 
 // ReadConfigv2 根据a和b取出c
-func ReadConfigv2(sectionName, keyName string) (string, error) {
+func DeleteConfigv2(sectionName, keyName string) error {
 	// 根据portValue确定协议
 	protocol := "http"
 	portValue := config.GetPortValue()
@@ -1005,103 +891,86 @@ func ReadConfigv2(sectionName, keyName string) (string, error) {
 		// 构建请求URL和参数
 		baseURL := fmt.Sprintf("%s://%s:%s/getid", protocol, serverDir, portValue)
 		params := url.Values{}
-		params.Add("type", "4")
+		params.Add("type", "15") // type 15是用于删除操作的
 		params.Add("id", sectionName)
 		params.Add("subtype", keyName)
 		url := baseURL + "?" + params.Encode()
 
 		resp, err := http.Get(url)
 		if err != nil {
-			return "", fmt.Errorf("failed to send request: %v", err)
+			return fmt.Errorf("failed to send request: %v", err)
 		}
 		defer resp.Body.Close()
 
-		if resp.StatusCode != http.StatusOK {
-			return "", fmt.Errorf("error response from server: %s", resp.Status)
+		// 如果HTTP状态码是200 OK，表示操作成功完成
+		if resp.StatusCode == http.StatusOK {
+			// 成功，可以返回nil或者根据需要返回具体的成功消息
+			return nil
+		} else {
+			// 如果状态码不是200 OK，返回错误信息
+			return fmt.Errorf("error response from server: %s", resp.Status)
 		}
-
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return "", fmt.Errorf("failed to read response body: %v", err)
-		}
-
-		var responseMap map[string]interface{}
-		if err := json.Unmarshal(body, &responseMap); err != nil {
-			return "", fmt.Errorf("failed to unmarshal response: %v", err)
-		}
-
-		if value, ok := responseMap["value"]; ok {
-			return fmt.Sprintf("%v", value), nil
-		}
-
-		return "", fmt.Errorf("value not found in response")
 	}
 
-	// 如果lotus为假,则使用原始方法在本地读取配置
-	return ReadConfig(sectionName, keyName)
+	// 如果lotus为假,则使用Redis删除配置
+	return DeleteConfig(sectionName, keyName)
 }
 
 // 灵感,ini配置文件
-func joinSectionAndKey(sectionName, keyName string) []byte {
-	return []byte(sectionName + ":" + keyName)
+func joinSectionAndKey(sectionName, keyName string) string {
+	return fmt.Sprintf("%s:%s", sectionName, keyName)
 }
 
 // UpdateVirtualValue 更新旧的虚拟值到新的虚拟值的映射
 func UpdateVirtualValue(oldRowValue, newRowValue int64) error {
-	return db.Update(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(BucketName))
+	oldRowKey := fmt.Sprintf("row-%d", oldRowValue)
+	newRowKey := fmt.Sprintf("row-%d", newRowValue)
 
+	// 使用事务确保操作的原子性
+	_, err := rdb.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
 		// 查找旧虚拟值对应的真实值
-		oldRowKey := fmt.Sprintf("row-%d", oldRowValue)
-		idBytes := b.Get([]byte(oldRowKey))
-		if idBytes == nil {
+		id, err := rdb.Get(ctx, oldRowKey).Result()
+		if err == redis.Nil {
 			return fmt.Errorf("不存在:%v", oldRowValue)
+		} else if err != nil {
+			return err
 		}
-		id := string(idBytes)
 
 		// 检查新虚拟值是否已经存在
-		newRowKey := fmt.Sprintf("row-%d", newRowValue)
-		if b.Get([]byte(newRowKey)) != nil {
+		if _, err := rdb.Get(ctx, newRowKey).Result(); err == nil {
 			return fmt.Errorf("%v :已存在", newRowValue)
+		} else if err != redis.Nil {
+			return err
 		}
 
 		// 更新真实值到新的虚拟值的映射
 		newRowBytes := make([]byte, 8)
 		binary.BigEndian.PutUint64(newRowBytes, uint64(newRowValue))
-		if err := b.Put([]byte(id), newRowBytes); err != nil {
+		if err := rdb.Set(ctx, id, newRowBytes, 0).Err(); err != nil {
 			return err
 		}
 
 		// 更新反向映射
-		if err := b.Delete([]byte(oldRowKey)); err != nil {
+		if err := rdb.Del(ctx, oldRowKey).Err(); err != nil {
 			return err
 		}
-		if err := b.Put([]byte(newRowKey), []byte(id)); err != nil {
+		if err := rdb.Set(ctx, newRowKey, id, 0).Err(); err != nil {
 			return err
 		}
 
 		return nil
 	})
+
+	return err
 }
 
 // RetrieveRealValue 根据虚拟值获取真实值，并返回虚拟值及其对应的真实值
 func RetrieveRealValue(virtualValue int64) (string, string, error) {
-	var realValue string
-	err := db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(BucketName))
-
-		// 构造键，根据虚拟值查找
-		virtualKey := fmt.Sprintf("row-%d", virtualValue)
-		realValueBytes := b.Get([]byte(virtualKey))
-		if realValueBytes == nil {
-			return fmt.Errorf("no real value found for virtual value: %d", virtualValue)
-		}
-		realValue = string(realValueBytes)
-
-		return nil
-	})
-
-	if err != nil {
+	virtualKey := fmt.Sprintf("row-%d", virtualValue)
+	realValue, err := rdb.Get(ctx, virtualKey).Result()
+	if err == redis.Nil {
+		return "", "", fmt.Errorf("no real value found for virtual value: %d", virtualValue)
+	} else if err != nil {
 		return "", "", err
 	}
 
@@ -1111,23 +980,14 @@ func RetrieveRealValue(virtualValue int64) (string, string, error) {
 
 // RetrieveVirtualValue 根据真实值获取虚拟值，并返回真实值及其对应的虚拟值
 func RetrieveVirtualValue(realValue string) (string, string, error) {
-	var virtualValue int64
-	err := db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(BucketName))
-
-		// 根据真实值查找虚拟值
-		virtualValueBytes := b.Get([]byte(realValue))
-		if virtualValueBytes == nil {
-			return fmt.Errorf("no virtual value found for real value: %s", realValue)
-		}
-		virtualValue = int64(binary.BigEndian.Uint64(virtualValueBytes))
-
-		return nil
-	})
-
-	if err != nil {
+	virtualValueBytes, err := rdb.Get(ctx, realValue).Bytes()
+	if err == redis.Nil {
+		return "", "", fmt.Errorf("no virtual value found for real value: %s", realValue)
+	} else if err != nil {
 		return "", "", err
 	}
+
+	virtualValue := int64(binary.BigEndian.Uint64(virtualValueBytes))
 
 	// 返回真实值和对应的虚拟值
 	return realValue, fmt.Sprintf("%d", virtualValue), nil
@@ -1284,71 +1144,132 @@ func RetrieveVirtualValuev2Pro(realValue string, realValueSub string) (string, s
 	return RetrieveVirtualValuePro(realValue, realValueSub)
 }
 
-// 根据2个真实值 获取2个虚拟值 群号 然后 用户号
-func RetrieveVirtualValuePro(realValue string, realValueSub string) (string, string, error) {
-	var newRowID, newSubRowID string
+// UpdateVirtualValue 更新旧的虚拟值到新的虚拟值的映射
+func UpdateVirtualValue(oldRowValue, newRowValue int64) error {
+	oldRowKey := fmt.Sprintf("row-%d", oldRowValue)
+	newRowKey := fmt.Sprintf("row-%d", newRowValue)
 
-	err := db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(BucketName))
-
-		// 构建正向键
-		forwardKey := fmt.Sprintf("%s:%s", realValue, realValueSub)
-
-		// 从数据库检索正向键对应的值
-		forwardValueBytes := b.Get([]byte(forwardKey))
-		if forwardValueBytes == nil {
-			return ErrKeyNotFound
+	// 使用事务确保操作的原子性
+	_, err := rdb.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
+		// 查找旧虚拟值对应的真实值
+		id, err := rdb.Get(ctx, oldRowKey).Result()
+		if err == redis.Nil {
+			return fmt.Errorf("不存在:%v", oldRowValue)
+		} else if err != nil {
+			return err
 		}
 
-		forwardValue := string(forwardValueBytes)
-		parts := strings.Split(forwardValue, ":")
-		if len(parts) != 2 {
-			return fmt.Errorf("invalid format for forward key value")
+		// 检查新虚拟值是否已经存在
+		if _, err := rdb.Get(ctx, newRowKey).Result(); err == nil {
+			return fmt.Errorf("%v :已存在", newRowValue)
+		} else if err != redis.Nil {
+			return err
 		}
 
-		newRowID, newSubRowID = parts[0], parts[1]
+		// 更新真实值到新的虚拟值的映射
+		newRowBytes := make([]byte, 8)
+		binary.BigEndian.PutUint64(newRowBytes, uint64(newRowValue))
+		if err := rdb.Set(ctx, id, newRowBytes, 0).Err(); err != nil {
+			return err
+		}
+
+		// 更新反向映射
+		if err := rdb.Del(ctx, oldRowKey).Err(); err != nil {
+			return err
+		}
+		if err := rdb.Set(ctx, newRowKey, id, 0).Err(); err != nil {
+			return err
+		}
 
 		return nil
 	})
 
-	if err != nil {
+	return err
+}
+
+// RetrieveRealValue 根据虚拟值获取真实值，并返回虚拟值及其对应的真实值
+func RetrieveRealValue(virtualValue int64) (string, string, error) {
+	virtualKey := fmt.Sprintf("row-%d", virtualValue)
+	realValue, err := rdb.Get(ctx, virtualKey).Result()
+	if err == redis.Nil {
+		return "", "", fmt.Errorf("no real value found for virtual value: %d", virtualValue)
+	} else if err != nil {
 		return "", "", err
 	}
 
-	return newRowID, newSubRowID, nil
+	// 返回虚拟值和对应的真实值
+	return fmt.Sprintf("%d", virtualValue), realValue, nil
+}
+
+// RetrieveVirtualValue 根据真实值获取虚拟值，并返回真实值及其对应的虚拟值
+func RetrieveVirtualValue(realValue string) (string, string, error) {
+	virtualValueBytes, err := rdb.Get(ctx, realValue).Bytes()
+	if err == redis.Nil {
+		return "", "", fmt.Errorf("no virtual value found for real value: %s", realValue)
+	} else if err != nil {
+		return "", "", err
+	}
+
+	virtualValue := int64(binary.BigEndian.Uint64(virtualValueBytes))
+
+	// 返回真实值和对应的虚拟值
+	return realValue, fmt.Sprintf("%d", virtualValue), nil
+}
+
+// RetrieveVirtualValuePro 根据2个真实值获取2个虚拟值
+func RetrieveVirtualValuePro(realValue string, realValueSub string) (string, string, error) {
+	// 拼接主键和子键
+	key := fmt.Sprintf("%s:%s", realValue, realValueSub)
+
+	// 从Redis中获取主键和子键对应的虚拟值
+	virtualValue, err := rdb.HGet(ctx, "virtualValues", key).Result()
+	if err == redis.Nil {
+		return "", "", fmt.Errorf("no virtual value found for real values: %s, %s", realValue, realValueSub)
+	} else if err != nil {
+		return "", "", err
+	}
+
+	// 返回主键和子键对应的虚拟值
+	return realValue, virtualValue, nil
+}
+// 根据2个真实值 获取2个虚拟值 群号 然后 用户号
+func RetrieveVirtualValuePro(realValue string, realValueSub string) (string, string, error) {
+	forwardKey := fmt.Sprintf("%s:%s", realValue, realValueSub)
+
+	// 从Redis检索正向键对应的值
+	forwardValue, err := rdb.Get(ctx, forwardKey).Result()
+	if err == redis.Nil {
+		return "", "", fmt.Errorf("key not found")
+	} else if err != nil {
+		return "", "", err
+	}
+
+	parts := strings.Split(forwardValue, ":")
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("invalid format for forward key value")
+	}
+
+	return parts[0], parts[1], nil
 }
 
 // RetrieveRealValuePro 根据两个虚拟值获取相应的两个真实值 群号 然后 用户号
 func RetrieveRealValuePro(virtualValue1, virtualValue2 int64) (string, string, error) {
-	var realValue1, realValue2 string
+	compositeKey := fmt.Sprintf("%d:%d", virtualValue1, virtualValue2)
 
-	err := db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(BucketName))
-
-		// 根据两个虚拟值构造键
-		compositeKey := fmt.Sprintf("%d:%d", virtualValue1, virtualValue2)
-		compositeValueBytes := b.Get([]byte(compositeKey))
-		if compositeValueBytes == nil {
-			return fmt.Errorf("no real values found for virtual values: %d, %d", virtualValue1, virtualValue2)
-		}
-
-		// 解析获取到的真实值
-		compositeValue := string(compositeValueBytes)
-		parts := strings.Split(compositeValue, ":")
-		if len(parts) != 2 {
-			return fmt.Errorf("invalid format for composite key value: %s", compositeValue)
-		}
-
-		realValue1, realValue2 = parts[0], parts[1]
-
-		return nil
-	})
-
-	if err != nil {
+	// 从Redis中获取复合键对应的值
+	compositeValue, err := rdb.Get(ctx, compositeKey).Result()
+	if err == redis.Nil {
+		return "", "", fmt.Errorf("no real values found for virtual values: %d, %d", virtualValue1, virtualValue2)
+	} else if err != nil {
 		return "", "", err
 	}
 
-	return realValue1, realValue2, nil
+	parts := strings.Split(compositeValue, ":")
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("invalid format for composite key value: %s", compositeValue)
+	}
+
+	return parts[0], parts[1], nil
 }
 
 // RetrieveRealValuesv2Pro 根据两个虚拟值获取两个真实值 群号 然后 用户号
@@ -1400,38 +1321,48 @@ func RetrieveRealValuesv2Pro(virtualValue int64, virtualValueSub int64) (string,
 
 // UpdateVirtualValuePro 更新一对旧虚拟值到新虚拟值的映射 旧群号 新群号 旧用户 新用户
 func UpdateVirtualValuePro(oldVirtualValue1, newVirtualValue1, oldVirtualValue2, newVirtualValue2 int64) error {
-	return db.Update(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(BucketName))
-		// 构造旧和新的复合键
-		oldCompositeKey := fmt.Sprintf("%d:%d", oldVirtualValue1, oldVirtualValue2)
-		newCompositeKey := fmt.Sprintf("%d:%d", newVirtualValue1, newVirtualValue2)
+	oldCompositeKey := fmt.Sprintf("%d:%d", oldVirtualValue1, oldVirtualValue2)
+	newCompositeKey := fmt.Sprintf("%d:%d", newVirtualValue1, newVirtualValue2)
+
+	// 使用事务确保操作的原子性
+	_, err := rdb.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
 		// 检查旧复合键是否存在
-		compositeValueBytes := b.Get([]byte(oldCompositeKey))
-		if compositeValueBytes == nil {
+		compositeValue, err := rdb.Get(ctx, oldCompositeKey).Result()
+		if err == redis.Nil {
 			return fmt.Errorf("不存在的复合虚拟值：%d-%d", oldVirtualValue1, oldVirtualValue2)
+		} else if err != nil {
+			return err
 		}
+
 		// 检查新复合键是否已经存在
-		if b.Get([]byte(newCompositeKey)) != nil {
+		if _, err := rdb.Get(ctx, newCompositeKey).Result(); err == nil {
 			return fmt.Errorf("该复合虚拟值已存在：%d-%d", newVirtualValue1, newVirtualValue2)
+		} else if err != redis.Nil {
+			return err
 		}
+
 		// 删除旧的复合键和正向键
-		if err := b.Delete([]byte(oldCompositeKey)); err != nil {
+		if err := rdb.Del(ctx, oldCompositeKey).Err(); err != nil {
 			return err
 		}
-		if err := b.Delete(compositeValueBytes); err != nil {
+		if err := rdb.Del(ctx, compositeValue).Err(); err != nil {
 			return err
 		}
+
 		// 反向键
-		if err := b.Put([]byte(newCompositeKey), []byte(compositeValueBytes)); err != nil {
+		if err := rdb.Set(ctx, newCompositeKey, compositeValue, 0).Err(); err != nil {
 			return err
 		}
+
 		// 正向键
-		if err := b.Put(compositeValueBytes, []byte(newCompositeKey)); err != nil {
+		if err := rdb.Set(ctx, compositeValue, newCompositeKey, 0).Err(); err != nil {
 			return err
 		}
 
 		return nil
 	})
+
+	return err
 }
 
 // UpdateVirtualValuev2Pro 根据配置更新两对虚拟值 旧群 新群 旧用户 新用户
@@ -1463,108 +1394,93 @@ func UpdateVirtualValuev2Pro(oldVirtualValue1, newVirtualValue1, oldVirtualValue
 
 	return UpdateVirtualValuePro(oldVirtualValue1, newVirtualValue1, oldVirtualValue2, newVirtualValue2)
 }
-
 // sub 要匹配的类型 typesuffix 相当于:type 的type
-func FindKeysBySubAndType(sub string, typeSuffix string) ([]string, error) {
+func FindKeysBySubAndType(sub string, typeSuffix string) ([]string, error) \{
 	var ids []string
 
-	err := db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(ConfigBucket))
-		if b == nil {
-			return fmt.Errorf("bucket %s not found", ConfigBucket)
+	// 获取所有键
+	keys, err := rdb.Keys(ctx, "*").Result()
+	if err != nil \{
+		return nil, err
+	}
+
+	for _, key := range keys \{
+		value, err := rdb.Get(ctx, key).Result()
+		if err != nil \{
+			continue
 		}
 
-		return b.ForEach(func(k, v []byte) error {
-			key := string(k)
-			value := string(v)
-
-			// 检查键是否以:type结尾，并且值是否匹配sub
-			if strings.HasSuffix(key, typeSuffix) && value == sub {
-				// 提取id部分
-				id := strings.Split(key, ":")[0]
-				ids = append(ids, id)
-			}
-			return nil
-		})
-	})
-
-	if err != nil {
-		return nil, err
+		if strings.HasSuffix(key, typeSuffix) && value == sub \{
+			id := strings.Split(key, ":")[0]
+			ids = append(ids, id)
+		}
 	}
 
 	return ids, nil
 }
 
 // 取相同前缀下的所有key的:后边 比如取群成员列表
-func FindSubKeysById(id string) ([]string, error) {
+func FindSubKeysById(id string) ([]string, error) \{
 	var subKeys []string
+	prefix := id + ":"
 
-	err := db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte("ids"))
-		if b == nil {
-			return fmt.Errorf("bucket %s not found", "ids")
-		}
-
-		c := b.Cursor()
-		prefix := []byte(id + ":")
-		for k, _ := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, _ = c.Next() {
-			keyParts := bytes.Split(k, []byte(":"))
-			if len(keyParts) == 2 {
-				subKeys = append(subKeys, string(keyParts[1]))
-			}
-		}
-
-		return nil
-	})
-
-	if err != nil {
+	// 获取所有键
+	keys, err := rdb.Keys(ctx, prefix+"*").Result()
+	if err != nil \{
 		return nil, err
+	}
+
+	for _, key := range keys \{
+		parts := strings.Split(key, ":")
+		if len(parts) == 2 \{
+			subKeys = append(subKeys, parts[1])
+		}
 	}
 
 	return subKeys, nil
 }
 
 // FindSubKeysByIdPro 根据1个值获取key中的k:v给出k获取所有v，通过网络调用
-func FindSubKeysByIdPro(id string) ([]string, error) {
-	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() {
+func FindSubKeysByIdPro(id string) ([]string, error) \{
+	if config.GetLotusValue() && !config.GetLotusWithoutIdmaps() \{
 		// 使用网络请求方式
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
 
 		// 根据portValue确定协议
 		protocol := "http"
-		if portValue == "443" {
+		if portValue == "443" \{
 			protocol = "https"
 		}
 
 		// 构建请求URL
 		url := fmt.Sprintf("%s://%s:%s/getid?type=14&id=%s", protocol, serverDir, portValue, id)
 		resp, err := http.Get(url)
-		if err != nil {
+		if err != nil \{
 			return nil, fmt.Errorf("failed to send request: %v", err)
 		}
 		defer resp.Body.Close()
 
 		// 解析响应
-		var response map[string]interface{}
-		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		var response map[string]interface\{}
+		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil \{
 			return nil, fmt.Errorf("failed to decode response: %v", err)
 		}
-		if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode != http.StatusOK \{
 			return nil, fmt.Errorf("error response from server: %s", response["error"])
 		}
 
-		keys, ok := response["keys"].([]interface{})
-		if !ok {
+		keys, ok := response["keys"].([]interface\{})
+		if !ok \{
 			return nil, fmt.Errorf("invalid response format for keys")
 		}
 
-		// 将interface{}类型的keys转换为[]string
+		// 将interface\{}类型的keys转换为[]string
 		var resultKeys []string
-		for _, key := range keys {
-			if strKey, ok := key.(string); ok {
+		for _, key := range keys \{
+			if strKey, ok := key.(string); ok \{
 				resultKeys = append(resultKeys, strKey)
-			} else {
+			} else \{
 				return nil, fmt.Errorf("invalid key format in response")
 			}
 		}
@@ -1577,108 +1493,101 @@ func FindSubKeysByIdPro(id string) ([]string, error) {
 }
 
 // 场景: xxx:yyy zzz:bbb  zzz:bbb xxx:yyy 把xxx(id)替换为newID 比如更换群号(会卡住)
-func UpdateKeysWithNewID(id, newID string) error {
-	return db.Update(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(BucketName))
-		if b == nil {
-			return fmt.Errorf("bucket %s not found", BucketName)
-		}
+func UpdateKeysWithNewID(id, newID string) error \{
+	// 获取所有以id开头的键
+	keys, err := rdb.Keys(ctx, id+":*").Result()
+	if err != nil \{
+		return err
+	}
 
-		// 临时存储需要更新的键和反向键
-		keysToUpdate := make(map[string]string)
-
-		// 查找所有以id开头的键
-		err := b.ForEach(func(k, v []byte) error {
-			key := string(k)
-			if strings.HasPrefix(key, id+":") {
-				value := string(v)
-				keysToUpdate[key] = value
+	// 开始事务
+	_, err = rdb.TxPipelined(ctx, func(pipe redis.Pipeliner) error \{
+		for _, key := range keys \{
+			value, err := rdb.Get(ctx, key).Result()
+			if err != nil \{
+				return err
 			}
-			return nil
-		})
 
-		if err != nil {
-			return err
-		}
-
-		// 更新找到的键和对应的反向键
-		for key, reverseKey := range keysToUpdate {
 			newKey := strings.Replace(key, id, newID, 1)
+			reverseKey := value
 
 			// 获取原反向键的值
-			reverseValueBytes := b.Get([]byte(reverseKey))
-			if reverseValueBytes == nil {
-				return fmt.Errorf("reverse key %s not found", reverseKey)
+			reverseValue, err := rdb.Get(ctx, reverseKey).Result()
+			if err != nil \{
+				return err
 			}
 
 			// 更新原键
-			err := b.Delete([]byte(key))
-			if err != nil {
+			if err := rdb.Del(ctx, key).Err(); err != nil \{
 				return err
 			}
-			err = b.Put([]byte(newKey), []byte(reverseKey))
-			if err != nil {
+			if err := rdb.Set(ctx, newKey, reverseKey, 0).Err(); err != nil \{
 				return err
 			}
 
 			// 更新反向键的值
-			newReverseValue := strings.Replace(string(reverseValueBytes), id, newID, 1)
-			err = b.Put([]byte(reverseKey), []byte(newReverseValue))
-			if err != nil {
+			newReverseValue := strings.Replace(reverseValue, id, newID, 1)
+			if err := rdb.Set(ctx, reverseKey, newReverseValue, 0).Err(); err != nil \{
 				return err
 			}
 		}
-
 		return nil
 	})
+
+	return err
 }
 
 // StoreUserInfo 存储用户信息
-func StoreUserInfo(rawID string, userInfo structs.FriendData) error {
-	return db.Update(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(UserInfoBucket))
-		key := fmt.Sprintf("%s:%s", rawID, userInfo.UserID) // 创建复合键
-		if v := b.Get([]byte(key)); v != nil {
-			return fmt.Errorf("duplicate key: %s", key)
-		}
+func StoreUserInfo(rawID string, userInfo structs.FriendData) error \{
+	key := fmt.Sprintf("%s:%s", rawID, userInfo.UserID) // 创建复合键
 
-		// 序列化用户信息作为值
-		value, err := json.Marshal(userInfo)
-		if err != nil {
-			return fmt.Errorf("could not encode user info: %s", err)
-		}
+	// 检查是否存在重复键
+	exists, err := rdb.Exists(ctx, key).Result()
+	if err != nil \{
+		return err
+	}
+	if exists > 0 \{
+		return fmt.Errorf("duplicate key: %s", key)
+	}
 
-		// 存储键值对
-		if err := b.Put([]byte(key), value); err != nil {
-			return fmt.Errorf("could not store user info: %s", err)
-		}
-		return nil
-	})
+	// 序列化用户信息作为值
+	value, err := json.Marshal(userInfo)
+	if err != nil \{
+		return fmt.Errorf("could not encode user info: %s", err)
+	}
+
+	// 存储键值对
+	if err := rdb.Set(ctx, key, value, 0).Err(); err != nil \{
+		return fmt.Errorf("could not store user info: %s", err)
+	}
+
+	return nil
 }
 
 // ListAllUsers 返回数据库中所有用户的信息
 func ListAllUsers() ([]structs.FriendData, error) {
 	var users []structs.FriendData
-	err := db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(UserInfoBucket))
-		if b == nil {
-			return fmt.Errorf("bucket %s not found", UserInfoBucket)
+
+	// 获取所有用户信息的键
+	keys, err := rdb.Keys(ctx, UserInfoBucket+":*").Result()
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve keys: %v", err)
+	}
+
+	for _, key := range keys {
+		value, err := rdb.Get(ctx, key).Result()
+		if err != nil {
+			log.Printf("Error retrieving key %s: %v", key, err)
+			continue
 		}
 
-		// 遍历bucket中的所有键值对
-		err := b.ForEach(func(key, value []byte) error {
-			var user structs.FriendData
-			if err := json.Unmarshal(value, &user); err != nil {
-				log.Printf("Error unmarshaling user data: %v", err)
-				return err
-			}
-			users = append(users, user)
-			return nil
-		})
-		return err
-	})
-	if err != nil {
-		return nil, err
+		var user structs.FriendData
+		if err := json.Unmarshal([]byte(value), &user); err != nil {
+			log.Printf("Error unmarshaling user data for key %s: %v", key, err)
+			continue
+		}
+		users = append(users, user)
 	}
+
 	return users, nil
 }
