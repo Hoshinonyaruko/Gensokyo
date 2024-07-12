@@ -120,9 +120,10 @@ type Settings struct {
 	AutoPutInteraction       bool   `yaml:"auto_put_interaction"`
 	PutInteractionDelay      int    `yaml:"put_interaction_delay"`
 	//onebot修改
-	TwoWayEcho bool `yaml:"twoway_echo"`
-	Array      bool `yaml:"array"`
-	NativeOb11 bool `yaml:"native_ob11"`
+	TwoWayEcho       bool `yaml:"twoway_echo"`
+	Array            bool `yaml:"array"`
+	NativeOb11       bool `yaml:"native_ob11"`
+	DisableErrorChan bool `yaml:"disable_error_chan"`
 	//url相关
 	VisibleIp    bool `yaml:"visible_ip"`
 	UrlToQrimage bool `yaml:"url_to_qrimage"`

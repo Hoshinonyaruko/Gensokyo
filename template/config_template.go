@@ -157,8 +157,9 @@ settings:
 
   #Onebot修改
   twoway_echo : false               #是否采用双向echo,根据机器人选择,獭獭\早苗 true 红色问答\椛椛 或者其他 请使用 false
-  array: false                                       # 连接trss云崽请开启array
+  array: false                      #连接trss云崽请开启array,是否以segment形式上报信息.
   native_ob11 : false               #如果你的机器人收到事件报错,请开启此选项增加兼容性
+  disable_error_chan : false        #禁用ws断开时候将信息放入补发频道,当信息非常多时可能导致冲垮应用端,可以设置本选项为true.
 
   #URL相关
   visible_ip : false                #转换url时,如果server_dir是ip true将以ip形式发出url 默认隐藏url 将server_dir配置为自己域名可以转换url
