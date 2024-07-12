@@ -45,7 +45,9 @@ func (client *WebSocketClient) SendMessage(message map[string]interface{}) error
 	if err != nil {
 		mylog.Println("Error sending message:", err)
 		// 发送失败，将消息添加到切片
-		client.sendFailures = append(client.sendFailures, message)
+		if !config.GetDisableErrorChan() {
+			client.sendFailures = append(client.sendFailures, message)
+		}
 		return err
 	}
 
