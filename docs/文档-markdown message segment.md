@@ -1,4 +1,3 @@
-```markdown
 # Gensokyo Markdown Segment
 
 Gensokyo的Markdown Segment是对现有OneBot v11的扩展。
@@ -51,4 +50,3 @@ CQ 码由字符 [ 起始, 以 ] 结束, 并且以 , 分割各个参数。如果�
 
 data下层应包含data（2层data），data.markdown，data.keyboard。
 同时与type同级的data字段是OneBot v11标准固定的，所以json结构会呈现data.data.markdown，data.data.keyboard双层结构。
-```
