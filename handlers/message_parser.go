@@ -1089,41 +1089,44 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 				}
 			}
 
-			//如果二级指令白名单全部是*(忽略自身,那么不判断二级白名单是否匹配)
-			if allStarPrefixed {
-				if len(messageText) == len(matchedPrefix.Prefix) {
+			// 调用 GetVisualPrefixsBypass 获取前缀数组
+			visualPrefixes := config.GetVisualPrefixsBypass()
+			// 判断 messageText 是否以数组中的任一前缀开头
+			for _, prefix := range visualPrefixes {
+				if strings.HasPrefix(originmessageText, prefix) {
 					matched = true
+					break
+				}
+			}
+
+			if !matched {
+				//如果二级指令白名单全部是*(忽略自身,那么不判断二级白名单是否匹配)
+				if allStarPrefixed {
+					if len(messageText) == len(matchedPrefix.Prefix) {
+						matched = true
+					} else {
+						matched = false
+					}
 				} else {
-					matched = false
-					// 调用 GetVisualPrefixsBypass 获取前缀数组
-					visualPrefixes := config.GetVisualPrefixsBypass()
-					// 判断 messageText 是否以数组中的任一前缀开头
-					for _, prefix := range visualPrefixes {
-						if strings.HasPrefix(originmessageText, prefix) {
+					// 遍历白名单数组，检查是否有匹配项
+					for _, prefix := range allPrefixes {
+						trimmedPrefix := prefix
+						if strings.HasPrefix(prefix, "*") {
+							// 如果前缀以 * 开头，则移除 *
+							trimmedPrefix = strings.TrimPrefix(prefix, "*")
+						} else if strings.HasPrefix(prefix, "&") {
+							// 如果前缀以 & 开头，则移除 & 并从 trimmedPrefix 前端去除 matchedPrefix.Prefix
+							trimmedPrefix = strings.TrimPrefix(prefix, "&")
+							trimmedPrefix = strings.TrimPrefix(trimmedPrefix, matchedPrefix.Prefix)
+						}
+
+						// 从trimmedPrefix中去除前后空格
+						trimmedPrefix = strings.TrimSpace(trimmedPrefix)
+						// trimmedPrefix如果是""就会导致任意内容都是true,所以不能是""
+						if strings.HasPrefix(messageText, trimmedPrefix) && trimmedPrefix != "" {
 							matched = true
 							break
 						}
-					}
-				}
-			} else {
-				// 遍历白名单数组，检查是否有匹配项
-				for _, prefix := range allPrefixes {
-					trimmedPrefix := prefix
-					if strings.HasPrefix(prefix, "*") {
-						// 如果前缀以 * 开头，则移除 *
-						trimmedPrefix = strings.TrimPrefix(prefix, "*")
-					} else if strings.HasPrefix(prefix, "&") {
-						// 如果前缀以 & 开头，则移除 & 并从 trimmedPrefix 前端去除 matchedPrefix.Prefix
-						trimmedPrefix = strings.TrimPrefix(prefix, "&")
-						trimmedPrefix = strings.TrimPrefix(trimmedPrefix, matchedPrefix.Prefix)
-					}
-
-					// 从trimmedPrefix中去除前后空格(可能会有bug)
-					trimmedPrefix = strings.TrimSpace(trimmedPrefix)
-					// trimmedPrefix如果是""就会导致任意内容都是true,所以不能是""
-					if strings.HasPrefix(messageText, trimmedPrefix) && trimmedPrefix != "" {
-						matched = true
-						break
 					}
 				}
 			}
