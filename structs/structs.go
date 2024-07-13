@@ -109,16 +109,17 @@ type Settings struct {
 	//增长营销类
 	SelfIntroduce []string `yaml:"self_introduce"`
 	//api修改
-	GetGroupListAllGuilds    bool   `yaml:"get_g_list_all_guilds"`
-	GetGroupListGuilds       string `yaml:"get_g_list_guilds"`
-	GetGroupListReturnGuilds bool   `yaml:"get_g_list_return_guilds"`
-	GetGroupListGuidsType    int    `yaml:"get_g_list_guilds_type"`
-	GetGroupListDelay        int    `yaml:"get_g_list_delay"`
-	ForwardMsgLimit          int    `yaml:"forward_msg_limit"`
-	CustomBotName            string `yaml:"custom_bot_name"`
-	TransFormApiIds          bool   `yaml:"transform_api_ids"`
-	AutoPutInteraction       bool   `yaml:"auto_put_interaction"`
-	PutInteractionDelay      int    `yaml:"put_interaction_delay"`
+	GetGroupListAllGuilds    bool     `yaml:"get_g_list_all_guilds"`
+	GetGroupListGuilds       string   `yaml:"get_g_list_guilds"`
+	GetGroupListReturnGuilds bool     `yaml:"get_g_list_return_guilds"`
+	GetGroupListGuidsType    int      `yaml:"get_g_list_guilds_type"`
+	GetGroupListDelay        int      `yaml:"get_g_list_delay"`
+	ForwardMsgLimit          int      `yaml:"forward_msg_limit"`
+	CustomBotName            string   `yaml:"custom_bot_name"`
+	TransFormApiIds          bool     `yaml:"transform_api_ids"`
+	AutoPutInteraction       bool     `yaml:"auto_put_interaction"`
+	PutInteractionDelay      int      `yaml:"put_interaction_delay"`
+	PutInteractionExcept     []string `yaml:"put_interaction_except"`
 	//onebot修改
 	TwoWayEcho       bool `yaml:"twoway_echo"`
 	Array            bool `yaml:"array"`

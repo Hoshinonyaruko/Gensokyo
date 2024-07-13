@@ -2400,3 +2400,15 @@ func GetDisableErrorChan() bool {
 	}
 	return instance.Settings.DisableErrorChan
 }
+
+// 获取 PutInteractionExcept 数组
+func GetPutInteractionExcept() []string {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to get PutInteractionExcept.")
+		return nil
+	}
+	return instance.Settings.PutInteractionExcept
+}

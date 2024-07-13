@@ -354,12 +354,14 @@ func CheckWordOUT(word string) string {
 		return "错误：缺少 'word' 参数"
 	}
 
+	//不替换base64
+	if strings.Contains(word, "base64://") {
+		// 当word包含特定字符串时原样返回
+		//fmt.Printf("原样返回的文本：%s", word)
+		return word
+	}
+
 	if len([]rune(word)) > 5000 {
-		if strings.Contains(word, "[CQ:image,file=base64://") {
-			// 当word包含特定字符串时原样返回
-			fmt.Printf("原样返回的文本：%s", word)
-			return word
-		}
 		log.Printf("错误请求：字符数超过最大限制（5000字符）。内容：%s", word)
 		return "错误：字符数超过最大限制（5000字符）"
 	}
