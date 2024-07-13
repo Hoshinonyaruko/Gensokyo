@@ -990,8 +990,24 @@ func generateGroupMessage(id string, eventid string, foundItems map[string][]str
 				fileRecordData = silk.EncoderSilk(fileRecordData)
 				mylog.Printf("音频转码ing")
 			}
+			base64Encoded := base64.StdEncoding.EncodeToString(fileRecordData)
+			if config.GetUploadPicV2Base64() {
+				// 直接上传语音返回 MessageToCreate type=7
+				messageToCreate, err := images.CreateAndUploadMediaMessage(context.TODO(), base64Encoded, eventid, 1, false, "", groupid, id, msgseq, apiv2)
+				if err != nil {
+					mylog.Printf("Error messageToCreate: %v", err)
+					return &dto.MessageToCreate{
+						Content: "错误: 上传语音失败",
+						MsgID:   id,
+						EventID: eventid,
+						MsgSeq:  msgseq,
+						MsgType: 0, // 默认文本类型
+					}
+				}
+				return messageToCreate
+			}
 			// 将解码的语音数据转换回base64格式并上传
-			imageURL, err := images.UploadBase64RecordToServer(base64.StdEncoding.EncodeToString(fileRecordData))
+			imageURL, err := images.UploadBase64RecordToServer(base64Encoded)
 			if err != nil {
 				mylog.Printf("failed to upload base64 record: %v", err)
 				return nil
@@ -1578,8 +1594,24 @@ func generatePrivateMessage(id string, eventid string, foundItems map[string][]s
 				fileRecordData = silk.EncoderSilk(fileRecordData)
 				mylog.Printf("音频转码ing")
 			}
+			base64Encoded := base64.StdEncoding.EncodeToString(fileRecordData)
+			if config.GetUploadPicV2Base64() {
+				// 直接上传语音返回 MessageToCreate type=7
+				messageToCreate, err := images.CreateAndUploadMediaMessagePrivate(context.TODO(), base64Encoded, eventid, 1, false, "", userid, id, msgseq, apiv2)
+				if err != nil {
+					mylog.Printf("Error messageToCreate: %v", err)
+					return &dto.MessageToCreate{
+						Content: "错误: 上传语音失败",
+						MsgID:   id,
+						EventID: eventid,
+						MsgSeq:  msgseq,
+						MsgType: 0, // 默认文本类型
+					}
+				}
+				return messageToCreate
+			}
 			// 将解码的语音数据转换回base64格式并上传
-			imageURL, err := images.UploadBase64RecordToServer(base64.StdEncoding.EncodeToString(fileRecordData))
+			imageURL, err := images.UploadBase64RecordToServer(base64Encoded)
 			if err != nil {
 				mylog.Printf("failed to upload base64 record: %v", err)
 				return nil
