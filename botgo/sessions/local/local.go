@@ -69,7 +69,8 @@ func (l *ChanManager) StartSingle(apInfo *dto.WebsocketAPSingle, token *token.To
 		apInfo.ShardCount, startInterval)
 
 	// 只启动一个分片
-
+	// 按照1数量初始化，用于启动连接的管理
+	l.sessionChan = make(chan dto.Session, 1)
 	session := dto.Session{
 		URL:     apInfo.URL,
 		Token:   *token,
@@ -80,9 +81,13 @@ func (l *ChanManager) StartSingle(apInfo *dto.WebsocketAPSingle, token *token.To
 			ShardCount: apInfo.ShardCount,
 		},
 	}
+	l.sessionChan <- session
 
-	time.Sleep(startInterval)
-	go l.newConnect(session)
+	for session := range l.sessionChan {
+		// MaxConcurrency 代表的是每 5s 可以连多少个请求
+		time.Sleep(startInterval)
+		go l.newConnect(session)
+	}
 
 	return nil
 }
