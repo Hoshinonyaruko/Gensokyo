@@ -56,18 +56,21 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		}
 	}
 
-	if msgType == "" && message.Params.UserID != nil && checkZeroUserID(message.Params.UserID) {
-		msgType = GetMessageTypeByUserid(config.GetAppIDStr(), message.Params.UserID)
+	if len(message.Params.GroupID.(string)) != 32 {
+		if msgType == "" && message.Params.UserID != nil && checkZeroUserID(message.Params.UserID) {
+			msgType = GetMessageTypeByUserid(config.GetAppIDStr(), message.Params.UserID)
+		}
+		if msgType == "" && message.Params.GroupID != nil && checkZeroGroupID(message.Params.GroupID) {
+			msgType = GetMessageTypeByGroupid(config.GetAppIDStr(), message.Params.GroupID)
+		}
+		if msgType == "" && message.Params.UserID != nil && checkZeroUserID(message.Params.UserID) {
+			msgType = GetMessageTypeByUseridV2(message.Params.UserID)
+		}
+		if msgType == "" && message.Params.GroupID != nil && checkZeroGroupID(message.Params.GroupID) {
+			msgType = GetMessageTypeByGroupidV2(message.Params.GroupID)
+		}
 	}
-	if msgType == "" && message.Params.GroupID != nil && checkZeroGroupID(message.Params.GroupID) {
-		msgType = GetMessageTypeByGroupid(config.GetAppIDStr(), message.Params.GroupID)
-	}
-	if msgType == "" && message.Params.UserID != nil && checkZeroUserID(message.Params.UserID) {
-		msgType = GetMessageTypeByUseridV2(message.Params.UserID)
-	}
-	if msgType == "" && message.Params.GroupID != nil && checkZeroGroupID(message.Params.GroupID) {
-		msgType = GetMessageTypeByGroupidV2(message.Params.GroupID)
-	}
+
 	// New checks for UserID and GroupID being nil or 0
 	if (message.Params.UserID == nil || !checkZeroUserID(message.Params.UserID)) &&
 		(message.Params.GroupID == nil || !checkZeroGroupID(message.Params.GroupID)) {
@@ -78,10 +81,20 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 	var idInt64 int64
 	var err error
 
-	if message.Params.UserID != "" {
-		idInt64, err = ConvertToInt64(message.Params.UserID)
-	} else if message.Params.GroupID != "" {
-		idInt64, err = ConvertToInt64(message.Params.GroupID)
+	if len(message.Params.GroupID.(string)) == 32 {
+		if message.Params.GroupID != "" {
+			idInt64, err = idmap.GenerateRowID(message.Params.GroupID.(string), 9)
+		} else if message.Params.UserID != "" {
+			idInt64, err = idmap.GenerateRowID(message.Params.UserID.(string), 9)
+		}
+		// 临时的
+		msgType = "private"
+	} else {
+		if message.Params.GroupID != "" {
+			idInt64, err = ConvertToInt64(message.Params.GroupID)
+		} else if message.Params.UserID != "" {
+			idInt64, err = ConvertToInt64(message.Params.UserID)
+		}
 	}
 
 	//设置递归 对直接向gsk发送action时有效果
@@ -107,22 +120,26 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 	case "group_private", "group":
 		//私聊信息
 		var UserID string
-		if config.GetIdmapPro() {
-			//还原真实的userid
-			//mylog.Printf("group_private:%v", message.Params.UserID.(string))
-			_, UserID, err = idmap.RetrieveRowByIDv2Pro("690426430", message.Params.UserID.(string))
-			if err != nil {
-				mylog.Printf("Error reading config: %v", err)
-				return "", nil
+		if len(message.Params.UserID.(string)) != 32 {
+			if config.GetIdmapPro() {
+				//还原真实的userid
+				//mylog.Printf("group_private:%v", message.Params.UserID.(string))
+				_, UserID, err = idmap.RetrieveRowByIDv2Pro("690426430", message.Params.UserID.(string))
+				if err != nil {
+					mylog.Printf("Error reading config: %v", err)
+					return "", nil
+				}
+				mylog.Printf("测试,通过Proid获取的UserID:%v", UserID)
+			} else {
+				//还原真实的userid
+				UserID, err = idmap.RetrieveRowByIDv2(message.Params.UserID.(string))
+				if err != nil {
+					mylog.Printf("Error reading config: %v", err)
+					return "", nil
+				}
 			}
-			mylog.Printf("测试,通过Proid获取的UserID:%v", UserID)
 		} else {
-			//还原真实的userid
-			UserID, err = idmap.RetrieveRowByIDv2(message.Params.UserID.(string))
-			if err != nil {
-				mylog.Printf("Error reading config: %v", err)
-				return "", nil
-			}
+			UserID = message.Params.UserID.(string)
 		}
 
 		// 解析消息内容
