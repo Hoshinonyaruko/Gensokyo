@@ -2401,6 +2401,30 @@ func GetDisableErrorChan() bool {
 	return instance.Settings.DisableErrorChan
 }
 
+// 获取StringOb11的值
+func GetStringOb11() bool {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to StringOb11 value.")
+		return false
+	}
+	return instance.Settings.StringOb11
+}
+
+// 获取StringAction的值
+func GetStringAction() bool {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	if instance == nil {
+		mylog.Println("Warning: instance is nil when trying to StringAction value.")
+		return false
+	}
+	return instance.Settings.StringAction
+}
+
 // 获取 PutInteractionExcept 数组
 func GetPutInteractionExcept() []string {
 	mu.RLock()
