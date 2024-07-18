@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -46,6 +47,16 @@ type Group struct {
 	MemberCount     int32  `json:"member_count"`
 }
 
+type GroupString struct {
+	GroupCreateTime int32  `json:"group_create_time"`
+	GroupID         string `json:"group_id"`
+	GroupLevel      int32  `json:"group_level"`
+	GroupMemo       string `json:"group_memo"`
+	GroupName       string `json:"group_name"`
+	MaxMemberCount  int32  `json:"max_member_count"`
+	MemberCount     int32  `json:"member_count"`
+}
+
 type GroupList struct {
 	Data    []Group     `json:"data"`
 	Message string      `json:"message"`
@@ -54,9 +65,19 @@ type GroupList struct {
 	Echo    interface{} `json:"echo"`
 }
 
+type GroupListString struct {
+	Data    []GroupString `json:"data"`
+	Message string        `json:"message"`
+	RetCode int           `json:"retcode"`
+	Status  string        `json:"status"`
+	Echo    interface{}   `json:"echo"`
+}
+
 func GetGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
 	//群还不支持,这里取得是频道的,如果后期支持了群,那都请求,一起返回
 	var groupList GroupList
+	var groupListString GroupListString
+	var outputMap map[string]interface{}
 
 	// 初始化 groupList.Data 为一个空数组
 	groupList.Data = []Group{}
@@ -129,35 +150,71 @@ func GetGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 	// 当前时间的 10 位 Unix 时间戳
 	currentTimestamp := int32(time.Now().Unix())
 
-	for _, idStr := range groupIDs {
-		groupID, err := strconv.ParseInt(idStr, 10, 64)
-		if err != nil {
-			mylog.Printf("Error converting group ID %s to int64: %v", idStr, err)
-			continue
+	// 判断是否string返回
+	if !config.GetStringOb11() {
+		for _, idStr := range groupIDs {
+			groupID, err := strconv.ParseInt(idStr, 10, 64)
+			if err != nil {
+				mylog.Printf("Error converting group ID %s to int64: %v", idStr, err)
+				continue
+			}
+
+			group := Group{
+				GroupCreateTime: currentTimestamp, // 使用当前时间的时间戳
+				GroupID:         groupID,
+				GroupLevel:      0,
+				GroupMemo:       "",
+				GroupName:       "",
+				MaxMemberCount:  0,
+				MemberCount:     0,
+			}
+
+			groupList.Data = append(groupList.Data, group)
 		}
+		groupList.Message = ""
+		groupList.RetCode = 0
+		groupList.Status = "ok"
 
-		group := Group{
-			GroupCreateTime: currentTimestamp, // 使用当前时间的时间戳
-			GroupID:         groupID,
-			GroupLevel:      0,
-			GroupMemo:       "",
-			GroupName:       "",
-			MaxMemberCount:  0,
-			MemberCount:     0,
+		if message.Echo == "" {
+			groupList.Echo = "0"
+		} else {
+			groupList.Echo = message.Echo
 		}
-
-		groupList.Data = append(groupList.Data, group)
-	}
-	groupList.Message = ""
-	groupList.RetCode = 0
-	groupList.Status = "ok"
-
-	if message.Echo == "" {
-		groupList.Echo = "0"
+		outputMap = structToMap(groupList)
 	} else {
-		groupList.Echo = message.Echo
+		// 检查字符串是否仅包含数字 将数字形式的interactionID转换为真实的形式
+		isNumeric := func(s string) bool {
+			return regexp.MustCompile(`^\d+$`).MatchString(s)
+		}
+		for _, idStr := range groupIDs {
+			var originalGroupID string
+			if isNumeric(idStr) {
+				originalGroupID, _ = idmap.RetrieveRowByIDv2(idStr)
+			} else {
+				originalGroupID = idStr
+			}
+			group := GroupString{
+				GroupCreateTime: currentTimestamp, // 使用当前时间的时间戳
+				GroupID:         originalGroupID,
+				GroupLevel:      0,
+				GroupMemo:       "",
+				GroupName:       "",
+				MaxMemberCount:  0,
+				MemberCount:     0,
+			}
+			groupListString.Data = append(groupListString.Data, group)
+		}
+		groupListString.Message = ""
+		groupListString.RetCode = 0
+		groupListString.Status = "ok"
+
+		if message.Echo == "" {
+			groupListString.Echo = "0"
+		} else {
+			groupListString.Echo = message.Echo
+		}
+		outputMap = structToMap(groupListString)
 	}
-	outputMap := structToMap(groupList)
 
 	//mylog.Printf("getGroupList(频道): %+v\n", outputMap)
 
