@@ -34,6 +34,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/url"
 	"github.com/hoshinonyaruko/gensokyo/webui"
 	"github.com/hoshinonyaruko/gensokyo/wsclient"
+	"github.com/tencent-connect/botgo/sessions/multi"
 	"google.golang.org/grpc"
 
 	"github.com/gin-gonic/gin"
@@ -283,8 +284,12 @@ func main() {
 			if conf.Settings.ShardCount == 1 {
 				go func() {
 					wsInfo.Shards = uint32(conf.Settings.ShardNum)
-					if err = botgo.NewSessionManager().Start(wsInfo, token, &intent); err != nil {
-						log.Fatalln(err)
+					if wsInfo.Shards == 1 {
+						if err = botgo.NewSessionManager().Start(wsInfo, token, &intent); err != nil {
+							log.Fatalln(err)
+						}
+					} else {
+						multi.NewShardManager(wsInfo, token, &intent).StartAllShards()
 					}
 				}()
 				log.Printf("不使用分片,所有信息都由当前gensokyo处理...\n")
