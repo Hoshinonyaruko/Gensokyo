@@ -40,6 +40,7 @@ func NewShardManager(apInfo *dto.WebsocketAP, token *token.Token, intents *dto.I
 
 func (sm *ShardManager) StartAllShards() {
 	for i := uint32(0); i < sm.APInfo.Shards; i++ {
+		time.Sleep(sm.StartInterval)
 		sm.StartShard(i)
 	}
 	sm.wg.Wait()
