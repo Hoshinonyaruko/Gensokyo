@@ -18,6 +18,7 @@ settings:
   client_secret: "<YOUR_CLIENT_SECRET>"              # 你的客户端密钥
   shard_count: 1                    #分片数量 默认1
   shard_id: 0                       #当前分片id 默认从0开始,详细请看 https://bot.q.qq.com/wiki/develop/api/gateway/reference.html
+  shard_num: 1                      #接口调用超过频率限制时,如果不想要多开gsk,尝试调大.gsk会尝试连接到n个分片处理信息. n为你所配置的值.与 shard_count和shard_id互不相干.
 
   #事件订阅
   text_intent:                                       # 请根据公域 私域来选择intent,错误的intent将连接失败
