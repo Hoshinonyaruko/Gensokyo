@@ -18,7 +18,7 @@ var ac *AhoCorasick
 var acout *AhoCorasick
 var wac *AhoCorasick
 
-//  1init函数用于初始化操作
+//  init函数用于初始化操作
 func init() {
 	ac = NewAhoCorasick()
 	acout = NewAhoCorasick()
