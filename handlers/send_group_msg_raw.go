@@ -56,7 +56,7 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 		}
 	}
 
-	if len(message.Params.GroupID.(string)) != 32 {
+	if message.Params.GroupID != nil && len(message.Params.GroupID.(string)) != 32 {
 		if msgType == "" && message.Params.GroupID != nil && checkZeroGroupID(message.Params.GroupID) {
 			msgType = GetMessageTypeByGroupid(config.GetAppIDStr(), message.Params.GroupID)
 		}
@@ -84,13 +84,13 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 	var retmsg string
 
 	if len(message.Params.GroupID.(string)) == 32 {
-		if message.Params.GroupID != "" {
-			idInt64, err = idmap.GenerateRowID(message.Params.GroupID.(string), 9)
-		} else if message.Params.UserID != "" {
-			idInt64, err = idmap.GenerateRowID(message.Params.UserID.(string), 9)
-		}
+		idInt64, err = idmap.GenerateRowID(message.Params.GroupID.(string), 9)
 		// 临时的
 		msgType = "group"
+	} else if len(message.Params.UserID.(string)) == 32 {
+		idInt64, err = idmap.GenerateRowID(message.Params.UserID.(string), 9)
+		// 临时的
+		msgType = "group_private"
 	} else {
 		if message.Params.GroupID != "" {
 			idInt64, err = ConvertToInt64(message.Params.GroupID)
@@ -476,7 +476,9 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 		retmsg, _ = HandleSendGuildChannelPrivateMsg(client, api, apiv2, message, &value, &RChannelID)
 	case "group_private":
 		//用userid还原出openid 这是虚拟成群的群聊私聊信息
-		message.Params.UserID = message.Params.GroupID.(string)
+		if message.Params.GroupID != nil && message.Params.GroupID.(string) != "" {
+			message.Params.UserID = message.Params.GroupID.(string)
+		}
 		retmsg, _ = HandleSendPrivateMsg(client, api, apiv2, message)
 	case "forum":
 		//用GroupID给ChannelID赋值,因为我们是把频道虚拟成了群

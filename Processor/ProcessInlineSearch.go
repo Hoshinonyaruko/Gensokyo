@@ -119,6 +119,11 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 			UserID:     userid64,
 			Data:       data,
 		}
+		//增强配置
+		if !config.GetNativeOb11() {
+			notice.RealUserID = fromuid
+			notice.RealGroupID = fromgid
+		}
 		//调试
 		PrintStructWithFieldNames(notice)
 
@@ -260,6 +265,31 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 			// 储存和群号相关的eventid
 			fmt.Printf("测试:储存eventid:[%v]LongGroupID64[%v]\n", data.EventID, LongGroupID64)
 			echo.AddEvnetID(AppIDString, LongGroupID64, data.EventID)
+
+			// 上报事件
+			notice := &OnebotInteractionNotice{
+				GroupID:    GroupID64,
+				NoticeType: "interaction",
+				PostType:   "notice",
+				SelfID:     selfid64,
+				SubType:    "create",
+				Time:       time.Now().Unix(),
+				UserID:     userid64,
+				Data:       data,
+			}
+			//增强配置
+			if !config.GetNativeOb11() {
+				notice.RealUserID = fromuid
+				notice.RealGroupID = fromgid
+			}
+			//调试
+			PrintStructWithFieldNames(notice)
+
+			// Convert OnebotGroupMessage to map and send
+			noticeMap := structToMap(notice)
+
+			//上报信息到onebotv11应用端(正反ws)
+			go p.BroadcastMessageToAll(noticeMap, p.Apiv2, data)
 		} else if data.UserOpenID != "" {
 			//私聊回调
 			newdata := ConvertInteractionToMessage(data)
@@ -338,6 +368,31 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 
 			// 储存和用户ID相关的eventid
 			echo.AddEvnetID(AppIDString, LongUserID64, data.EventID)
+
+			// 上报事件
+			notice := &OnebotInteractionNotice{
+				GroupID:    GroupID64,
+				NoticeType: "interaction",
+				PostType:   "notice",
+				SelfID:     selfid64,
+				SubType:    "create",
+				Time:       time.Now().Unix(),
+				UserID:     userid64,
+				Data:       data,
+			}
+			//增强配置
+			if !config.GetNativeOb11() {
+				notice.RealUserID = fromuid
+				notice.RealGroupID = fromgid
+			}
+			//调试
+			PrintStructWithFieldNames(notice)
+
+			// Convert OnebotGroupMessage to map and send
+			noticeMap := structToMap(notice)
+
+			//上报信息到onebotv11应用端(正反ws)
+			go p.BroadcastMessageToAll(noticeMap, p.Apiv2, data)
 		} else {
 			// TODO: 区分频道和频道私信 如果有人提需求
 			// 频道回调
