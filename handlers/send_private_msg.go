@@ -56,7 +56,7 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		}
 	}
 
-	if len(message.Params.GroupID.(string)) != 32 {
+	if message.Params.UserID != nil && len(message.Params.UserID.(string)) != 32 {
 		if msgType == "" && message.Params.UserID != nil && checkZeroUserID(message.Params.UserID) {
 			msgType = GetMessageTypeByUserid(config.GetAppIDStr(), message.Params.UserID)
 		}
@@ -81,14 +81,10 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 	var idInt64 int64
 	var err error
 
-	if len(message.Params.GroupID.(string)) == 32 {
-		if message.Params.GroupID != "" {
-			idInt64, err = idmap.GenerateRowID(message.Params.GroupID.(string), 9)
-		} else if message.Params.UserID != "" {
-			idInt64, err = idmap.GenerateRowID(message.Params.UserID.(string), 9)
-		}
+	if len(message.Params.UserID.(string)) == 32 {
+		idInt64, err = idmap.GenerateRowID(message.Params.UserID.(string), 9)
 		// 临时的
-		msgType = "private"
+		msgType = "group_private"
 	} else {
 		if message.Params.GroupID != "" {
 			idInt64, err = ConvertToInt64(message.Params.GroupID)

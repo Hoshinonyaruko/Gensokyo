@@ -25,18 +25,22 @@ type GroupRequestEvent struct {
 	SubType     string `json:"sub_type"`
 	Time        int64  `json:"time"`
 	UserID      int64  `json:"user_id"`
+	RealUserID  string `json:"real_user_id,omitempty"`  //当前真实uid
+	RealGroupID string `json:"real_group_id,omitempty"` //当前真实gid
 }
 
 // GroupNoticeEvent 表示群通知事件的数据结构
 type GroupNoticeEvent struct {
-	GroupID    int64  `json:"group_id"`
-	NoticeType string `json:"notice_type"`
-	OperatorID int64  `json:"operator_id"`
-	PostType   string `json:"post_type"`
-	SelfID     int64  `json:"self_id"`
-	SubType    string `json:"sub_type"`
-	Time       int64  `json:"time"`
-	UserID     int64  `json:"user_id"`
+	GroupID     int64  `json:"group_id"`
+	NoticeType  string `json:"notice_type"`
+	OperatorID  int64  `json:"operator_id"`
+	PostType    string `json:"post_type"`
+	SelfID      int64  `json:"self_id"`
+	SubType     string `json:"sub_type"`
+	Time        int64  `json:"time"`
+	UserID      int64  `json:"user_id"`
+	RealUserID  string `json:"real_user_id,omitempty"`  //当前真实uid
+	RealGroupID string `json:"real_group_id,omitempty"` //当前真实gid
 }
 
 // 定义了一个符合 Client 接口的 SelfIntroduceClient 结构体
@@ -113,6 +117,12 @@ func (p *Processors) ProcessGroupAddBot(data *dto.GroupAddBotEvent) error {
 		Time:        timestampInt64,
 		UserID:      userid64,
 	}
+	//增强配置
+	if !config.GetNativeOb11() {
+		Request.RealUserID = data.OpMemberOpenID
+		Request.RealGroupID = data.GroupOpenID
+	}
+
 	Notice = GroupNoticeEvent{
 		GroupID:    GroupID64,
 		NoticeType: "group_increase",
@@ -123,6 +133,12 @@ func (p *Processors) ProcessGroupAddBot(data *dto.GroupAddBotEvent) error {
 		Time:       timestampInt64,
 		UserID:     userid64,
 	}
+	//增强配置
+	if !config.GetNativeOb11() {
+		Notice.RealUserID = data.OpMemberOpenID
+		Notice.RealGroupID = data.GroupOpenID
+	}
+
 	groupMsgMap := structToMap(Request)
 	//上报信息到onebotv11应用端(正反ws)
 	go p.BroadcastMessageToAll(groupMsgMap, p.Apiv2, data)
