@@ -84,7 +84,7 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 	p.HandleFrameworkCommand(messageText, data, "group")
 
 	var messageID int
-	//映射str的messageID到int
+	//映射str的messageID到int 
 	if !config.GetStringOb11() {
 		var messageID64 int64
 		if config.GetMemoryMsgid() {
@@ -156,6 +156,7 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 			},
 			SubType: "normal",
 			Time:    time.Now().Unix(),
+			RealMessageID: data.ID,
 		}
 		//增强配置
 		if !config.GetNativeOb11() {

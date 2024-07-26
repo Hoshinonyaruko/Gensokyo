@@ -258,6 +258,7 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 			},
 			SubType: "normal",
 			Time:    time.Now().Unix(),
+			RealMessageID: data.ID,
 		}
 		//增强配置
 		if !config.GetNativeOb11() {

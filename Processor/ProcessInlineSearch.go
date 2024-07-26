@@ -196,6 +196,7 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 				},
 				SubType: "normal",
 				Time:    time.Now().Unix(),
+				RealMessageID: "",
 			}
 			//增强配置
 			if !config.GetNativeOb11() {
