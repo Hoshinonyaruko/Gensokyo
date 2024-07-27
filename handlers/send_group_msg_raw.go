@@ -24,6 +24,7 @@ func init() {
 func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
 	// 使用 message.Echo 作为key来获取消息类型
 	var msgType string
+	mylog.Printf("群组ID1: %v", message.Params.GroupID.(string))
 	if echoStr, ok := message.Echo.(string); ok {
 		// 当 message.Echo 是字符串类型时执行此块
 		msgType = echo.GetMsgTypeByKey(echoStr)
@@ -55,6 +56,7 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 			return true // 如果不是int、int64或string，假定它不为0
 		}
 	}
+	mylog.Printf("群组ID2: %v", message.Params.GroupID.(string))
 
 	if message.Params.GroupID != nil && len(message.Params.GroupID.(string)) != 32 {
 		if msgType == "" && message.Params.GroupID != nil && checkZeroGroupID(message.Params.GroupID) {
@@ -77,6 +79,7 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 		mylog.Printf("send_group_msgs接收到错误action: %v", message)
 		return "", nil
 	}
+	mylog.Printf("群组ID3: %v", message.Params.GroupID.(string))
 
 	mylog.Printf("send_group_msg获取到信息类型:%v", msgType)
 	var idInt64 int64
@@ -190,7 +193,7 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 				messageID = RealMsgID
 			}
 		}
-		mylog.Printf("消息ID2: %v", message.Params.GroupID.(string))
+		//mylog.Printf("消息ID2: %v", message.Params.GroupID.(string))
 
 		//2000是群主动 此时不能被动转主动
 		if SSM {
@@ -248,7 +251,7 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 			
 
 			//如果没有转换成md发送
-			mylog.Printf("消息ID1: %v", message.Params.GroupID.(string))
+			mylog.Printf("群组ID4: %v", message.Params.GroupID.(string))
 			if !transmd {
 				// 上传图片并获取FileInfo
 				fileInfo, err := uploadMedia(context.TODO(), message.Params.GroupID.(string), richMediaMessage, apiv2)
