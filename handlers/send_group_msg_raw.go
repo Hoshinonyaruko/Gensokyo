@@ -80,6 +80,8 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 		return "", nil
 	}
 	mylog.Printf("群组ID3: %v", message.Params.GroupID.(string))
+	var Rawgroupid string
+	Rawgroupid = message.Params.GroupID.(string)
 
 	mylog.Printf("send_group_msg获取到信息类型:%v", msgType)
 	var idInt64 int64
@@ -172,6 +174,7 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 		isNumeric := func(s string) bool {
 			return regexp.MustCompile(`^\d+$`).MatchString(s)
 		}
+		
 
 		messageID := message.Params.MessageID.(string)
 
@@ -193,7 +196,7 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 				messageID = RealMsgID
 			}
 		}
-		//mylog.Printf("消息ID2: %v", message.Params.GroupID.(string))
+		mylog.Printf("消息ID2: %v", message.Params.GroupID.(string))
 
 		//2000是群主动 此时不能被动转主动
 		if SSM {
@@ -251,6 +254,7 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 			
 
 			//如果没有转换成md发送
+			message.Params.GroupID = Rawgroupid
 			mylog.Printf("群组ID4: %v", message.Params.GroupID.(string))
 			if !transmd {
 				// 上传图片并获取FileInfo
