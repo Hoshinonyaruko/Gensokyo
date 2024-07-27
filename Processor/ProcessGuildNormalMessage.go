@@ -246,6 +246,7 @@ func (p *Processors) ProcessGuildNormalMessage(data *dto.WSMessageData) error {
 			},
 			SubType: "normal",
 			Time:    time.Now().Unix(),
+			RealMessageID: data.ID,
 		}
 		//增强配置
 		if !config.GetNativeOb11() {

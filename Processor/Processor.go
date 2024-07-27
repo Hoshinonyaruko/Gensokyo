@@ -94,6 +94,7 @@ type OnebotGroupMessage struct {
 	UserID          int64       `json:"user_id"`
 	RealMessageType string      `json:"real_message_type,omitempty"`  //当前信息的真实类型 group group_private guild guild_private
 	RealUserID      string      `json:"real_user_id,omitempty"`       //当前真实uid
+	RealMessageID   string      `json:"real_message_id,omitempty"`
 	RealGroupID     string      `json:"real_group_id,omitempty"`      //当前真实gid
 	IsBindedGroupId bool        `json:"is_binded_group_id,omitempty"` //当前群号是否是binded后的
 	IsBindedUserId  bool        `json:"is_binded_user_id,omitempty"`  //当前用户号号是否是binded后的

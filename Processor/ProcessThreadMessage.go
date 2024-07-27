@@ -365,6 +365,7 @@ func (p *Processors) ProcessThreadMessage(data *dto.WSThreadData) error {
 				},
 				SubType: "normal",
 				Time:    time.Now().Unix(),
+				RealMessageID: data.ID,
 			}
 			//增强配置
 			if !config.GetNativeOb11() {

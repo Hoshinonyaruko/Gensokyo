@@ -150,6 +150,7 @@ func (p *Processors) ProcessGroupMsgReject(data *dto.GroupMsgRejectEvent) error 
 				},
 				SubType: "normal",
 				Time:    time.Now().Unix(),
+				RealMessageID: "123",
 			}
 			//增强配置
 			if !config.GetNativeOb11() {

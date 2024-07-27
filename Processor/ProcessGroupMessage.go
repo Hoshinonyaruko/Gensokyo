@@ -156,6 +156,7 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 			},
 			SubType: "normal",
 			Time:    time.Now().Unix(),
+			RealMessageID: data.ID,
 		}
 		//增强配置
 		if !config.GetNativeOb11() {
