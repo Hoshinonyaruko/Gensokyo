@@ -190,6 +190,7 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 				messageID = RealMsgID
 			}
 		}
+		mylog.Printf("消息ID2: %v", message.Params.GroupID.(string))
 
 		//2000是群主动 此时不能被动转主动
 		if SSM {
@@ -244,8 +245,10 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 			if config.GetTwoWayEcho() {
 				md, kb, transmd = auto_md(message, messageText, richMediaMessage)
 			}
+			
 
 			//如果没有转换成md发送
+			mylog.Printf("消息ID1: %v", message.Params.GroupID.(string))
 			if !transmd {
 				// 上传图片并获取FileInfo
 				fileInfo, err := uploadMedia(context.TODO(), message.Params.GroupID.(string), richMediaMessage, apiv2)
