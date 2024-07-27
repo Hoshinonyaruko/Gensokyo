@@ -1,6 +1,6 @@
 name: Cross Compile Go Project
 
-on:push
+on: push
     
 
 jobs:
