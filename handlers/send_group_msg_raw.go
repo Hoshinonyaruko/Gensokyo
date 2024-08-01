@@ -123,47 +123,49 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 		var SSM bool
 
 		var originalGroupID, originalUserID string
-		// 检查UserID是否为nil
-		if message.Params.UserID != nil && config.GetIdmapPro() && message.Params.UserID.(string) != "" && message.Params.UserID.(string) != "0" {
-			// 如果UserID不是nil且配置为使用Pro版本，则调用RetrieveRowByIDv2Pro
-			originalGroupID, originalUserID, err = idmap.RetrieveRowByIDv2Pro(message.Params.GroupID.(string), message.Params.UserID.(string))
-			if err != nil {
-				mylog.Printf("Error1 retrieving original GroupID: %v", err)
-			}
-			mylog.Printf("测试,通过idmaps-pro获取的originalGroupID:%v", originalGroupID)
-			if originalGroupID == "" {
+		if len(message.Params.GroupID.(string)) != 32 {
+			// 检查UserID是否为nil
+			if message.Params.UserID != nil && config.GetIdmapPro() && message.Params.UserID.(string) != "" && message.Params.UserID.(string) != "0" {
+				// 如果UserID不是nil且配置为使用Pro版本，则调用RetrieveRowByIDv2Pro
+				originalGroupID, originalUserID, err = idmap.RetrieveRowByIDv2Pro(message.Params.GroupID.(string), message.Params.UserID.(string))
+				if err != nil {
+					mylog.Printf("Error1 retrieving original GroupID: %v", err)
+				}
+				mylog.Printf("测试,通过idmaps-pro获取的originalGroupID:%v", originalGroupID)
+				if originalGroupID == "" {
+					originalGroupID, err = idmap.RetrieveRowByIDv2(message.Params.GroupID.(string))
+					if err != nil {
+						mylog.Printf("Error2 retrieving original GroupID: %v", err)
+						return "", nil
+					}
+					mylog.Printf("测试,通过idmaps获取的originalGroupID:%v", originalGroupID)
+				}
+			} else {
+				// 如果UserID是nil或配置不使用Pro版本，则调用RetrieveRowByIDv2
 				originalGroupID, err = idmap.RetrieveRowByIDv2(message.Params.GroupID.(string))
 				if err != nil {
-					mylog.Printf("Error2 retrieving original GroupID: %v", err)
-					return "", nil
+					mylog.Printf("Error retrieving original GroupID: %v", err)
 				}
-				mylog.Printf("测试,通过idmaps获取的originalGroupID:%v", originalGroupID)
-			}
-		} else {
-			// 如果UserID是nil或配置不使用Pro版本，则调用RetrieveRowByIDv2
-			originalGroupID, err = idmap.RetrieveRowByIDv2(message.Params.GroupID.(string))
-			if err != nil {
-				mylog.Printf("Error retrieving original GroupID: %v", err)
-			}
-			// 检查 message.Params.UserID 是否为 nil
-			if message.Params.UserID == nil {
-				//mylog.Println("UserID is nil")
-			} else {
-				// 进行类型断言，确认 UserID 不是 nil
-				userID, ok := message.Params.UserID.(string)
-				if !ok {
-					mylog.Println("UserID is not a string")
-					// 处理类型断言失败的情况
+				// 检查 message.Params.UserID 是否为 nil
+				if message.Params.UserID == nil {
+					//mylog.Println("UserID is nil")
 				} else {
-					originalUserID, err = idmap.RetrieveRowByIDv2(userID)
-					if err != nil {
-						mylog.Printf("Error retrieving original UserID: %v", err)
+					// 进行类型断言，确认 UserID 不是 nil
+					userID, ok := message.Params.UserID.(string)
+					if !ok {
+						mylog.Println("UserID is not a string")
+						// 处理类型断言失败的情况
+					} else {
+						originalUserID, err = idmap.RetrieveRowByIDv2(userID)
+						if err != nil {
+							mylog.Printf("Error retrieving original UserID: %v", err)
+						}
 					}
 				}
 			}
+			message.Params.GroupID = originalGroupID
+			message.Params.UserID = originalUserID
 		}
-		message.Params.GroupID = originalGroupID
-		message.Params.UserID = originalUserID
 
 		// 检查字符串是否仅包含数字
 		isNumeric := func(s string) bool {

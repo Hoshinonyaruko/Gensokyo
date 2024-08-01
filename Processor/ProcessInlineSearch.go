@@ -360,8 +360,11 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 
 			// Convert OnebotGroupMessage to map and send
 			privateMsgMap := structToMap(privateMsg)
-			//上报信息到onebotv11应用端(正反ws)
-			go p.BroadcastMessageToAll(privateMsgMap, p.Apiv2, data)
+
+			if privateMsg.RawMessage != "" {
+				//上报信息到onebotv11应用端(正反ws)
+				go p.BroadcastMessageToAll(privateMsgMap, p.Apiv2, data)
+			}
 
 			// 转换appid
 			AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
