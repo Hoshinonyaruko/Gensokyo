@@ -246,18 +246,21 @@ func (c *Client) readMessageToQueue() {
 		payload.RawMessage = message
 		log.Infof("%s receive %s message, %s", c.session, dto.OPMeans(payload.OPCode), string(message))
 
-		// 计算数据的哈希值
-		dataHash := calculateDataHash(payload.Data)
+		// 不过滤心跳事件
+		if payload.OPCode != 11 {
+			// 计算数据的哈希值
+			dataHash := calculateDataHash(payload.Data)
 
-		// 检查是否已存在相同的 Data
-		if existingPayload, ok := getDataFromSyncMap(dataHash); ok {
-			// 如果已存在相同的 Data，则丢弃当前消息
-			log.Infof("%s discard duplicate message with DataHash: %v", c.session, existingPayload)
-			continue
+			// 检查是否已存在相同的 Data
+			if existingPayload, ok := getDataFromSyncMap(dataHash); ok {
+				// 如果已存在相同的 Data，则丢弃当前消息
+				log.Infof("%s discard duplicate message with DataHash: %v", c.session, existingPayload)
+				continue
+			}
+
+			// 将新的 payload 存入 sync.Map
+			storeDataToSyncMap(dataHash, payload)
 		}
-
-		// 将新的 payload 存入 sync.Map
-		storeDataToSyncMap(dataHash, payload)
 
 		// 处理内置的一些事件，如果处理成功，则这个事件不再投递给业务
 		if c.isHandleBuildIn(payload) {
