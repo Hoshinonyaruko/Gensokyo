@@ -81,7 +81,7 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 	var idInt64 int64
 	var err error
 
-	if len(message.Params.UserID.(string)) == 32 {
+	if message.Params.UserID != nil && len(message.Params.UserID.(string)) == 32 {
 		idInt64, err = idmap.GenerateRowID(message.Params.UserID.(string), 9)
 		// 临时的
 		msgType = "group_private"

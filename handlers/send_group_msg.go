@@ -102,7 +102,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		idInt64, err = idmap.GenerateRowID(message.Params.GroupID.(string), 9)
 		// 临时的
 		msgType = "group"
-	} else if len(message.Params.UserID.(string)) == 32 {
+	} else if message.Params.UserID != nil && len(message.Params.UserID.(string)) == 32 {
 		idInt64, err = idmap.GenerateRowID(message.Params.UserID.(string), 9)
 		// 临时的
 		msgType = "group_private"
