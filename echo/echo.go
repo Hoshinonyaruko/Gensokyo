@@ -12,6 +12,70 @@ import (
 	"github.com/tencent-connect/botgo/dto"
 )
 
+func init() {
+	// 在 init 函数中运行清理逻辑
+	startCleanupRoutine()
+}
+
+func startCleanupRoutine() {
+	cleanupTicker = time.NewTicker(30 * time.Minute)
+	go func() {
+		for {
+			<-cleanupTicker.C
+			cleanupGlobalMaps()
+		}
+	}()
+}
+
+func cleanupGlobalMaps() {
+	cleanupSyncMap(&globalSyncMapMsgid)
+	cleanupSyncMap(&globalReverseMapMsgid)
+	cleanupMessageGroupStack(globalMessageGroupStack)
+	cleanupEchoMapping(globalEchoMapping)
+	cleanupInt64ToIntMapping(globalInt64ToIntMapping)
+	cleanupStringToIntMappingSeq(globalStringToIntMappingSeq)
+}
+
+func cleanupSyncMap(m *sync.Map) {
+	m.Range(func(key, value interface{}) bool {
+		m.Delete(key)
+		return true
+	})
+}
+
+func cleanupMessageGroupStack(stack *globalMessageGroup) {
+	stack.stack = make([]MessageGroupPair, 0)
+}
+
+func cleanupEchoMapping(mapping *EchoMapping) {
+	mapping.msgTypeMapping.Range(func(key, value interface{}) bool {
+		mapping.msgTypeMapping.Delete(key)
+		return true
+	})
+	mapping.msgIDMapping.Range(func(key, value interface{}) bool {
+		mapping.msgIDMapping.Delete(key)
+		return true
+	})
+	mapping.eventIDMapping.Range(func(key, value interface{}) bool {
+		mapping.eventIDMapping.Delete(key)
+		return true
+	})
+}
+
+func cleanupInt64ToIntMapping(mapping *Int64ToIntMapping) {
+	mapping.mapping.Range(func(key, value interface{}) bool {
+		mapping.mapping.Delete(key)
+		return true
+	})
+}
+
+func cleanupStringToIntMappingSeq(mapping *StringToIntMappingSeq) {
+	mapping.mapping.Range(func(key, value interface{}) bool {
+		mapping.mapping.Delete(key)
+		return true
+	})
+}
+
 type EchoMapping struct {
 	msgTypeMapping sync.Map
 	msgIDMapping   sync.Map
