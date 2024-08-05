@@ -866,6 +866,18 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 		messageText = " "
 	}
 
+	//一个斜杠后跟一个空格的,用户也不希望去掉
+	if msg.Content == "/ " {
+		menumsg = true
+		messageText = " "
+	}
+
+	//一个空格一个斜杠后跟一个空格的,用户也不希望去掉
+	if msg.Content == " / " {
+		menumsg = true
+		messageText = " "
+	}
+
 	if !menumsg {
 		//处理前 先去前后空
 		messageText = strings.TrimSpace(msg.Content)
