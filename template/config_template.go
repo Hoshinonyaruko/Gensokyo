@@ -90,6 +90,7 @@ settings:
   developer_log : false             #开启开发者日志 默认关闭
   log_level : 1                     # 0=debug 1=info 2=warning 3=error 默认1
   save_logs : false                 #自动储存日志
+  log_suffix_per_mins : 0           #默认0,代表不切分日志文件,设置60代表每60分钟储存一个日志文件,如果你的日志文件太大打不开,可以设置这个到合适的时间范围.
 
   #webui设置
   disable_webui: false              #禁用webui
