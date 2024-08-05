@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/hoshinonyaruko/gensokyo/structs"
 	"github.com/hoshinonyaruko/gensokyo/sys"
 	"github.com/hoshinonyaruko/gensokyo/template"
@@ -546,7 +545,7 @@ func DeleteConfig() error {
 	// 获取当前执行的可执行文件的路径
 	exePath, err := os.Executable()
 	if err != nil {
-		mylog.Println("Error getting executable path:", err)
+		fmt.Println("Error getting executable path:", err)
 		return err
 	}
 
@@ -558,14 +557,14 @@ func DeleteConfig() error {
 
 	// 删除配置文件
 	if err := os.Remove(configPath); err != nil {
-		mylog.Println("Error removing config file:", err)
+		fmt.Println("Error removing config file:", err)
 		return err
 	}
 
 	// 获取内网IP地址
 	ip, err := sys.GetLocalIP()
 	if err != nil {
-		mylog.Println("Error retrieving the local IP address:", err)
+		fmt.Println("Error retrieving the local IP address:", err)
 		return err
 	}
 
@@ -574,7 +573,7 @@ func DeleteConfig() error {
 
 	// 创建一个新的配置文件模板 写到配置
 	if err := os.WriteFile(configPath, []byte(configData), 0644); err != nil {
-		mylog.Println("Error writing config.yml:", err)
+		fmt.Println("Error writing config.yml:", err)
 		return err
 	}
 
@@ -599,7 +598,7 @@ func GetServer_dir() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get upload directory.")
+		fmt.Println("Warning: instance is nil when trying to get upload directory.")
 		return ""
 	}
 	return instance.Settings.Server_dir
@@ -611,7 +610,7 @@ func GetDevBotid() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get DevBotid.")
+		fmt.Println("Warning: instance is nil when trying to get DevBotid.")
 		return "1234"
 	}
 	return instance.Settings.DevBotid
@@ -623,7 +622,7 @@ func GetForwardMsgLimit() int {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get GetForwardMsgLimit.")
+		fmt.Println("Warning: instance is nil when trying to get GetForwardMsgLimit.")
 		return 3
 	}
 	return instance.Settings.ForwardMsgLimit
@@ -635,7 +634,7 @@ func GetDevelop_Acdir() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get DevlopAcDir.")
+		fmt.Println("Warning: instance is nil when trying to get DevlopAcDir.")
 		return ""
 	}
 	return instance.Settings.DevlopAcDir
@@ -647,7 +646,7 @@ func GetLotusValue() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get lotus value.")
+		fmt.Println("Warning: instance is nil when trying to get lotus value.")
 		return false
 	}
 	return instance.Settings.Lotus
@@ -659,7 +658,7 @@ func GetTwoWayEcho() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get lotus value.")
+		fmt.Println("Warning: instance is nil when trying to get lotus value.")
 		return false
 	}
 	return instance.Settings.TwoWayEcho
@@ -671,7 +670,7 @@ func GetWhitePrefixMode() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetWhitePrefixModes value.")
+		fmt.Println("Warning: instance is nil when trying to GetWhitePrefixModes value.")
 		return false
 	}
 	return instance.Settings.WhitePrefixMode
@@ -693,7 +692,7 @@ func GetBlackPrefixMode() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetBlackPrefixMode value.")
+		fmt.Println("Warning: instance is nil when trying to GetBlackPrefixMode value.")
 		return false
 	}
 	return instance.Settings.BlackPrefixMode
@@ -715,7 +714,7 @@ func GetVisibleIP() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetVisibleIP value.")
+		fmt.Println("Warning: instance is nil when trying to GetVisibleIP value.")
 		return false
 	}
 	return instance.Settings.VisibleIp
@@ -745,7 +744,7 @@ func GetLazyMessageId() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get LazyMessageId value.")
+		fmt.Println("Warning: instance is nil when trying to get LazyMessageId value.")
 		return false
 	}
 	return instance.Settings.LazyMessageId
@@ -757,7 +756,7 @@ func GetHashIDValue() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get hashid value.")
+		fmt.Println("Warning: instance is nil when trying to get hashid value.")
 		return false
 	}
 	return instance.Settings.HashID
@@ -769,7 +768,7 @@ func GetRemoveAt() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get RemoveAt value.")
+		fmt.Println("Warning: instance is nil when trying to get RemoveAt value.")
 		return false
 	}
 	return instance.Settings.RemoveAt
@@ -781,7 +780,7 @@ func GetPortValue() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get port value.")
+		fmt.Println("Warning: instance is nil when trying to get port value.")
 		return ""
 	}
 	return instance.Settings.Port
@@ -793,7 +792,7 @@ func GetArrayValue() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get array value.")
+		fmt.Println("Warning: instance is nil when trying to get array value.")
 		return false
 	}
 	return instance.Settings.Array
@@ -845,7 +844,7 @@ func GetEnableWsServer() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get port value.")
+		fmt.Println("Warning: instance is nil when trying to get port value.")
 		return false
 	}
 	return instance.Settings.EnableWsServer
@@ -857,7 +856,7 @@ func GetWsServerToken() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get WsServerToken value.")
+		fmt.Println("Warning: instance is nil when trying to get WsServerToken value.")
 		return ""
 	}
 	return instance.Settings.WsServerToken
@@ -869,7 +868,7 @@ func GetIdentifyFile() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get identify file name.")
+		fmt.Println("Warning: instance is nil when trying to get identify file name.")
 		return false
 	}
 	return instance.Settings.IdentifyFile
@@ -881,7 +880,7 @@ func GetCrtPath() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get crt path.")
+		fmt.Println("Warning: instance is nil when trying to get crt path.")
 		return ""
 	}
 	return instance.Settings.Crt
@@ -893,7 +892,7 @@ func GetKeyPath() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get key path.")
+		fmt.Println("Warning: instance is nil when trying to get key path.")
 		return ""
 	}
 	return instance.Settings.Key
@@ -905,7 +904,7 @@ func GetDeveloperLog() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get developer log status.")
+		fmt.Println("Warning: instance is nil when trying to get developer log status.")
 		return false
 	}
 	return instance.Settings.DeveloperLog
@@ -961,7 +960,7 @@ func GetServerUserName() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get server user name.")
+		fmt.Println("Warning: instance is nil when trying to get server user name.")
 		return ""
 	}
 	return instance.Settings.Username
@@ -973,7 +972,7 @@ func GetServerUserPassword() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get server user password.")
+		fmt.Println("Warning: instance is nil when trying to get server user password.")
 		return ""
 	}
 	return instance.Settings.Password
@@ -985,7 +984,7 @@ func GetImageLimit() int {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get image limit value.")
+		fmt.Println("Warning: instance is nil when trying to get image limit value.")
 		return 0 // 或者返回一个默认的 ImageLimit 值
 	}
 
@@ -998,7 +997,7 @@ func GetRemovePrefixValue() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get remove_prefix value.")
+		fmt.Println("Warning: instance is nil when trying to get remove_prefix value.")
 		return false // 或者可能是默认值，取决于您的应用程序逻辑
 	}
 	return instance.Settings.RemovePrefix
@@ -1010,7 +1009,7 @@ func GetBackupPort() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get LotusPort.")
+		fmt.Println("Warning: instance is nil when trying to get LotusPort.")
 		return ""
 	}
 
@@ -1023,7 +1022,7 @@ func GetDevMsgID() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetDevMsgID value.")
+		fmt.Println("Warning: instance is nil when trying to GetDevMsgID value.")
 		return false
 	}
 	return instance.Settings.DevMessgeID
@@ -1035,7 +1034,7 @@ func GetSaveLogs() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetSaveLogs value.")
+		fmt.Println("Warning: instance is nil when trying to GetSaveLogs value.")
 		return false
 	}
 	return instance.Settings.SaveLogs
@@ -1047,7 +1046,7 @@ func GetLogLevel() int {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetLogLevel value.")
+		fmt.Println("Warning: instance is nil when trying to GetLogLevel value.")
 		return 2
 	}
 	return instance.Settings.LogLevel
@@ -1059,7 +1058,7 @@ func GetBindPrefix() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetBindPrefix value.")
+		fmt.Println("Warning: instance is nil when trying to GetBindPrefix value.")
 		return "/bind"
 	}
 	return instance.Settings.BindPrefix
@@ -1071,7 +1070,7 @@ func GetMePrefix() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetMePrefix value.")
+		fmt.Println("Warning: instance is nil when trying to GetMePrefix value.")
 		return "/me"
 	}
 	return instance.Settings.MePrefix
@@ -1083,7 +1082,7 @@ func GetFrpPort() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetFrpPort value.")
+		fmt.Println("Warning: instance is nil when trying to GetFrpPort value.")
 		return "0"
 	}
 	return instance.Settings.FrpPort
@@ -1095,7 +1094,7 @@ func GetRemoveBotAtGroup() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetRemoveBotAtGroup value.")
+		fmt.Println("Warning: instance is nil when trying to GetRemoveBotAtGroup value.")
 		return false
 	}
 	return instance.Settings.RemoveBotAtGroup
@@ -1107,7 +1106,7 @@ func GetImageLimitB() int {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to ImageLimitB value.")
+		fmt.Println("Warning: instance is nil when trying to ImageLimitB value.")
 		return 100
 	}
 	return instance.Settings.ImageLimitB
@@ -1119,7 +1118,7 @@ func GetRecordSampleRate() int {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetRecordSampleRate value.")
+		fmt.Println("Warning: instance is nil when trying to GetRecordSampleRate value.")
 		return 0 // 或者返回一个默认的 ImageLimit 值
 	}
 
@@ -1132,7 +1131,7 @@ func GetRecordBitRate() int {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetRecordBitRate value.")
+		fmt.Println("Warning: instance is nil when trying to GetRecordBitRate value.")
 		return 0 // 或者返回一个默认的 ImageLimit 值
 	}
 
@@ -1145,7 +1144,7 @@ func GetNoWhiteResponse() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to NoWhiteResponse value.")
+		fmt.Println("Warning: instance is nil when trying to NoWhiteResponse value.")
 		return ""
 	}
 	return instance.Settings.NoWhiteResponse
@@ -1157,7 +1156,7 @@ func GetSendError() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetSendError value.")
+		fmt.Println("Warning: instance is nil when trying to GetSendError value.")
 		return true
 	}
 	return instance.Settings.SendError
@@ -1169,7 +1168,7 @@ func GetSaveError() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetSaveError value.")
+		fmt.Println("Warning: instance is nil when trying to GetSaveError value.")
 		return true
 	}
 	return instance.Settings.SaveError
@@ -1181,7 +1180,7 @@ func GetAddAtGroup() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetAddGroupAt value.")
+		fmt.Println("Warning: instance is nil when trying to GetAddGroupAt value.")
 		return true
 	}
 	return instance.Settings.AddAtGroup
@@ -1193,7 +1192,7 @@ func GetUrlPicTransfer() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetUrlPicTransfer value.")
+		fmt.Println("Warning: instance is nil when trying to GetUrlPicTransfer value.")
 		return true
 	}
 	return instance.Settings.UrlPicTransfer
@@ -1205,7 +1204,7 @@ func GetLotusPassword() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetLotusPassword value.")
+		fmt.Println("Warning: instance is nil when trying to GetLotusPassword value.")
 		return ""
 	}
 	return instance.Settings.LotusPassword
@@ -1217,7 +1216,7 @@ func GetWsServerPath() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetWsServerPath value.")
+		fmt.Println("Warning: instance is nil when trying to GetWsServerPath value.")
 		return ""
 	}
 	return instance.Settings.WsServerPath
@@ -1229,7 +1228,7 @@ func GetIdmapPro() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetIdmapPro value.")
+		fmt.Println("Warning: instance is nil when trying to GetIdmapPro value.")
 		return false
 	}
 	return instance.Settings.IdmapPro
@@ -1241,7 +1240,7 @@ func GetCardAndNick() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetCardAndNick value.")
+		fmt.Println("Warning: instance is nil when trying to GetCardAndNick value.")
 		return ""
 	}
 	return instance.Settings.CardAndNick
@@ -1253,7 +1252,7 @@ func GetAutoBind() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetAutoBind value.")
+		fmt.Println("Warning: instance is nil when trying to GetAutoBind value.")
 		return false
 	}
 	return instance.Settings.AutoBind
@@ -1265,7 +1264,7 @@ func GetCustomBotName() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetCustomBotName value.")
+		fmt.Println("Warning: instance is nil when trying to GetCustomBotName value.")
 		return "Gensokyo全域机器人"
 	}
 	return instance.Settings.CustomBotName
@@ -1277,7 +1276,7 @@ func GetSendDelay() int {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetSendDelay value.")
+		fmt.Println("Warning: instance is nil when trying to GetSendDelay value.")
 		return 300
 	}
 	return instance.Settings.SendDelay
@@ -1289,7 +1288,7 @@ func GetAtoPCount() int {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to AtoPCount value.")
+		fmt.Println("Warning: instance is nil when trying to AtoPCount value.")
 		return 5
 	}
 	return instance.Settings.AtoPCount
@@ -1301,7 +1300,7 @@ func GetReconnecTimes() int {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to ReconnecTimes value.")
+		fmt.Println("Warning: instance is nil when trying to ReconnecTimes value.")
 		return 50
 	}
 	return instance.Settings.ReconnecTimes
@@ -1313,7 +1312,7 @@ func GetHeartBeatInterval() int {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to HeartBeatInterval value.")
+		fmt.Println("Warning: instance is nil when trying to HeartBeatInterval value.")
 		return 5
 	}
 	return instance.Settings.HeartBeatInterval
@@ -1325,7 +1324,7 @@ func GetLaunchReconectTimes() int {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to LaunchReconectTimes value.")
+		fmt.Println("Warning: instance is nil when trying to LaunchReconectTimes value.")
 		return 3
 	}
 	return instance.Settings.LaunchReconectTimes
@@ -1337,7 +1336,7 @@ func GetUnlockPrefix() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to UnlockPrefix value.")
+		fmt.Println("Warning: instance is nil when trying to UnlockPrefix value.")
 		return "/unlock"
 	}
 	return instance.Settings.UnlockPrefix
@@ -1359,7 +1358,7 @@ func GetTransferUrl() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetTransferUrl value.")
+		fmt.Println("Warning: instance is nil when trying to GetTransferUrl value.")
 		return false
 	}
 	return instance.Settings.TransferUrl
@@ -1371,7 +1370,7 @@ func GetHttpAddress() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get HTTP address.")
+		fmt.Println("Warning: instance is nil when trying to get HTTP address.")
 		return ""
 	}
 	return instance.Settings.HttpAddress
@@ -1383,7 +1382,7 @@ func GetHTTPAccessToken() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get HTTP access token.")
+		fmt.Println("Warning: instance is nil when trying to get HTTP access token.")
 		return ""
 	}
 	return instance.Settings.AccessToken
@@ -1395,7 +1394,7 @@ func GetHttpVersion() int {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get HTTP version.")
+		fmt.Println("Warning: instance is nil when trying to get HTTP version.")
 		return 11
 	}
 	return instance.Settings.HttpVersion
@@ -1407,7 +1406,7 @@ func GetHttpTimeOut() int {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get HTTP timeout.")
+		fmt.Println("Warning: instance is nil when trying to get HTTP timeout.")
 		return 5
 	}
 	return instance.Settings.HttpTimeOut
@@ -1419,7 +1418,7 @@ func GetPostUrl() []string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get POST URL.")
+		fmt.Println("Warning: instance is nil when trying to get POST URL.")
 		return nil
 	}
 	return instance.Settings.PostUrl
@@ -1431,7 +1430,7 @@ func GetPostSecret() []string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get POST secret.")
+		fmt.Println("Warning: instance is nil when trying to get POST secret.")
 		return nil
 	}
 	return instance.Settings.PostSecret
@@ -1443,7 +1442,7 @@ func GetVisualPrefixsBypass() []string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to getVisualPrefixsBypass.")
+		fmt.Println("Warning: instance is nil when trying to getVisualPrefixsBypass.")
 		return nil
 	}
 	return instance.Settings.VisualPrefixsBypass
@@ -1455,7 +1454,7 @@ func GetPostMaxRetries() []int {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get POST max retries.")
+		fmt.Println("Warning: instance is nil when trying to get POST max retries.")
 		return nil
 	}
 	return instance.Settings.PostMaxRetries
@@ -1467,7 +1466,7 @@ func GetPostRetriesInterval() []int {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get POST retries interval.")
+		fmt.Println("Warning: instance is nil when trying to get POST retries interval.")
 		return nil
 	}
 	return instance.Settings.PostRetriesInterval
@@ -1479,7 +1478,7 @@ func GetNativeOb11() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to NativeOb11 value.")
+		fmt.Println("Warning: instance is nil when trying to NativeOb11 value.")
 		return false
 	}
 	return instance.Settings.NativeOb11
@@ -1491,7 +1490,7 @@ func GetRamDomSeq() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetRamDomSeq value.")
+		fmt.Println("Warning: instance is nil when trying to GetRamDomSeq value.")
 		return false
 	}
 	return instance.Settings.RamDomSeq
@@ -1503,7 +1502,7 @@ func GetUrlToQrimage() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetUrlToQrimage value.")
+		fmt.Println("Warning: instance is nil when trying to GetUrlToQrimage value.")
 		return false
 	}
 	return instance.Settings.UrlToQrimage
@@ -1514,7 +1513,7 @@ func GetUseUin() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to UseUin value.")
+		fmt.Println("Warning: instance is nil when trying to UseUin value.")
 		return false
 	}
 	return instance.Settings.UseUin
@@ -1526,7 +1525,7 @@ func GetQrSize() int {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to QrSize value.")
+		fmt.Println("Warning: instance is nil when trying to QrSize value.")
 		return 200
 	}
 	return instance.Settings.QrSize
@@ -1579,7 +1578,7 @@ func GetWhiteBypassRevers() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetWhiteBypassRevers value.")
+		fmt.Println("Warning: instance is nil when trying to GetWhiteBypassRevers value.")
 		return false
 	}
 	return instance.Settings.WhiteBypassRevers
@@ -1591,7 +1590,7 @@ func GetGuildUrlImageToBase64() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GuildUrlImageToBase64 value.")
+		fmt.Println("Warning: instance is nil when trying to GuildUrlImageToBase64 value.")
 		return false
 	}
 	return instance.Settings.GuildUrlImageToBase64
@@ -1603,7 +1602,7 @@ func GetTencentBucketURL() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get TencentBucketURL.")
+		fmt.Println("Warning: instance is nil when trying to get TencentBucketURL.")
 		return ""
 	}
 
@@ -1612,7 +1611,7 @@ func GetTencentBucketURL() string {
 
 	// 构建并返回URL
 	if bucketName == "" || bucketRegion == "" {
-		mylog.Println("Warning: Tencent bucket name or region is not configured.")
+		fmt.Println("Warning: Tencent bucket name or region is not configured.")
 		return ""
 	}
 
@@ -1625,7 +1624,7 @@ func GetTencentCosSecretid() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get TencentCosSecretid.")
+		fmt.Println("Warning: instance is nil when trying to get TencentCosSecretid.")
 		return ""
 	}
 	return instance.Settings.TencentCosSecretid
@@ -1637,7 +1636,7 @@ func GetTencentSecretKey() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get TencentSecretKey.")
+		fmt.Println("Warning: instance is nil when trying to get TencentSecretKey.")
 		return ""
 	}
 	return instance.Settings.TencentSecretKey
@@ -1649,7 +1648,7 @@ func GetTencentAudit() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to TencentAudit value.")
+		fmt.Println("Warning: instance is nil when trying to TencentAudit value.")
 		return false
 	}
 	return instance.Settings.TencentAudit
@@ -1661,7 +1660,7 @@ func GetOssType() int {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get ExtraPicAuditingType version.")
+		fmt.Println("Warning: instance is nil when trying to get ExtraPicAuditingType version.")
 		return 0
 	}
 	return instance.Settings.OssType
@@ -1673,7 +1672,7 @@ func GetBaiduBOSBucketName() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get BaiduBOSBucketName.")
+		fmt.Println("Warning: instance is nil when trying to get BaiduBOSBucketName.")
 		return ""
 	}
 	return instance.Settings.BaiduBOSBucketName
@@ -1685,7 +1684,7 @@ func GetBaiduBCEAK() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get BaiduBCEAK.")
+		fmt.Println("Warning: instance is nil when trying to get BaiduBCEAK.")
 		return ""
 	}
 	return instance.Settings.BaiduBCEAK
@@ -1697,7 +1696,7 @@ func GetBaiduBCESK() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get BaiduBCESK.")
+		fmt.Println("Warning: instance is nil when trying to get BaiduBCESK.")
 		return ""
 	}
 	return instance.Settings.BaiduBCESK
@@ -1709,7 +1708,7 @@ func GetBaiduAudit() int {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get BaiduAudit.")
+		fmt.Println("Warning: instance is nil when trying to get BaiduAudit.")
 		return 0
 	}
 	return instance.Settings.BaiduAudit
@@ -1721,7 +1720,7 @@ func GetAliyunEndpoint() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get AliyunEndpoint.")
+		fmt.Println("Warning: instance is nil when trying to get AliyunEndpoint.")
 		return ""
 	}
 	return instance.Settings.AliyunEndpoint
@@ -1759,7 +1758,7 @@ func GetAliyunAccessKeyId() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get AliyunAccessKeyId.")
+		fmt.Println("Warning: instance is nil when trying to get AliyunAccessKeyId.")
 		return ""
 	}
 	return instance.Settings.AliyunAccessKeyId
@@ -1771,7 +1770,7 @@ func GetAliyunAccessKeySecret() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get AliyunAccessKeySecret.")
+		fmt.Println("Warning: instance is nil when trying to get AliyunAccessKeySecret.")
 		return ""
 	}
 	return instance.Settings.AliyunAccessKeySecret
@@ -1783,7 +1782,7 @@ func GetAliyunBucketName() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get AliyunBucketName.")
+		fmt.Println("Warning: instance is nil when trying to get AliyunBucketName.")
 		return ""
 	}
 	return instance.Settings.AliyunBucketName
@@ -1795,7 +1794,7 @@ func GetAliyunAudit() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to AliyunAudit value.")
+		fmt.Println("Warning: instance is nil when trying to AliyunAudit value.")
 		return false
 	}
 	return instance.Settings.AliyunAudit
@@ -1859,7 +1858,7 @@ func GetTransFormApiIds() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to TransFormApiIds value.")
+		fmt.Println("Warning: instance is nil when trying to TransFormApiIds value.")
 		return false
 	}
 	return instance.Settings.TransFormApiIds
@@ -1871,7 +1870,7 @@ func GetCustomTemplateID() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get CustomTemplateID.")
+		fmt.Println("Warning: instance is nil when trying to get CustomTemplateID.")
 		return ""
 	}
 	return instance.Settings.CustomTemplateID
@@ -1883,7 +1882,7 @@ func GetKeyBoardID() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get KeyBoardID.")
+		fmt.Println("Warning: instance is nil when trying to get KeyBoardID.")
 		return ""
 	}
 	return instance.Settings.KeyBoardID
@@ -1915,7 +1914,7 @@ func GetVwhitePrefixMode() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to VwhitePrefixMode value.")
+		fmt.Println("Warning: instance is nil when trying to VwhitePrefixMode value.")
 		return false
 	}
 	return instance.Settings.VwhitePrefixMode
@@ -1947,7 +1946,7 @@ func GetLinkPrefix() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get LinkPrefix.")
+		fmt.Println("Warning: instance is nil when trying to get LinkPrefix.")
 		return ""
 	}
 	return instance.Settings.LinkPrefix
@@ -1959,7 +1958,7 @@ func GetLinkBots() []string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get LinkBots.")
+		fmt.Println("Warning: instance is nil when trying to get LinkBots.")
 		return nil
 	}
 	return instance.Settings.LinkBots
@@ -1971,7 +1970,7 @@ func GetLinkText() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get LinkText.")
+		fmt.Println("Warning: instance is nil when trying to get LinkText.")
 		return ""
 	}
 	return instance.Settings.LinkText
@@ -1983,7 +1982,7 @@ func GetLinkPic() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get LinkPic.")
+		fmt.Println("Warning: instance is nil when trying to get LinkPic.")
 		return ""
 	}
 	return instance.Settings.LinkPic
@@ -1995,7 +1994,7 @@ func GetMusicPrefix() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get MusicPrefix.")
+		fmt.Println("Warning: instance is nil when trying to get MusicPrefix.")
 		return ""
 	}
 	return instance.Settings.MusicPrefix
@@ -2007,7 +2006,7 @@ func GetDisableWebui() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetDisableWebui value.")
+		fmt.Println("Warning: instance is nil when trying to GetDisableWebui value.")
 		return false
 	}
 	return instance.Settings.DisableWebui
@@ -2019,7 +2018,7 @@ func GetBotForumTitle() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get BotForumTitle.")
+		fmt.Println("Warning: instance is nil when trying to get BotForumTitle.")
 		return ""
 	}
 	return instance.Settings.BotForumTitle
@@ -2031,7 +2030,7 @@ func GetGlobalInteractionToMessage() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GlobalInteractionToMessage value.")
+		fmt.Println("Warning: instance is nil when trying to GlobalInteractionToMessage value.")
 		return false
 	}
 	return instance.Settings.GlobalInteractionToMessage
@@ -2043,7 +2042,7 @@ func GetAutoPutInteraction() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to AutoPutInteraction value.")
+		fmt.Println("Warning: instance is nil when trying to AutoPutInteraction value.")
 		return false
 	}
 	return instance.Settings.AutoPutInteraction
@@ -2055,7 +2054,7 @@ func GetPutInteractionDelay() int {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get PutInteractionDelay.")
+		fmt.Println("Warning: instance is nil when trying to get PutInteractionDelay.")
 		return 0
 	}
 	return instance.Settings.PutInteractionDelay
@@ -2067,7 +2066,7 @@ func GetFix11300() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to Fix11300 value.")
+		fmt.Println("Warning: instance is nil when trying to Fix11300 value.")
 		return false
 	}
 	return instance.Settings.Fix11300
@@ -2079,7 +2078,7 @@ func GetLotusWithoutIdmaps() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to LotusWithoutIdmaps value.")
+		fmt.Println("Warning: instance is nil when trying to LotusWithoutIdmaps value.")
 		return false
 	}
 	return instance.Settings.LotusWithoutIdmaps
@@ -2091,7 +2090,7 @@ func GetGroupListAllGuilds() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetGroupListAllGuilds value.")
+		fmt.Println("Warning: instance is nil when trying to GetGroupListAllGuilds value.")
 		return false
 	}
 	return instance.Settings.GetGroupListAllGuilds
@@ -2103,7 +2102,7 @@ func GetGetGroupListGuilds() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get GetGroupListGuilds.")
+		fmt.Println("Warning: instance is nil when trying to get GetGroupListGuilds.")
 		return "10"
 	}
 	return instance.Settings.GetGroupListGuilds
@@ -2115,7 +2114,7 @@ func GetGroupListReturnGuilds() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GetGroupListReturnGuilds value.")
+		fmt.Println("Warning: instance is nil when trying to GetGroupListReturnGuilds value.")
 		return false
 	}
 	return instance.Settings.GetGroupListReturnGuilds
@@ -2127,7 +2126,7 @@ func GetGroupListGuidsType() int {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get GetGroupListGuidsType.")
+		fmt.Println("Warning: instance is nil when trying to get GetGroupListGuidsType.")
 		return 0
 	}
 	return instance.Settings.GetGroupListGuidsType
@@ -2139,7 +2138,7 @@ func GetGroupListDelay() int {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get GetGroupListDelay.")
+		fmt.Println("Warning: instance is nil when trying to get GetGroupListDelay.")
 		return 0
 	}
 	return instance.Settings.GetGroupListDelay
@@ -2151,7 +2150,7 @@ func GetGlobalServerTempQQguild() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GlobalServerTempQQguild value.")
+		fmt.Println("Warning: instance is nil when trying to GlobalServerTempQQguild value.")
 		return false
 	}
 	return instance.Settings.GlobalServerTempQQguild
@@ -2163,7 +2162,7 @@ func GetServerTempQQguild() string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to ServerTempQQguild value.")
+		fmt.Println("Warning: instance is nil when trying to ServerTempQQguild value.")
 		return "0"
 	}
 	return instance.Settings.ServerTempQQguild
@@ -2185,7 +2184,7 @@ func GetUploadPicV2Base64() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to UploadPicV2 value.")
+		fmt.Println("Warning: instance is nil when trying to UploadPicV2 value.")
 		return false
 	}
 	return instance.Settings.UploadPicV2Base64
@@ -2197,7 +2196,7 @@ func GetAutoWithdraw() []string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get AutoWithdraw.")
+		fmt.Println("Warning: instance is nil when trying to get AutoWithdraw.")
 		return nil
 	}
 	return instance.Settings.AutoWithdraw
@@ -2209,7 +2208,7 @@ func GetAutoWithdrawTime() int {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get AutoWithdrawTime.")
+		fmt.Println("Warning: instance is nil when trying to get AutoWithdrawTime.")
 		return 0
 	}
 	return instance.Settings.AutoWithdrawTime
@@ -2231,7 +2230,7 @@ func GetEnableChangeWord() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to EnableChangeWord.")
+		fmt.Println("Warning: instance is nil when trying to EnableChangeWord.")
 		return false
 	}
 	return instance.Settings.EnableChangeWord
@@ -2243,7 +2242,7 @@ func GetGlobalGroupMsgRejectReciveEventToMessage() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to GlobalGroupMsgRejectReciveEventToMessage.")
+		fmt.Println("Warning: instance is nil when trying to GlobalGroupMsgRejectReciveEventToMessage.")
 		return false
 	}
 	return instance.Settings.GlobalGroupMsgRejectReciveEventToMessage
@@ -2275,7 +2274,7 @@ func GetEntersAsBlock() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to EntersAsBlock.")
+		fmt.Println("Warning: instance is nil when trying to EntersAsBlock.")
 		return false
 	}
 	return instance.Settings.EntersAsBlock
@@ -2287,7 +2286,7 @@ func GetNativeMD() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to NativeMD.")
+		fmt.Println("Warning: instance is nil when trying to NativeMD.")
 		return false
 	}
 	return instance.Settings.NativeMD
@@ -2309,7 +2308,7 @@ func GetAutoLink() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to AutoLink value.")
+		fmt.Println("Warning: instance is nil when trying to AutoLink value.")
 		return false
 	}
 	return instance.Settings.AutoLink
@@ -2321,7 +2320,7 @@ func GetLinkLines() int {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to LinkLines value.")
+		fmt.Println("Warning: instance is nil when trying to LinkLines value.")
 		return 2 //默认2个一行
 	}
 
@@ -2334,7 +2333,7 @@ func GetLinkNum() int {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to LinkNum value.")
+		fmt.Println("Warning: instance is nil when trying to LinkNum value.")
 		return 6 //默认6个
 	}
 
@@ -2347,7 +2346,7 @@ func GetDoNotReplaceAppid() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to DoNotReplaceAppid value.")
+		fmt.Println("Warning: instance is nil when trying to DoNotReplaceAppid value.")
 		return false
 	}
 	return instance.Settings.DoNotReplaceAppid
@@ -2359,7 +2358,7 @@ func GetMemoryMsgid() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to MemoryMsgid value.")
+		fmt.Println("Warning: instance is nil when trying to MemoryMsgid value.")
 		return false
 	}
 	return instance.Settings.MemoryMsgid
@@ -2371,7 +2370,7 @@ func GetLotusGrpc() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to LotusGrpc value.")
+		fmt.Println("Warning: instance is nil when trying to LotusGrpc value.")
 		return false
 	}
 	return instance.Settings.LotusGrpc
@@ -2383,7 +2382,7 @@ func GetLotusWithoutUploadPic() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to LotusWithoutUploadPic value.")
+		fmt.Println("Warning: instance is nil when trying to LotusWithoutUploadPic value.")
 		return false
 	}
 	return instance.Settings.LotusWithoutUploadPic
@@ -2395,7 +2394,7 @@ func GetDisableErrorChan() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to DisableErrorChan value.")
+		fmt.Println("Warning: instance is nil when trying to DisableErrorChan value.")
 		return false
 	}
 	return instance.Settings.DisableErrorChan
@@ -2407,7 +2406,7 @@ func GetStringOb11() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to StringOb11 value.")
+		fmt.Println("Warning: instance is nil when trying to StringOb11 value.")
 		return false
 	}
 	return instance.Settings.StringOb11
@@ -2419,7 +2418,7 @@ func GetStringAction() bool {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to StringAction value.")
+		fmt.Println("Warning: instance is nil when trying to StringAction value.")
 		return false
 	}
 	return instance.Settings.StringAction
@@ -2431,8 +2430,20 @@ func GetPutInteractionExcept() []string {
 	defer mu.RUnlock()
 
 	if instance == nil {
-		mylog.Println("Warning: instance is nil when trying to get PutInteractionExcept.")
+		fmt.Println("Warning: instance is nil when trying to get PutInteractionExcept.")
 		return nil
 	}
 	return instance.Settings.PutInteractionExcept
+}
+
+// 获取 LogSuffixPerMins
+func GetLogSuffixPerMins() int {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	if instance == nil {
+		fmt.Println("Warning: instance is nil when trying to get LogSuffixPerMins.")
+		return 0
+	}
+	return instance.Settings.LogSuffixPerMins
 }

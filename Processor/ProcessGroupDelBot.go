@@ -70,6 +70,11 @@ func (p *Processors) ProcessGroupDelBot(data *dto.GroupAddBotEvent) error {
 		Time:       timestampInt64,
 		UserID:     userid64,
 	}
+	//增强配置
+	if !config.GetNativeOb11() {
+		Notice.RealUserID = data.OpMemberOpenID
+		Notice.RealGroupID = data.GroupOpenID
+	}
 	groupMsgMap := structToMap(Notice)
 	//上报信息到onebotv11应用端(正反ws)
 	go p.BroadcastMessageToAll(groupMsgMap, p.Apiv2, data)

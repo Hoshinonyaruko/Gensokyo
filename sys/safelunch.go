@@ -4,12 +4,12 @@
 package sys
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"syscall"
 	"unsafe"
 
-	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"golang.org/x/sys/windows"
 )
 
@@ -65,7 +65,7 @@ func NoMoreDoubleClick() error {
 		return err
 	}
 	if err != nil {
-		mylog.Printf("打开gensokyo.bat失败: %v", err)
+		fmt.Printf("打开gensokyo.bat失败: %v", err)
 		return nil
 	}
 	_ = f.Truncate(0)
@@ -74,7 +74,7 @@ func NoMoreDoubleClick() error {
 	exPath := filepath.Base(ex)
 	_, err = f.WriteString("%Created by gensokyo. DO NOT EDIT ME!%\nstart cmd /K \"" + exPath + "\"")
 	if err != nil {
-		mylog.Printf("写入gensokyo.bat失败: %v", err)
+		fmt.Printf("写入gensokyo.bat失败: %v", err)
 		return nil
 	}
 	f.Close()

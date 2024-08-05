@@ -70,9 +70,10 @@ type Settings struct {
 	Crt            string  `yaml:"crt"`
 	Key            string  `yaml:"key"`
 	//日志类
-	DeveloperLog bool `yaml:"developer_log"`
-	LogLevel     int  `yaml:"log_level"`
-	SaveLogs     bool `yaml:"save_logs"`
+	DeveloperLog     bool `yaml:"developer_log"`
+	LogLevel         int  `yaml:"log_level"`
+	SaveLogs         bool `yaml:"save_logs"`
+	LogSuffixPerMins int  `yaml:"log_suffix_per_mins"`
 	//webui相关
 	DisableWebui bool   `yaml:"disable_webui"`
 	Username     string `yaml:"server_user_name"`

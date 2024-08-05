@@ -11,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"github.com/hoshinonyaruko/gensokyo/config"
 )
 
 type LogLevel int
@@ -87,12 +88,30 @@ func NewMyLogAdapter(level LogLevel, enableFileLog bool) *MyLogAdapter {
 	}
 }
 
+// 获取当前日志文件名
+func getCurrentLogFilename() string {
+	suffixMins := config.GetLogSuffixPerMins()
+	baseFilename := time.Now().Format("2006-01-02")
+	if suffixMins == 0 {
+		return baseFilename + ".log"
+	}
+
+	currentTime := time.Now()
+	currentMinutes := currentTime.Hour()*60 + currentTime.Minute()   // 当前时间的总分钟数
+	windowStartMinutes := (currentMinutes / suffixMins) * suffixMins // 计算当前时间窗口的起始分钟数
+	windowStartHour := windowStartMinutes / 60
+	windowStartMinute := windowStartMinutes % 60
+
+	suffix := fmt.Sprintf("%02d-%02d", windowStartHour, windowStartMinute) // 格式化时间窗口后缀
+	return fmt.Sprintf("%s-%s.log", baseFilename, suffix)
+}
+
 // 文件日志记录函数
 func (adapter *MyLogAdapter) logToFile(level, message string) {
 	if !adapter.EnableFileLog {
 		return
 	}
-	filename := time.Now().Format("2006-01-02") + ".log" // 按日期命名文件
+	filename := getCurrentLogFilename()
 	filepath := adapter.FileLogPath + "/" + filename
 
 	file, err := os.OpenFile(filepath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -113,7 +132,7 @@ func LogToFile(level, message string) {
 	if !enableFileLogGlobal {
 		return
 	}
-	filename := time.Now().Format("2006-01-02") + ".log"
+	filename := getCurrentLogFilename()
 	filepath := logPath + "/" + filename
 
 	file, err := os.OpenFile(filepath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
