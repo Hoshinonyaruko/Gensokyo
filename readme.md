@@ -75,7 +75,7 @@ Gensokyo文档(施工中):[起步](/docs/起步-注册QQ开放平台&启动genso
 ## 特别鸣谢
 
 - [`mnixry/nonebot-plugin-gocqhttp`](https://github.com/mnixry/nonebot-plugin-gocqhttp/): 本项目采用了mnixry编写的前端,并实现了与它对应的,基于qq官方api的后端api.
-- 感谢 Parker Liang 提供的技术指导和支持.
+- 特别鸣谢[`dk 盾`](https://www.dkdun.cn/),友情赞助服务器资源
 
 ### 接口
 

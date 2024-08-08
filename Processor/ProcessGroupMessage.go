@@ -35,6 +35,10 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 	var GroupID64 int64
 	var err error
 
+	if data.Author.ID == "" {
+		mylog.Printf("出现ID为空未知错误.%v\n", data)
+	}
+
 	if !config.GetStringOb11() {
 		if config.GetIdmapPro() {
 			//将真实id转为int userid64

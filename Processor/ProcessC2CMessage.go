@@ -28,6 +28,10 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 	//sourece是源头频道
 	//GuildID := data.GuildID
 
+	if data.Author.ID == "" {
+		mylog.Printf("出现ID为空未知错误.%v\n", data)
+	}
+
 	//获取当前的s值 当前ws连接所收到的信息条数
 	s := client.GetGlobalS()
 	if !p.Settings.GlobalPrivateToChannel {
