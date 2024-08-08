@@ -2,11 +2,33 @@ package event
 
 import (
 	"encoding/json"
+	"sync"
+	"time"
 
 	"github.com/tidwall/gjson" // 由于回包的 d 类型不确定，gjson 用于从回包json中提取 d 并进行针对性的解析
 
 	"github.com/tencent-connect/botgo/dto"
 )
+
+func init() {
+	// Start a goroutine for periodic cleaning
+	go cleanProcessedIDs()
+}
+
+func cleanProcessedIDs() {
+	ticker := time.NewTicker(5 * time.Minute) // Adjust the interval as needed
+	defer ticker.Stop()
+
+	for range ticker.C {
+		// Clean processedIDs, remove entries which are no longer needed
+		processedIDs.Range(func(key, value interface{}) bool {
+			processedIDs.Delete(key)
+			return true
+		})
+	}
+}
+
+var processedIDs sync.Map
 
 var eventParseFuncMap = map[dto.OPCode]map[dto.EventType]eventParseFunc{
 	dto.WSDispatchEvent: {
@@ -217,6 +239,9 @@ func groupAtMessageHandler(payload *dto.WSPayload, message []byte) error {
 	data := &dto.WSGroupATMessageData{}
 	if err := ParseData(message, data); err != nil {
 		return err
+	}
+	if _, loaded := processedIDs.LoadOrStore(data.ID, struct{}{}); loaded {
+		return nil
 	}
 	if DefaultHandlers.GroupATMessage != nil {
 		return DefaultHandlers.GroupATMessage(payload, data)
