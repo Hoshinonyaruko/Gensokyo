@@ -37,6 +37,7 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 
 	if data.Author.ID == "" {
 		mylog.Printf("出现ID为空未知错误.%v\n", data)
+		return nil
 	}
 
 	if !config.GetStringOb11() {

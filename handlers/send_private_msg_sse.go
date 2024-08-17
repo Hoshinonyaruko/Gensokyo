@@ -109,6 +109,7 @@ func HandleSendPrivateMsgSSE(client callapi.Client, api openapi.OpenAPI, apiv2 o
 
 	// 输出反序列化后的对象，确认是否成功转换
 	fmt.Printf("Recovered InterfaceBody: %+v\n", messageBody)
+
 	// 使用 echo 获取消息ID
 	var messageID string
 	if config.GetLazyMessageId() {
@@ -135,7 +136,9 @@ func HandleSendPrivateMsgSSE(client callapi.Client, api openapi.OpenAPI, apiv2 o
 
 	// 获取并打印相关ID
 	relatedID := GetRelatedID(messageID)
-	fmt.Println("相关ID:", relatedID)
+
+	//fmt.Println("相关ID:", relatedID)
+
 	dtoSSE := generateMessageSSE(messageBody, messageID, relatedID)
 
 	mylog.Printf("私聊发信息sse:%v", dtoSSE)
