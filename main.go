@@ -17,7 +17,7 @@ import (
 	"syscall"
 	"time"
 
-	_ "net/http/pprof"
+	// _ "net/http/pprof"
 
 	"github.com/fatih/color"
 	"github.com/fsnotify/fsnotify"
@@ -580,13 +580,13 @@ func main() {
 		}()
 	}
 
-	// 启动一个用于 pprof 的 HTTP 服务器
-	go func() {
-		log.Println("pprof server running on :6060")
-		if err := http.ListenAndServe("localhost:6060", nil); err != nil {
-			log.Fatalf("pprof server failed: %s", err)
-		}
-	}()
+	// // 启动一个用于 pprof 的 HTTP 服务器
+	// go func() {
+	// 	log.Println("pprof server running on :6060")
+	// 	if err := http.ListenAndServe("localhost:6060", nil); err != nil {
+	// 		log.Fatalf("pprof server failed: %s", err)
+	// 	}
+	// }()
 
 	//杂七杂八的地方
 	if conf.Settings.MemoryMsgid {
