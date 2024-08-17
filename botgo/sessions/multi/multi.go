@@ -1,6 +1,7 @@
 package multi
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -93,6 +94,19 @@ func (sm *ShardManager) newConnect(session dto.Session, shardID uint32) {
 	}
 	if err := wsClient.Listening(); err != nil {
 		log.Errorf("[ws/session] Listening error: %+v", err)
-		sm.SessionChans[shardID] <- session // Reconnect
+		currentSession := wsClient.Session()
+		// 对于不能够进行重连的session，需要清空 session id 与 seq
+		if manager.CanNotResume(err) {
+			currentSession.ID = ""
+			currentSession.LastSeq = 0
+		}
+		// 一些错误不能够鉴权，比如机器人被封禁，这里就直接退出了
+		if manager.CanNotIdentify(err) {
+			msg := fmt.Sprintf("can not identify because server return %+v, so process exit", err)
+			log.Errorf(msg)
+			panic(msg) // 当机器人被下架，或者封禁，将不能再连接，所以 panic
+		}
+		// 将 session 放到 session chan 中，用于启动新的连接，当前连接退出
+		sm.SessionChans[shardID] <- *currentSession // Reconnect
 	}
 }
