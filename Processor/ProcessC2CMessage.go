@@ -30,6 +30,7 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 
 	if data.Author.ID == "" {
 		mylog.Printf("出现ID为空未知错误.%v\n", data)
+		return nil
 	}
 
 	//获取当前的s值 当前ws连接所收到的信息条数

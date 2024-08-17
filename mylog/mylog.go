@@ -23,6 +23,8 @@ const (
 	LogLevelError
 )
 
+var currentLevel = LogLevelInfo // 默认日志级别为 INFO
+
 type Client struct {
 	conn *websocket.Conn
 	send chan EnhancedLogEntry
@@ -249,32 +251,56 @@ type EnhancedLogEntry struct {
 // 日志频道，所有的 WebSocket 客户端都会在此监听日志事件
 var logChannel = make(chan EnhancedLogEntry, 1000)
 
+func SetLogLevel(level LogLevel) {
+	if level >= LogLevelDebug && level <= LogLevelError {
+		currentLevel = level
+	} else {
+		log.Printf("Invalid log level: %d", level)
+	}
+}
+
 func Println(v ...interface{}) {
-	log.Println(v...)
-	message := fmt.Sprint(v...)
-	emitLog("INFO", message)
-	LogToFile("INFO", message)
+	if currentLevel <= LogLevelInfo {
+		log.Println(v...)
+		message := fmt.Sprint(v...)
+		emitLog("INFO", message)
+		LogToFile("INFO", message)
+	}
 }
 
 func Printf(format string, v ...interface{}) {
-	log.Printf(format, v...)
-	message := fmt.Sprintf(format, v...)
-	emitLog("INFO", message)
-	LogToFile("INFO", message)
+	if currentLevel <= LogLevelInfo {
+		log.Printf(format, v...)
+		message := fmt.Sprintf(format, v...)
+		emitLog("INFO", message)
+		LogToFile("INFO", message)
+	}
+}
+
+func Warnf(format string, v ...interface{}) {
+	if currentLevel <= LogLevelWarn {
+		log.Printf(format, v...)
+		message := fmt.Sprintf(format, v...)
+		emitLog("WARN", message)
+		LogToFile("WARN", message)
+	}
 }
 
 func Errorf(format string, v ...interface{}) {
-	log.Printf(format, v...)
-	message := fmt.Sprintf(format, v...)
-	emitLog("ERROR", message)
-	LogToFile("ERROR", message)
+	if currentLevel <= LogLevelError {
+		log.Printf(format, v...)
+		message := fmt.Sprintf(format, v...)
+		emitLog("ERROR", message)
+		LogToFile("ERROR", message)
+	}
 }
 
 func Fatalf(format string, v ...interface{}) {
 	log.Printf(format, v...)
 	message := fmt.Sprintf(format, v...)
-	emitLog("Fatal", message)
-	LogToFile("Fatal", message)
+	emitLog("FATAL", message)
+	LogToFile("FATAL", message)
+	os.Exit(1) // Fatal logs usually terminate the program
 }
 
 func emitLog(level, message string) {

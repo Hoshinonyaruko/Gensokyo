@@ -17,6 +17,8 @@ import (
 	"syscall"
 	"time"
 
+	_ "net/http/pprof"
+
 	"github.com/fatih/color"
 	"github.com/fsnotify/fsnotify"
 	"github.com/hoshinonyaruko/gensokyo/Processor"
@@ -125,6 +127,7 @@ func main() {
 	//logger
 	logLevel := mylog.GetLogLevelFromConfig(config.GetLogLevel())
 	loggerAdapter := mylog.NewMyLogAdapter(logLevel, config.GetSaveLogs())
+	mylog.SetLogLevel(logLevel)
 	botgo.SetLogger(loggerAdapter)
 
 	if *m {
@@ -576,6 +579,14 @@ func main() {
 			}
 		}()
 	}
+
+	// 启动一个用于 pprof 的 HTTP 服务器
+	go func() {
+		log.Println("pprof server running on :6060")
+		if err := http.ListenAndServe("localhost:6060", nil); err != nil {
+			log.Fatalf("pprof server failed: %s", err)
+		}
+	}()
 
 	//杂七杂八的地方
 	if conf.Settings.MemoryMsgid {
