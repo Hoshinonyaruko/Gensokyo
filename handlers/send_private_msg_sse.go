@@ -8,7 +8,6 @@ import (
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/config"
-	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/hoshinonyaruko/gensokyo/structs"
@@ -72,24 +71,29 @@ func HandleSendPrivateMsgSSE(client callapi.Client, api openapi.OpenAPI, apiv2 o
 
 	var resp *dto.C2CMessageResponse
 
-	//私聊信息
 	var UserID string
-	if config.GetIdmapPro() {
-		//还原真实的userid
-		//mylog.Printf("group_private:%v", message.Params.UserID.(string))
-		_, UserID, err = idmap.RetrieveRowByIDv2Pro("690426430", message.Params.UserID.(string))
-		if err != nil {
-			mylog.Printf("Error reading config: %v", err)
-			return "", nil
+
+	if message.Params.UserID != nil && len(message.Params.UserID.(string)) != 32 {
+		//私聊信息
+		if config.GetIdmapPro() {
+			//还原真实的userid
+			//mylog.Printf("group_private:%v", message.Params.UserID.(string))
+			_, UserID, err = idmap.RetrieveRowByIDv2Pro("690426430", message.Params.UserID.(string))
+			if err != nil {
+				mylog.Printf("Error reading config: %v", err)
+				return "", nil
+			}
+			mylog.Printf("测试,通过Proid获取的UserID:%v", UserID)
+		} else {
+			//还原真实的userid
+			UserID, err = idmap.RetrieveRowByIDv2(message.Params.UserID.(string))
+			if err != nil {
+				mylog.Printf("Error reading config: %v", err)
+				return "", nil
+			}
 		}
-		mylog.Printf("测试,通过Proid获取的UserID:%v", UserID)
 	} else {
-		//还原真实的userid
-		UserID, err = idmap.RetrieveRowByIDv2(message.Params.UserID.(string))
-		if err != nil {
-			mylog.Printf("Error reading config: %v", err)
-			return "", nil
-		}
+		UserID = message.Params.UserID.(string)
 	}
 
 	// 首先，将message.Params.Message序列化成JSON字符串
@@ -112,40 +116,27 @@ func HandleSendPrivateMsgSSE(client callapi.Client, api openapi.OpenAPI, apiv2 o
 
 	// 使用 echo 获取消息ID
 	var messageID string
-	if config.GetLazyMessageId() {
-		//由于实现了Params的自定义unmarshell 所以可以类型安全的断言为string
-		messageID = echo.GetLazyMessagesId(UserID)
-		mylog.Printf("GetLazyMessagesId: %v", messageID)
-	}
-	if messageID == "" {
-		if echoStr, ok := message.Echo.(string); ok {
-			messageID = echo.GetMsgIDByKey(echoStr)
-			mylog.Println("echo取私聊发信息对应的message_id:", messageID)
-		}
-	}
+
 	// 如果messageID仍然为空，尝试使用config.GetAppID和UserID的组合来获取messageID
-	// 如果messageID为空，通过函数获取
 	if messageID == "" {
-		messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), UserID)
-		mylog.Println("通过GetMessageIDByUserid函数获取的message_id:", messageID)
-	}
-	if messageID == "2000" {
-		messageID = ""
-		mylog.Println("通过lazymsgid发送群私聊主动信息,每月可发送1次")
+		if config.GetStringOb11() {
+			messageID = GetMessageIDByUseridOrGroupidSP(config.GetAppIDStr(), UserID)
+			mylog.Errorf("通过GetMessageIDByUserid函数获取的message_id:" + messageID)
+		} else {
+			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), UserID)
+			mylog.Errorf("通过GetMessageIDByUserid函数获取的message_id:" + messageID)
+		}
+
 	}
 
 	// 获取并打印相关ID
 	relatedID := GetRelatedID(messageID)
 
-	//fmt.Println("相关ID:", relatedID)
-
 	dtoSSE := generateMessageSSE(messageBody, messageID, relatedID)
-
-	mylog.Printf("私聊发信息sse:%v", dtoSSE)
 
 	resp, err = apiv2.PostC2CMessageSSE(context.TODO(), UserID, dtoSSE)
 	if err != nil {
-		mylog.Printf("发送文本私聊信息失败: %v", err)
+		mylog.Errorf("发送文本私聊信息失败: %v", err)
 		//如果失败 防止进入递归
 		return "", nil
 	}

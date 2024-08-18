@@ -29,9 +29,14 @@ func CombinedMiddleware(api openapi.OpenAPI, apiV2 openapi.OpenAPI) gin.HandlerF
 				return
 			}
 		}
+
 		// 检查路径和处理对应的请求
 		if c.Request.URL.Path == "/send_group_msg" {
-			handleSendGroupMessage(c, api, apiV2)
+			if config.GetStringOb11() {
+				handleSendGroupMessageSP(c, api, apiV2)
+			} else {
+				handleSendGroupMessage(c, api, apiV2)
+			}
 			return
 		}
 		if c.Request.URL.Path == "/send_group_msg_raw" {
@@ -43,7 +48,11 @@ func CombinedMiddleware(api openapi.OpenAPI, apiV2 openapi.OpenAPI) gin.HandlerF
 			return
 		}
 		if c.Request.URL.Path == "/send_private_msg_sse" {
-			handleSendPrivateMessageSSE(c, api, apiV2)
+			if config.GetStringOb11() {
+				handleSendPrivateMessageSSESP(c, api, apiV2)
+			} else {
+				handleSendPrivateMessageSSE(c, api, apiV2)
+			}
 			return
 		}
 		if c.Request.URL.Path == "/send_guild_channel_msg" {
@@ -118,6 +127,57 @@ func handleSendGroupMessage(c *gin.Context, api openapi.OpenAPI, apiV2 openapi.O
 	// 如果 UserID 存在，则加入到参数中
 	if req.UserID != nil {
 		message.Params.UserID = strconv.FormatInt(*req.UserID, 10)
+	}
+	// 调用处理函数
+	retmsg, err := handlers.HandleSendGroupMsg(client, api, apiV2, message)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 返回处理结果
+	c.Header("Content-Type", "application/json")
+	c.String(http.StatusOK, retmsg)
+}
+
+// handleSendGroupMessage 处理发送群聊消息的请求
+func handleSendGroupMessageSP(c *gin.Context, api openapi.OpenAPI, apiV2 openapi.OpenAPI) {
+	var retmsg string
+	var req struct {
+		GroupID    string  `json:"group_id" form:"group_id"`
+		UserID     *string `json:"user_id,omitempty" form:"user_id"`
+		Message    string  `json:"message" form:"message"`
+		AutoEscape bool    `json:"auto_escape" form:"auto_escape"`
+	}
+
+	// 根据请求方法解析参数
+	if c.Request.Method == http.MethodGet {
+		// 从URL查询参数解析
+		if err := c.ShouldBindQuery(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	} else {
+		// 从JSON或表单数据解析
+		if err := c.ShouldBind(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	// 使用解析后的参数处理请求
+	client := &HttpAPIClient{}
+	// 创建 ActionMessage 实例
+	message := callapi.ActionMessage{
+		Action: "send_group_msg",
+		Params: callapi.ParamsContent{
+			GroupID: req.GroupID, // 注意这里需要转换类型，因为 GroupID 是 int64
+			Message: req.Message,
+		},
+	}
+	// 如果 UserID 存在，则加入到参数中
+	if req.UserID != nil {
+		message.Params.UserID = *req.UserID
 	}
 	// 调用处理函数
 	retmsg, err := handlers.HandleSendGroupMsg(client, api, apiV2, message)
@@ -232,6 +292,84 @@ func handleSendPrivateMessage(c *gin.Context, api openapi.OpenAPI, apiV2 openapi
 	// 返回处理结果
 	c.Header("Content-Type", "application/json")
 	c.String(http.StatusOK, retmsg)
+}
+
+// handleSendPrivateMessageSSE 处理发送私聊SSE消息的请求
+func handleSendPrivateMessageSSESP(c *gin.Context, api openapi.OpenAPI, apiV2 openapi.OpenAPI) {
+	// 根据请求方法解析参数
+	if c.Request.Method == http.MethodGet {
+		var req struct {
+			GroupID    string `json:"group_id" form:"group_id"`
+			UserID     string `json:"user_id" form:"user_id"`
+			Message    string `json:"message" form:"message"`
+			AutoEscape bool   `json:"auto_escape" form:"auto_escape"`
+		}
+		// 从URL查询参数解析
+		if err := c.ShouldBindQuery(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		var InterfaceBody structs.InterfaceBody
+		if err := json.Unmarshal([]byte(req.Message), &InterfaceBody); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid message format"})
+			return
+		}
+
+		client := &HttpAPIClient{}
+		// 创建 ActionMessage 实例
+		message := callapi.ActionMessage{
+			Action: "send_private_msg_sse",
+			Params: callapi.ParamsContent{
+				GroupID: req.GroupID, // 注意这里需要转换类型，因为 GroupID 是 int64
+				UserID:  req.UserID,
+				Message: InterfaceBody,
+			},
+		}
+		// 调用处理函数
+		retmsg, err := handlers.HandleSendPrivateMsgSSE(client, api, apiV2, message)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		// 返回处理结果
+		c.Header("Content-Type", "application/json")
+		c.String(http.StatusOK, retmsg)
+	} else {
+		var req struct {
+			GroupID    string      `json:"group_id" form:"group_id"`
+			UserID     string      `json:"user_id" form:"user_id"`
+			Message    interface{} `json:"message" form:"message"`
+			AutoEscape bool        `json:"auto_escape" form:"auto_escape"`
+		}
+		// 从JSON或表单数据解析
+		if err := c.ShouldBind(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		client := &HttpAPIClient{}
+		// 创建 ActionMessage 实例
+		message := callapi.ActionMessage{
+			Action: "send_private_msg_sse",
+			Params: callapi.ParamsContent{
+				GroupID: req.GroupID, // 注意这里需要转换类型，因为 GroupID 是 int64
+				UserID:  req.UserID,
+				Message: req.Message,
+			},
+		}
+		// 调用处理函数
+		retmsg, err := handlers.HandleSendPrivateMsgSSE(client, api, apiV2, message)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		// 返回处理结果
+		c.Header("Content-Type", "application/json")
+		c.String(http.StatusOK, retmsg)
+	}
+
 }
 
 // handleSendPrivateMessageSSE 处理发送私聊SSE消息的请求
