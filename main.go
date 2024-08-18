@@ -663,7 +663,9 @@ func ATMessageEventHandler() event.ATMessageEventHandler {
 				data.Author.Username = acnode.CheckWordIN(data.Author.Username)
 			}
 		}
-		return p.ProcessGuildATMessage(data)
+
+		go p.ProcessGuildATMessage(data)
+		return nil
 	}
 }
 
@@ -701,7 +703,8 @@ func DirectMessageHandler() event.DirectMessageEventHandler {
 				data.Author.Username = acnode.CheckWordIN(data.Author.Username)
 			}
 		}
-		return p.ProcessChannelDirectMessage(data)
+		go p.ProcessChannelDirectMessage(data)
+		return nil
 	}
 }
 
@@ -715,7 +718,8 @@ func CreateMessageHandler() event.MessageEventHandler {
 				data.Author.Username = acnode.CheckWordIN(data.Author.Username)
 			}
 		}
-		return p.ProcessGuildNormalMessage(data)
+		go p.ProcessGuildNormalMessage(data)
+		return nil
 	}
 }
 
@@ -723,7 +727,8 @@ func CreateMessageHandler() event.MessageEventHandler {
 func InteractionHandler() event.InteractionEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSInteractionData) error {
 		mylog.Printf("收到按钮回调:%v", data)
-		return p.ProcessInlineSearch(data)
+		go p.ProcessInlineSearch(data)
+		return nil
 	}
 }
 
@@ -731,7 +736,8 @@ func InteractionHandler() event.InteractionEventHandler {
 func ThreadEventHandler() event.ThreadEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSThreadData) error {
 		mylog.Printf("收到帖子事件:%v", data)
-		return p.ProcessThreadMessage(data)
+		go p.ProcessThreadMessage(data)
+		return nil
 	}
 }
 
@@ -745,7 +751,8 @@ func GroupATMessageEventHandler() event.GroupATMessageEventHandler {
 				data.Author.Username = acnode.CheckWordIN(data.Author.Username)
 			}
 		}
-		return p.ProcessGroupMessage(data)
+		go p.ProcessGroupMessage(data)
+		return nil
 	}
 }
 
@@ -759,35 +766,40 @@ func C2CMessageEventHandler() event.C2CMessageEventHandler {
 				data.Author.Username = acnode.CheckWordIN(data.Author.Username)
 			}
 		}
-		return p.ProcessC2CMessage(data)
+		go p.ProcessC2CMessage(data)
+		return nil
 	}
 }
 
 // GroupAddRobotEventHandler 实现处理 群机器人新增 事件的回调
 func GroupAddRobotEventHandler() event.GroupAddRobotEventHandler {
 	return func(event *dto.WSPayload, data *dto.GroupAddBotEvent) error {
-		return p.ProcessGroupAddBot(data)
+		go p.ProcessGroupAddBot(data)
+		return nil
 	}
 }
 
 // GroupDelRobotEventHandler 实现处理 群机器人删除 事件的回调
 func GroupDelRobotEventHandler() event.GroupDelRobotEventHandler {
 	return func(event *dto.WSPayload, data *dto.GroupAddBotEvent) error {
-		return p.ProcessGroupDelBot(data)
+		go p.ProcessGroupDelBot(data)
+		return nil
 	}
 }
 
 // GroupMsgRejectHandler 实现处理 群请求关闭机器人主动推送 事件的回调
 func GroupMsgRejectHandler() event.GroupMsgRejectHandler {
 	return func(event *dto.WSPayload, data *dto.GroupMsgRejectEvent) error {
-		return p.ProcessGroupMsgReject(data)
+		go p.ProcessGroupMsgReject(data)
+		return nil
 	}
 }
 
 // GroupMsgReceiveHandler 实现处理 群请求开启机器人主动推送 事件的回调
 func GroupMsgReceiveHandler() event.GroupMsgReceiveHandler {
 	return func(event *dto.WSPayload, data *dto.GroupMsgReceiveEvent) error {
-		return p.ProcessGroupMsgRecive(data)
+		go p.ProcessGroupMsgRecive(data)
+		return nil
 	}
 }
 

@@ -109,6 +109,7 @@ type Settings struct {
 	DowntimeMessage string `yaml:"downtime_message"`
 	MemoryMsgid     bool   `yaml:"memory_msgid"`
 	ThreadsRetMsg   bool   `yaml:"threads_ret_msg"`
+	NoRetMsg        bool   `yaml:"no_ret_msg"`
 	//增长营销类
 	SelfIntroduce []string `yaml:"self_introduce"`
 	//api修改
