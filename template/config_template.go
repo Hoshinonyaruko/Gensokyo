@@ -141,6 +141,7 @@ settings:
   downtime_message : "我正在维护中~请不要担心,维护结束就回来~维护时间:(1小时)"
   memory_msgid : false              #当你的机器人单日信息量超过100万,就需要高性能SSD或者开启这个选项了.部分依赖msgid的功能可能会受影响(如delete_msg)
   threads_ret_msg : false           #异步,并发发送回执信息 仅ws可用.
+  no_ret_msg : false                #当你的信息量达到1000万/天的时候,并且你的业务不需要获取回调信息,此时直接屏蔽是最好的选择,可以提升50%收发性能. 需应用端适配!!!
 
   #增长营销类(推荐gensokyo-broadcast项目)
   self_introduce : ["",""]          #自我介绍,可设置多个随机发送,当不为空时,机器人被邀入群会发送自定义自我介绍 需手动添加新textintent   - "GroupAddRobotEventHandler"   - "GroupDelRobotEventHandler"

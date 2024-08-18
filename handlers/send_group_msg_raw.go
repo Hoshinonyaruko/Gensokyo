@@ -297,11 +297,14 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 				echo.PushGlobalStack(pair)
 			}
 
-			// 发送成功回执
-			if config.GetThreadsRetMsg() {
-				go SendResponse(client, err, &message, resp, api, apiv2)
-			} else {
-				retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
+			if !config.GetNoRetMsg() {
+				// 发送成功回执
+				if config.GetThreadsRetMsg() {
+					go SendResponse(client, err, &message, resp, api, apiv2)
+				} else {
+					retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
+				}
+
 			}
 
 			delete(foundItems, imageType) // 从foundItems中删除已处理的图片项
@@ -334,11 +337,14 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 				pair.GroupMessage = groupMessage
 				echo.PushGlobalStack(pair)
 			}
-			//发送成功回执
-			if config.GetThreadsRetMsg() {
-				go SendResponse(client, err, &message, resp, api, apiv2)
-			} else {
-				retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
+
+			if !config.GetNoRetMsg() {
+				//发送成功回执
+				if config.GetThreadsRetMsg() {
+					go SendResponse(client, err, &message, resp, api, apiv2)
+				} else {
+					retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
+				}
 			}
 
 		}
@@ -375,12 +381,15 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 							pair.GroupMessage = groupMessage
 							echo.PushGlobalStack(pair)
 						}
-						//发送成功回执
-						if config.GetThreadsRetMsg() {
-							go SendResponse(client, err, &message, resp, api, apiv2)
-						} else {
+
+						if !config.GetNoRetMsg() {
 							//发送成功回执
-							retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
+							if config.GetThreadsRetMsg() {
+								go SendResponse(client, err, &message, resp, api, apiv2)
+							} else {
+								//发送成功回执
+								retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
+							}
 						}
 
 					}
@@ -441,12 +450,15 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 						echo.PushGlobalStack(pair)
 					}
 				}
-				//发送成功回执
-				if config.GetThreadsRetMsg() {
-					go SendResponse(client, err, &message, resp, api, apiv2)
-				} else {
+
+				if !config.GetNoRetMsg() {
 					//发送成功回执
-					retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
+					if config.GetThreadsRetMsg() {
+						go SendResponse(client, err, &message, resp, api, apiv2)
+					} else {
+						//发送成功回执
+						retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
+					}
 				}
 
 			}

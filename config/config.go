@@ -2460,3 +2460,14 @@ func GetThreadsRetMsg() bool {
 	return instance.Settings.ThreadsRetMsg
 }
 
+// 获取NoRetMsg的值
+func GetNoRetMsg() bool {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	if instance == nil {
+		fmt.Println("Warning: instance is nil when trying to NoRetMsg value.")
+		return false
+	}
+	return instance.Settings.NoRetMsg
+}

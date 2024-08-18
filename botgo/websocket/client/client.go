@@ -317,10 +317,14 @@ func (c *Client) listenMessageAndHandle() {
 			c.readyHandler(payload)
 			continue
 		}
-		// 解析具体事件，并投递给业务注册的 handler
-		if err := event.ParseAndHandle(payload); err != nil {
-			log.Errorf("%s parseAndHandle failed, %v", c.session, err)
-		}
+
+		// 性能不够 报错也没用 就扬了
+		go event.ParseAndHandle(payload)
+
+		// // 解析具体事件，并投递给业务注册的 handler
+		// if err := event.ParseAndHandle(payload); err != nil {
+		// 	log.Errorf("%s parseAndHandle failed, %v", c.session, err)
+		// }
 	}
 	log.Infof("%s message queue is closed", c.session)
 }
