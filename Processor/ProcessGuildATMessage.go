@@ -146,7 +146,7 @@ func (p *Processors) ProcessGuildATMessage(data *dto.WSATMessageData) error {
 			//将真实id转为int userid64
 			ChannelID64, userid64, err = idmap.StoreIDv2Pro(data.ChannelID, data.Author.ID)
 			if err != nil {
-				mylog.Fatalf("Error storing ID: %v", err)
+				mylog.Errorf("Error storing ID: %v", err)
 			}
 			//当参数不全时
 			_, _ = idmap.StoreIDv2(data.ChannelID)

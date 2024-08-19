@@ -47,12 +47,12 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 			//将真实id转为int userid64
 			_, _, err = idmap.StoreIDv2Pro(data.ChannelID, data.Author.ID)
 			if err != nil {
-				mylog.Fatalf("Error storing ID: %v", err)
+				mylog.Errorf("Error storing ID: %v", err)
 			}
 			//将真实id转为int userid64
 			userid64, err = idmap.StoreIDv2(data.Author.ID)
 			if err != nil {
-				mylog.Fatalf("Error storing ID: %v", err)
+				mylog.Errorf("Error storing ID: %v", err)
 			}
 			ChannelID64, err = idmap.StoreIDv2(data.ChannelID)
 			if err != nil {
@@ -74,7 +74,7 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 			//将真实id转为int userid64
 			userid64, err = idmap.StoreIDv2(data.Author.ID)
 			if err != nil {
-				mylog.Fatalf("Error storing ID: %v", err)
+				mylog.Errorf("Error storing ID: %v", err)
 			}
 			//将channelid写入数据库,可取出guild_id
 			ChannelID64, err = idmap.StoreIDv2(data.ChannelID)
@@ -299,12 +299,12 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 				//将真实id转为int userid64
 				ChannelID64, userid64, err = idmap.StoreIDv2Pro(data.ChannelID, data.Author.ID)
 				if err != nil {
-					mylog.Fatalf("Error storing ID: %v", err)
+					mylog.Errorf("Error storing ID: %v", err)
 				}
 				//将真实id转为int userid64
 				_, err = idmap.StoreIDv2(data.Author.ID)
 				if err != nil {
-					mylog.Fatalf("Error storing ID: %v", err)
+					mylog.Errorf("Error storing ID: %v", err)
 				}
 				_, err = idmap.StoreIDv2(data.ChannelID)
 				if err != nil {
@@ -322,7 +322,7 @@ func (p *Processors) ProcessChannelDirectMessage(data *dto.WSDirectMessageData) 
 				//将真实id转为int userid64
 				userid64, err = idmap.StoreIDv2(data.Author.ID)
 				if err != nil {
-					mylog.Fatalf("Error storing ID: %v", err)
+					mylog.Errorf("Error storing ID: %v", err)
 				}
 				//将真实channelid和虚拟做映射
 				ChannelID64, err = idmap.StoreIDv2(data.ChannelID)

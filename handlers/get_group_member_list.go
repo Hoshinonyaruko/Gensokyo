@@ -256,7 +256,7 @@ func GetGroupMemberList(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 					//将真实id转为int userid64
 					_, userIDInt64, err = idmap.StoreIDv2Pro(message.Params.ChannelID.(string), memberFromAPI.User.ID)
 					if err != nil {
-						mylog.Fatalf("Error storing ID: %v", err)
+						mylog.Errorf("Error storing ID: %v", err)
 					}
 				} else {
 					//映射str的userid到int

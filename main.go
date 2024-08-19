@@ -282,6 +282,9 @@ func main() {
 
 			log.Printf("注册 intents: %v\n", intent)
 
+			// 确保p包含conf
+			p = Processor.NewProcessorV2(api, apiV2, &conf.Settings)
+
 			// 启动session manager以管理websocket连接
 			// 指定需要启动的分片数为 2 的话可以手动修改 wsInfo
 			if conf.Settings.ShardCount == 1 {

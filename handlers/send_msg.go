@@ -313,19 +313,19 @@ func GetMessageIDByUseridAndGroupid(appID string, userID interface{}, groupID in
 		//将真实id转为int userid64
 		groupid64, userid64, err = idmap.StoreIDv2Pro(GroupIDStr, userIDStr)
 		if err != nil {
-			mylog.Fatalf("Error storing ID 210: %v", err)
+			mylog.Errorf("Error storing ID 210: %v", err)
 		}
 	} else {
 		//将真实id转为int
 		userid64, err = idmap.StoreIDv2(userIDStr)
 		if err != nil {
-			mylog.Fatalf("Error storing ID 241: %v", err)
+			mylog.Errorf("Error storing ID 241: %v", err)
 			return ""
 		}
 		//将真实id转为int
 		groupid64, err = idmap.StoreIDv2(GroupIDStr)
 		if err != nil {
-			mylog.Fatalf("Error storing ID 256: %v", err)
+			mylog.Errorf("Error storing ID 256: %v", err)
 			return ""
 		}
 	}

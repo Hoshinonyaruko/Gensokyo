@@ -1042,7 +1042,7 @@ func (p *Processors) Autobind(data interface{}) error {
 		//将真实id转为int userid64
 		GroupID64, userid64, err = idmap.StoreIDv2Pro(groupID, realID)
 		if err != nil {
-			mylog.Fatalf("Error storing ID689: %v", err)
+			mylog.Errorf("Error storing ID689: %v", err)
 		}
 	}
 	// 单独检查vuin和gid的绑定状态
@@ -1058,7 +1058,7 @@ func (p *Processors) Autobind(data interface{}) error {
 		// idmaps pro也更新
 		err = idmap.UpdateVirtualValuev2Pro(GroupID64, idValue, userid64, vuinValue)
 		if err != nil {
-			mylog.Fatalf("Error storing ID703: %v", err)
+			mylog.Errorf("Error storing ID703: %v", err)
 		}
 	} else if !vuinBound {
 		// 只有vuin未绑定，更新vuin映射

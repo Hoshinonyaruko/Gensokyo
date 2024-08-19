@@ -45,7 +45,7 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 			//将真实id转为int userid64
 			GroupID64, userid64, err = idmap.StoreIDv2Pro(data.GroupID, data.Author.ID)
 			if err != nil {
-				mylog.Fatalf("Error storing ID: %v", err)
+				mylog.Errorf("Error storing ID: %v", err)
 			}
 			//当参数不全
 			_, _ = idmap.StoreIDv2(data.GroupID)

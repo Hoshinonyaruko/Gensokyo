@@ -28,7 +28,7 @@ func HandleGetFriendList(client callapi.Client, api openapi.OpenAPI, apiv2 opena
 	// 从数据库获取所有用户信息
 	users, err := idmap.ListAllUsers()
 	if err != nil {
-		mylog.Fatalf("Failed to list users: %v", err)
+		mylog.Errorf("Failed to list users: %v", err)
 	}
 
 	// 添加数据库中读取的用户数据到output.Data

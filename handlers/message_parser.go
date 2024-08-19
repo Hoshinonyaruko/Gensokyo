@@ -81,7 +81,7 @@ func SendResponse(client callapi.Client, err error, message *callapi.ActionMessa
 			//将真实id转为int userid64
 			GroupID64, _, errr = idmap.StoreIDv2Pro(message.Params.GroupID.(string), message.Params.UserID.(string))
 			if errr != nil {
-				mylog.Fatalf("Error storing ID: %v", err)
+				mylog.Errorf("Error storing ID: %v", err)
 			}
 		} else {
 			// 映射str的GroupID到int
@@ -98,7 +98,7 @@ func SendResponse(client callapi.Client, err error, message *callapi.ActionMessa
 			//将真实id转为int userid64
 			channelID64, _, errr = idmap.StoreIDv2Pro(message.Params.ChannelID.(string), message.Params.UserID.(string))
 			if errr != nil {
-				mylog.Fatalf("Error storing ID: %v", err)
+				mylog.Errorf("Error storing ID: %v", err)
 			}
 		} else {
 			// 映射str的GroupID到int
@@ -115,7 +115,7 @@ func SendResponse(client callapi.Client, err error, message *callapi.ActionMessa
 			//将真实id转为int userid64
 			guildID64, _, errr = idmap.StoreIDv2Pro(message.Params.GuildID.(string), message.Params.UserID.(string))
 			if errr != nil {
-				mylog.Fatalf("Error storing ID: %v", err)
+				mylog.Errorf("Error storing ID: %v", err)
 			}
 		} else {
 			// 映射str的GroupID到int
@@ -132,7 +132,7 @@ func SendResponse(client callapi.Client, err error, message *callapi.ActionMessa
 			//将真实id转为int userid64
 			userID64, _, errr = idmap.StoreIDv2Pro("group_private", message.Params.UserID.(string))
 			if errr != nil {
-				mylog.Fatalf("Error storing ID: %v", err)
+				mylog.Errorf("Error storing ID: %v", err)
 			}
 		} else {
 			// 映射str的GroupID到int
@@ -344,7 +344,7 @@ func SendC2CResponse(client callapi.Client, err error, message *callapi.ActionMe
 	//将真实id转为int userid64
 	userid64, errr := idmap.StoreIDv2(message.Params.UserID.(string))
 	if errr != nil {
-		mylog.Fatalf("Error storing ID: %v", err)
+		mylog.Errorf("Error storing ID: %v", err)
 	}
 	response.UserID = userid64
 	response.Echo = message.Echo

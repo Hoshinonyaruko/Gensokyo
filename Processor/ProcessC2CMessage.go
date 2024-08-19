@@ -50,7 +50,7 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 			//将真实id转为int userid64
 			_, userid64, err = idmap.StoreIDv2Pro("group_private", data.Author.ID)
 			if err != nil {
-				mylog.Fatalf("Error storing ID: %v", err)
+				mylog.Errorf("Error storing ID: %v", err)
 			}
 			//当参数不全
 			_, _ = idmap.StoreIDv2(data.Author.ID)
@@ -65,7 +65,7 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 			//将真实id转为int userid64
 			userid64, err = idmap.StoreIDv2(data.Author.ID)
 			if err != nil {
-				mylog.Fatalf("Error storing ID: %v", err)
+				mylog.Errorf("Error storing ID: %v", err)
 			}
 		}
 
@@ -199,7 +199,7 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 				magic, userid64, err = idmap.StoreIDv2Pro("group_private", data.Author.ID)
 				mylog.Printf("魔法数字:%v", magic) //690426430
 				if err != nil {
-					mylog.Fatalf("Error storing ID: %v", err)
+					mylog.Errorf("Error storing ID: %v", err)
 				}
 				//当参数不全,降级时
 				_, _ = idmap.StoreIDv2(data.Author.ID)
@@ -209,7 +209,7 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 				//将真实id转为int userid64
 				userid64, err = idmap.StoreIDv2(data.Author.ID)
 				if err != nil {
-					mylog.Fatalf("Error storing ID: %v", err)
+					mylog.Errorf("Error storing ID: %v", err)
 				}
 			}
 			//转换at

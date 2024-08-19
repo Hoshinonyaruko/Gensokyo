@@ -68,7 +68,7 @@ func (p *Processors) ProcessGroupAddBot(data *dto.GroupAddBotEvent) error {
 	if config.GetIdmapPro() {
 		GroupID64, userid64, err = idmap.StoreIDv2Pro(data.GroupOpenID, data.OpMemberOpenID)
 		if err != nil {
-			mylog.Fatalf("Error storing ID: %v", err)
+			mylog.Errorf("Error storing ID: %v", err)
 		}
 	} else {
 		GroupID64, err = idmap.StoreIDv2(data.GroupOpenID)
