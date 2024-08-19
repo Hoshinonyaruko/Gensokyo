@@ -43,7 +43,7 @@ func (p *Processors) ProcessGroupMsgRecive(data *dto.GroupMsgReceiveEvent) error
 		//将真实id转为int userid64
 		GroupID64, userid64, err = idmap.StoreIDv2Pro(fromgid, fromuid)
 		if err != nil {
-			mylog.Fatalf("Error storing ID: %v", err)
+			mylog.Errorf("Error storing ID: %v", err)
 		}
 
 		// 当哈希碰撞 因为获取时候是用的非idmap的get函数
