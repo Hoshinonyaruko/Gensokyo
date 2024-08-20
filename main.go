@@ -747,14 +747,19 @@ func ThreadEventHandler() event.ThreadEventHandler {
 // GroupATMessageEventHandler 实现处理 群at 消息的回调
 func GroupATMessageEventHandler() event.GroupATMessageEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSGroupATMessageData) error {
-		botstats.RecordMessageReceived()
+		go p.ProcessGroupMessage(data)
+
+		if !config.GetDisableErrorChan() {
+			botstats.RecordMessageReceived()
+		}
+
 		if config.GetEnableChangeWord() {
 			data.Content = acnode.CheckWordIN(data.Content)
 			if data.Author.Username != "" {
 				data.Author.Username = acnode.CheckWordIN(data.Author.Username)
 			}
 		}
-		go p.ProcessGroupMessage(data)
+
 		return nil
 	}
 }
@@ -762,14 +767,19 @@ func GroupATMessageEventHandler() event.GroupATMessageEventHandler {
 // C2CMessageEventHandler 实现处理 群私聊 消息的回调
 func C2CMessageEventHandler() event.C2CMessageEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSC2CMessageData) error {
-		botstats.RecordMessageReceived()
+		go p.ProcessC2CMessage(data)
+
+		if !config.GetDisableErrorChan() {
+			botstats.RecordMessageReceived()
+		}
+
 		if config.GetEnableChangeWord() {
 			data.Content = acnode.CheckWordIN(data.Content)
 			if data.Author.Username != "" {
 				data.Author.Username = acnode.CheckWordIN(data.Author.Username)
 			}
 		}
-		go p.ProcessC2CMessage(data)
+
 		return nil
 	}
 }
