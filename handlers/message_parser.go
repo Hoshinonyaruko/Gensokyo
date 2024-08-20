@@ -441,6 +441,8 @@ func SendGuildPrivateResponse(client callapi.Client, err error, message *callapi
 func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.ActionMessage, client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI) (string, map[string][]string) {
 	messageText := ""
 
+	foundItems := make(map[string][]string)
+
 	switch message := paramsMessage.Message.(type) {
 	case string:
 		mylog.Printf("params.message is a string\n")
@@ -457,7 +459,6 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 			messageText = ProcessCQAvatar(paramsMessage.GroupID.(string), messageText)
 		}
 	case []interface{}:
-		//多个映射组成的切片
 		mylog.Printf("params.message is a slice (segment_type_koishi)\n")
 		for _, segment := range message {
 			segmentMap, ok := segment.(map[string]interface{})
@@ -474,128 +475,130 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 			switch segmentType {
 			case "text":
 				segmentContent, _ = segmentMap["data"].(map[string]interface{})["text"].(string)
-				// 应用替换规则
 				if config.GetEnableChangeWord() {
 					segmentContent = acnode.CheckWordOUT(segmentContent)
 				}
 			case "image":
 				fileContent, _ := segmentMap["data"].(map[string]interface{})["file"].(string)
-				segmentContent = "[CQ:image,file=" + fileContent + "]"
-			case "voice":
+				foundItems["image"] = append(foundItems["image"], fileContent)
+
+			case "voice", "record":
 				fileContent, _ := segmentMap["data"].(map[string]interface{})["file"].(string)
-				segmentContent = "[CQ:record,file=" + fileContent + "]"
-			case "record":
-				fileContent, _ := segmentMap["data"].(map[string]interface{})["file"].(string)
-				segmentContent = "[CQ:record,file=" + fileContent + "]"
+				foundItems["record"] = append(foundItems["record"], fileContent)
+
 			case "at":
 				qqNumber, _ := segmentMap["data"].(map[string]interface{})["qq"].(string)
-				segmentContent = "[CQ:at,qq=" + qqNumber + "]"
+				foundItems["at"] = append(foundItems["at"], qqNumber)
+
 			case "avatar":
 				qqNumber, _ := segmentMap["data"].(map[string]interface{})["qq"].(string)
+				var avatarCQCode string
 				if paramsMessage.GroupID == nil {
-					segmentContent, _ = GetAvatarCQCodeNoGroupID(qqNumber)
+					avatarCQCode, _ = GetAvatarCQCodeNoGroupID(qqNumber)
 				} else {
-					segmentContent, _ = GetAvatarCQCode(paramsMessage.GroupID.(string), qqNumber)
+					avatarCQCode, _ = GetAvatarCQCode(paramsMessage.GroupID.(string), qqNumber)
 				}
+				foundItems["avatar"] = append(foundItems["avatar"], avatarCQCode)
+
 			case "markdown":
 				mdContent, ok := segmentMap["data"].(map[string]interface{})["data"]
 				if ok {
+					var mdContentEncoded string
 					if mdContentMap, isMap := mdContent.(map[string]interface{}); isMap {
-						// mdContent是map[string]interface{}，按map处理
 						mdContentBytes, err := json.Marshal(mdContentMap)
 						if err != nil {
 							mylog.Printf("Error marshaling mdContentMap to JSON:%v", err)
+							continue
 						}
-						encoded := base64.StdEncoding.EncodeToString(mdContentBytes)
-						segmentContent = "[CQ:markdown,data=base64://" + encoded + "]"
+						mdContentEncoded = base64.StdEncoding.EncodeToString(mdContentBytes)
 					} else if mdContentStr, isString := mdContent.(string); isString {
-						// mdContent是string
 						if strings.HasPrefix(mdContentStr, "base64://") {
-							// 如果以base64://开头，直接使用
-							segmentContent = "[CQ:markdown,data=" + mdContentStr + "]"
+							mdContentEncoded = mdContentStr
 						} else {
-							// 处理实体化后的JSON文本
 							mdContentStr = strings.ReplaceAll(mdContentStr, "&amp;", "&")
 							mdContentStr = strings.ReplaceAll(mdContentStr, "&#91;", "[")
 							mdContentStr = strings.ReplaceAll(mdContentStr, "&#93;", "]")
 							mdContentStr = strings.ReplaceAll(mdContentStr, "&#44;", ",")
 
-							// 将处理过的字符串视为JSON对象，进行序列化和编码
 							var jsonMap map[string]interface{}
 							if err := json.Unmarshal([]byte(mdContentStr), &jsonMap); err != nil {
 								mylog.Printf("Error unmarshaling string to JSON:%v", err)
+								continue
 							}
 							mdContentBytes, err := json.Marshal(jsonMap)
 							if err != nil {
 								mylog.Printf("Error marshaling jsonMap to JSON:%v", err)
+								continue
 							}
-							encoded := base64.StdEncoding.EncodeToString(mdContentBytes)
-							segmentContent = "[CQ:markdown,data=base64://" + encoded + "]"
+							mdContentEncoded = base64.StdEncoding.EncodeToString(mdContentBytes)
 						}
 					} else {
 						mylog.Printf("Error marshaling markdown segment wrong type.")
+						continue
 					}
+					foundItems["markdown"] = append(foundItems["markdown"], mdContentEncoded)
 				} else {
-					mylog.Printf("Error marshaling markdown segment to interface,contain type but data is nil.")
+					mylog.Printf("Error: markdown segment data is nil.")
 				}
+
+			default:
+				mylog.Printf("Unhandled segment type: %s", segmentType)
 			}
 
 			messageText += segmentContent
+
 		}
 	case map[string]interface{}:
-		//单个映射
 		mylog.Printf("params.message is a map (segment_type_trss)\n")
 		messageType, _ := message["type"].(string)
+
 		switch messageType {
 		case "text":
 			messageText, _ = message["data"].(map[string]interface{})["text"].(string)
-			// 应用替换规则
 			if config.GetEnableChangeWord() {
 				messageText = acnode.CheckWordOUT(messageText)
 			}
+
 		case "image":
 			fileContent, _ := message["data"].(map[string]interface{})["file"].(string)
-			messageText = "[CQ:image,file=" + fileContent + "]"
-		case "voice":
+			foundItems["image"] = append(foundItems["image"], fileContent)
+
+		case "voice", "record":
 			fileContent, _ := message["data"].(map[string]interface{})["file"].(string)
-			messageText = "[CQ:record,file=" + fileContent + "]"
-		case "record":
-			fileContent, _ := message["data"].(map[string]interface{})["file"].(string)
-			messageText = "[CQ:record,file=" + fileContent + "]"
+			foundItems["record"] = append(foundItems["record"], fileContent)
+
 		case "at":
 			qqNumber, _ := message["data"].(map[string]interface{})["qq"].(string)
-			messageText = "[CQ:at,qq=" + qqNumber + "]"
+			foundItems["at"] = append(foundItems["at"], qqNumber)
+
 		case "avatar":
 			qqNumber, _ := message["data"].(map[string]interface{})["qq"].(string)
+			var avatarCQCode string
 			if paramsMessage.GroupID == nil {
-				messageText, _ = GetAvatarCQCodeNoGroupID(qqNumber)
+				avatarCQCode, _ = GetAvatarCQCodeNoGroupID(qqNumber)
 			} else {
-				messageText, _ = GetAvatarCQCode(paramsMessage.GroupID.(string), qqNumber)
+				avatarCQCode, _ = GetAvatarCQCode(paramsMessage.GroupID.(string), qqNumber)
 			}
+			foundItems["avatar"] = append(foundItems["avatar"], avatarCQCode)
+
 		case "markdown":
 			mdContent, ok := message["data"].(map[string]interface{})["data"]
 			if ok {
+				var mdContentEncoded string
 				if mdContentMap, isMap := mdContent.(map[string]interface{}); isMap {
-					// mdContent是map[string]interface{}，按map处理
 					mdContentBytes, err := json.Marshal(mdContentMap)
 					if err != nil {
 						mylog.Printf("Error marshaling mdContentMap to JSON:%v", err)
 					}
-					encoded := base64.StdEncoding.EncodeToString(mdContentBytes)
-					messageText = "[CQ:markdown,data=base64://" + encoded + "]"
+					mdContentEncoded = base64.StdEncoding.EncodeToString(mdContentBytes)
 				} else if mdContentStr, isString := mdContent.(string); isString {
-					// mdContent是string
 					if strings.HasPrefix(mdContentStr, "base64://") {
-						// 如果以base64://开头，直接使用
-						messageText = "[CQ:markdown,data=" + mdContentStr + "]"
+						mdContentEncoded = mdContentStr
 					} else {
-						// 处理实体化后的JSON文本
 						mdContentStr = strings.ReplaceAll(mdContentStr, "&amp;", "&")
 						mdContentStr = strings.ReplaceAll(mdContentStr, "&#91;", "[")
 						mdContentStr = strings.ReplaceAll(mdContentStr, "&#93;", "]")
 						mdContentStr = strings.ReplaceAll(mdContentStr, "&#44;", ",")
-
-						// 将处理过的字符串视为JSON对象，进行序列化和编码
 						var jsonMap map[string]interface{}
 						if err := json.Unmarshal([]byte(mdContentStr), &jsonMap); err != nil {
 							mylog.Printf("Error unmarshaling string to JSON:%v", err)
@@ -604,16 +607,20 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 						if err != nil {
 							mylog.Printf("Error marshaling jsonMap to JSON:%v", err)
 						}
-						encoded := base64.StdEncoding.EncodeToString(mdContentBytes)
-						messageText = "[CQ:markdown,data=base64://" + encoded + "]"
+						mdContentEncoded = base64.StdEncoding.EncodeToString(mdContentBytes)
 					}
 				} else {
-					mylog.Printf("Error marshaling mdContent wrong type.")
+					mylog.Printf("Error: markdown content has an unexpected type.")
 				}
+				foundItems["markdown"] = append(foundItems["markdown"], mdContentEncoded)
 			} else {
-				mylog.Printf("Error marshaling markdown segment to interface,contain type but data is nil.")
+				mylog.Printf("Error: markdown segment data is nil.")
 			}
+
+		default:
+			mylog.Printf("Unhandled message type: %s", messageType)
 		}
+
 	default:
 		mylog.Println("Unsupported message format: params.message field is not a string, map or slice")
 	}
@@ -626,61 +633,62 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 		messageText = transformMessageTextAt(messageText, paramsMessage.GroupID.(string))
 	}
 
-	//mylog.Printf(messageText)
-
-	// 正则表达式部分
-	var localImagePattern *regexp.Regexp
-	var localRecordPattern *regexp.Regexp
-	if runtime.GOOS == "windows" {
-		localImagePattern = regexp.MustCompile(`\[CQ:image,file=file:///([^\]]+?)\]`)
-	} else {
-		localImagePattern = regexp.MustCompile(`\[CQ:image,file=file://([^\]]+?)\]`)
-	}
-	if runtime.GOOS == "windows" {
-		localRecordPattern = regexp.MustCompile(`\[CQ:record,file=file:///([^\]]+?)\]`)
-	} else {
-		localRecordPattern = regexp.MustCompile(`\[CQ:record,file=file://([^\]]+?)\]`)
-	}
-	httpUrlImagePattern := regexp.MustCompile(`\[CQ:image,file=http://(.+?)\]`)
-	httpsUrlImagePattern := regexp.MustCompile(`\[CQ:image,file=https://(.+?)\]`)
-	base64ImagePattern := regexp.MustCompile(`\[CQ:image,file=base64://(.+?)\]`)
-	base64RecordPattern := regexp.MustCompile(`\[CQ:record,file=base64://(.+?)\]`)
-	httpUrlRecordPattern := regexp.MustCompile(`\[CQ:record,file=http://(.+?)\]`)
-	httpsUrlRecordPattern := regexp.MustCompile(`\[CQ:record,file=https://(.+?)\]`)
-	httpUrlVideoPattern := regexp.MustCompile(`\[CQ:video,file=http://(.+?)\]`)
-	httpsUrlVideoPattern := regexp.MustCompile(`\[CQ:video,file=https://(.+?)\]`)
-	mdPattern := regexp.MustCompile(`\[CQ:markdown,data=base64://(.+?)\]`)
-	qqMusicPattern := regexp.MustCompile(`\[CQ:music,type=qq,id=(\d+)\]`)
-
-	patterns := []struct {
-		key     string
-		pattern *regexp.Regexp
-	}{
-		{"local_image", localImagePattern},
-		{"url_image", httpUrlImagePattern},
-		{"url_images", httpsUrlImagePattern},
-		{"base64_image", base64ImagePattern},
-		{"base64_record", base64RecordPattern},
-		{"local_record", localRecordPattern},
-		{"url_record", httpUrlRecordPattern},
-		{"url_records", httpsUrlRecordPattern},
-		{"markdown", mdPattern},
-		{"qqmusic", qqMusicPattern},
-		{"url_video", httpUrlVideoPattern},
-		{"url_videos", httpsUrlVideoPattern},
-	}
-
-	foundItems := make(map[string][]string)
-	for _, pattern := range patterns {
-		matches := pattern.pattern.FindAllStringSubmatch(messageText, -1)
-		for _, match := range matches {
-			if len(match) > 1 {
-				foundItems[pattern.key] = append(foundItems[pattern.key], match[1])
-			}
+	// 当匹配到复古cq码上报类型,使用低效率正则.
+	if _, ok := paramsMessage.Message.(string); ok {
+		// 正则表达式部分
+		var localImagePattern *regexp.Regexp
+		var localRecordPattern *regexp.Regexp
+		if runtime.GOOS == "windows" {
+			localImagePattern = regexp.MustCompile(`\[CQ:image,file=file:///([^\]]+?)\]`)
+		} else {
+			localImagePattern = regexp.MustCompile(`\[CQ:image,file=file://([^\]]+?)\]`)
 		}
-		// 移动替换操作到这里，确保所有匹配都被处理后再进行替换
-		messageText = pattern.pattern.ReplaceAllString(messageText, "")
+		if runtime.GOOS == "windows" {
+			localRecordPattern = regexp.MustCompile(`\[CQ:record,file=file:///([^\]]+?)\]`)
+		} else {
+			localRecordPattern = regexp.MustCompile(`\[CQ:record,file=file://([^\]]+?)\]`)
+		}
+		httpUrlImagePattern := regexp.MustCompile(`\[CQ:image,file=http://(.+?)\]`)
+		httpsUrlImagePattern := regexp.MustCompile(`\[CQ:image,file=https://(.+?)\]`)
+		base64ImagePattern := regexp.MustCompile(`\[CQ:image,file=base64://(.+?)\]`)
+		base64RecordPattern := regexp.MustCompile(`\[CQ:record,file=base64://(.+?)\]`)
+		httpUrlRecordPattern := regexp.MustCompile(`\[CQ:record,file=http://(.+?)\]`)
+		httpsUrlRecordPattern := regexp.MustCompile(`\[CQ:record,file=https://(.+?)\]`)
+		httpUrlVideoPattern := regexp.MustCompile(`\[CQ:video,file=http://(.+?)\]`)
+		httpsUrlVideoPattern := regexp.MustCompile(`\[CQ:video,file=https://(.+?)\]`)
+		mdPattern := regexp.MustCompile(`\[CQ:markdown,data=base64://(.+?)\]`)
+		qqMusicPattern := regexp.MustCompile(`\[CQ:music,type=qq,id=(\d+)\]`)
+
+		patterns := []struct {
+			key     string
+			pattern *regexp.Regexp
+		}{
+			{"local_image", localImagePattern},
+			{"url_image", httpUrlImagePattern},
+			{"url_images", httpsUrlImagePattern},
+			{"base64_image", base64ImagePattern},
+			{"base64_record", base64RecordPattern},
+			{"local_record", localRecordPattern},
+			{"url_record", httpUrlRecordPattern},
+			{"url_records", httpsUrlRecordPattern},
+			{"markdown", mdPattern},
+			{"qqmusic", qqMusicPattern},
+			{"url_video", httpUrlVideoPattern},
+			{"url_videos", httpsUrlVideoPattern},
+		}
+
+		for _, pattern := range patterns {
+			matches := pattern.pattern.FindAllStringSubmatch(messageText, -1)
+			for _, match := range matches {
+				if len(match) > 1 {
+					foundItems[pattern.key] = append(foundItems[pattern.key], match[1])
+				}
+			}
+			// 移动替换操作到这里，确保所有匹配都被处理后再进行替换
+			messageText = pattern.pattern.ReplaceAllString(messageText, "")
+		}
 	}
+
 	//最后再处理Url
 	messageText = transformMessageTextUrl(messageText, message, client, api, apiv2)
 
