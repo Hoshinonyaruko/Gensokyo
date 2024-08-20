@@ -41,14 +41,17 @@ func (client *WebSocketClient) SendMessage(message map[string]interface{}) error
 		return err
 	}
 
-	err = client.conn.WriteMessage(websocket.TextMessage, msgBytes)
-	if err != nil {
-		mylog.Println("Error sending message:", err)
-		// 发送失败，将消息添加到切片
-		if !config.GetDisableErrorChan() {
+	if !config.GetDisableErrorChan() {
+		err = client.conn.WriteMessage(websocket.TextMessage, msgBytes)
+		if err != nil {
+			mylog.Println("Error sending message:", err)
+			// 发送失败，将消息添加到切片
 			client.sendFailures = append(client.sendFailures, message)
+			return err
 		}
-		return err
+	} else {
+		// 直接发 不管报错
+		go client.conn.WriteMessage(websocket.TextMessage, msgBytes)
 	}
 
 	return nil
