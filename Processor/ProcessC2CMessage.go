@@ -404,7 +404,7 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 			echo.AddMsgIDv3(AppIDString, data.Author.ID, data.ID)
 
 			//储存当前群或频道号的类型
-			idmap.WriteConfigv2(data.Author.ID, "type", "group_private")
+			//idmap.WriteConfigv2(data.Author.ID, "type", "group_private")
 
 			//懒message_id池
 			echo.AddLazyMessageId(data.Author.ID, data.ID, time.Now())
