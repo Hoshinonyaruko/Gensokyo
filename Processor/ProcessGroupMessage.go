@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hoshinonyaruko/gensokyo/config"
@@ -75,18 +76,45 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 		}
 	}
 
-	// 转换at
-	messageText := handlers.RevertTransformedText(data, "group", p.Api, p.Apiv2, GroupID64, userid64, config.GetWhiteEnable(4))
-	if messageText == "" {
-		mylog.Printf("信息被自定义黑白名单拦截")
-		return nil
+	var messageText string
+	//当屏蔽错误通道时候=性能模式 不解析at 不解析图片
+	if !config.GetDisableErrorChan() {
+		// 转换at
+		messageText = handlers.RevertTransformedText(data, "group", p.Api, p.Apiv2, GroupID64, userid64, config.GetWhiteEnable(4))
+		if messageText == "" {
+			mylog.Printf("信息被自定义黑白名单拦截")
+			return nil
+		}
+
+		//框架内指令
+		p.HandleFrameworkCommand(messageText, data, "group")
+	} else {
+		// 减少无用的性能开支
+		messageText = data.Content
+
+		if messageText == "/ " {
+			messageText = " "
+		}
+
+		if messageText == " / " {
+			messageText = " "
+		}
+		messageText = strings.TrimSpace(messageText)
+
+		// 检查是否需要移除前缀
+		if config.GetRemovePrefixValue() {
+			// 移除消息内容中第一次出现的 "/"
+			if idx := strings.Index(messageText, "/"); idx != -1 {
+				messageText = messageText[:idx] + messageText[idx+1:]
+			}
+		}
+
 	}
+
 	//群没有at,但用户可以选择加一个
 	if config.GetAddAtGroup() {
 		messageText = "[CQ:at,qq=" + config.GetAppIDStr() + "] " + messageText
 	}
-	//框架内指令
-	p.HandleFrameworkCommand(messageText, data, "group")
 
 	var messageID int
 	//映射str的messageID到int
