@@ -44,7 +44,7 @@ func (client *WebSocketClient) SendMessage(message map[string]interface{}) error
 		return err
 	}
 
-	// 创建错误通道，用于接收写操作的结果
+	// 创建专用通道，用于接收写操作的结果
 	client.writeCh <- writeRequest{
 		messageType: websocket.TextMessage,
 		data:        msgBytes,
