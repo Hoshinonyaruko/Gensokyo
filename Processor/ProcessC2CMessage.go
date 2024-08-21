@@ -352,7 +352,10 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 
 			var messageText string
 			//当屏蔽错误通道时候=性能模式 不解析at 不解析图片
-			if !config.GetDisableErrorChan() {
+			GetDisableErrorChan := config.GetDisableErrorChan()
+
+			// 判断性能模式
+			if !GetDisableErrorChan {
 				//转换at
 				messageText = handlers.RevertTransformedText(data, "group_private", p.Api, p.Apiv2, 0, 0, config.GetWhiteEnable(5))
 				if messageText == "" {
@@ -436,8 +439,15 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 
 			// Convert OnebotGroupMessage to map and send
 			groupMsgMap := structToMap(groupMsg)
-			//上报信息到onebotv11应用端(正反ws)
-			go p.BroadcastMessageToAll(groupMsgMap, p.Apiv2, data)
+
+			// 不使用性能模式
+			if !GetDisableErrorChan {
+				//上报信息到onebotv11应用端(正反ws)
+				go p.BroadcastMessageToAll(groupMsgMap, p.Apiv2, data)
+			} else {
+				// 性能模式
+				go p.BroadcastMessageToAllFAF(groupMsgMap, p.Apiv2, data)
+			}
 
 			//组合FriendData
 			userdata := structs.FriendData{

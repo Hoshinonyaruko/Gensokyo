@@ -256,6 +256,26 @@ func (p *Processors) SendMessageToAllClients(message map[string]interface{}) err
 }
 
 // 方便快捷的发信息函数
+func (p *Processors) BroadcastMessageToAllFAF(message map[string]interface{}, api openapi.MessageAPI, data interface{}) error {
+	// 并发发送到我们作为客户端的Wsclient
+	for _, client := range p.Wsclient {
+		go func(c callapi.WebSocketServerClienter) {
+			_ = c.SendMessage(message) // 忽略错误
+		}(client)
+	}
+
+	// 并发发送到我们作为服务器连接到我们的WsServerClients
+	for _, serverClient := range p.WsServerClients {
+		go func(sc callapi.WebSocketServerClienter) {
+			_ = sc.SendMessage(message) // 忽略错误
+		}(serverClient)
+	}
+
+	// 不再等待所有 goroutine 完成，直接返回
+	return nil
+}
+
+// 方便快捷的发信息函数
 func (p *Processors) BroadcastMessageToAll(message map[string]interface{}, api openapi.MessageAPI, data interface{}) error {
 	var wg sync.WaitGroup
 	errorCh := make(chan string, len(p.Wsclient)+len(p.WsServerClients))
