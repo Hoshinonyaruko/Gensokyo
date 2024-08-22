@@ -10,9 +10,6 @@ import (
 
 // 独立的错误日志记录函数
 func ErrLogToFile(level, message string) {
-	if !enableFileLogGlobal {
-		return
-	}
 	filename := time.Now().Format("2006-01-02") + "-error.log"
 	filepath := logPath + "/" + filename
 
@@ -31,9 +28,6 @@ func ErrLogToFile(level, message string) {
 
 // 独立的错误日志记录函数
 func ErrInterfaceToFile(level, message interface{}) {
-	if !enableFileLogGlobal {
-		return
-	}
 	filename := time.Now().Format("2006-01-02") + "-error.log"
 	filepath := logPath + "/" + filename
 

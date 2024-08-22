@@ -58,7 +58,7 @@ func GetLazyMessagesId(groupID string) string {
 	store.mu.RLock()
 	defer store.mu.RUnlock()
 
-	fiveMinutesAgo := time.Now().Add(-5 * time.Minute)
+	fiveMinutesAgo := time.Now().Add(-4 * time.Minute)
 	var recentMessages []string
 	for _, record := range store.records[groupID] {
 		if record.timestamp.After(fiveMinutesAgo) {
@@ -94,7 +94,7 @@ func GetLazyMessagesIdv2(groupID, userID string) string { //1
 	// 构建复合键
 	key := groupID + "." + userID
 
-	fiveMinutesAgo := time.Now().Add(-5 * time.Minute)
+	fiveMinutesAgo := time.Now().Add(-4 * time.Minute)
 	var recentMessages []string
 	for _, record := range store.records[key] {
 		if record.timestamp.After(fiveMinutesAgo) {
