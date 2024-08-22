@@ -111,21 +111,24 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 	}
 
 	if message.Params.GroupID != nil && len(message.Params.GroupID.(string)) != 32 {
-		//设置递归 对直接向gsk发送action时有效果
-		if msgType == "" {
-			messageCopy := message
-			if err != nil {
-				mylog.Printf("错误：无法转换 ID %v\n", err)
-			} else {
-				// 递归3次
-				echo.AddMapping(idInt64, 4)
-				// 递归调用handleSendGroupMsg，使用设置的消息类型
-				echo.AddMsgType(config.GetAppIDStr(), idInt64, "group_private")
-				retmsg, _ = HandleSendGroupMsg(client, api, apiv2, messageCopy)
+		// stringob11通过字段判断类型,不需要递归
+		if !config.GetStringOb11() {
+			//设置递归 对直接向gsk发送action时有效果
+			if msgType == "" {
+				messageCopy := message
+				if err != nil {
+					mylog.Printf("错误：无法转换 ID %v\n", err)
+				} else {
+					// 递归3次
+					echo.AddMapping(idInt64, 4)
+					// 递归调用handleSendGroupMsg，使用设置的消息类型
+					echo.AddMsgType(config.GetAppIDStr(), idInt64, "group_private")
+					retmsg, _ = HandleSendGroupMsg(client, api, apiv2, messageCopy)
+				}
+			} else if echo.GetMapping(idInt64) <= 0 {
+				// 特殊值代表不递归
+				echo.AddMapping(idInt64, 10)
 			}
-		} else if echo.GetMapping(idInt64) <= 0 {
-			// 特殊值代表不递归
-			echo.AddMapping(idInt64, 10)
 		}
 	}
 
@@ -697,24 +700,27 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		mylog.Printf("Unknown message type: %s", msgType)
 	}
 
-	// 如果递归id不是10(不递归特殊值)
-	if echo.GetMapping(idInt64) != 10 {
-		//重置递归类型 递归结束重置类型,避免下一次同样id,不同类型的请求被使用上一次类型
-		if echo.GetMapping(idInt64) <= 0 {
-			echo.AddMsgType(config.GetAppIDStr(), idInt64, "")
-		}
+	// stringob11不需要递归
+	if !config.GetStringOb11() {
+		// 如果递归id不是10(不递归特殊值)
+		if echo.GetMapping(idInt64) != 10 {
+			//重置递归类型 递归结束重置类型,避免下一次同样id,不同类型的请求被使用上一次类型
+			if echo.GetMapping(idInt64) <= 0 {
+				echo.AddMsgType(config.GetAppIDStr(), idInt64, "")
+			}
 
-		//减少递归计数器
-		echo.AddMapping(idInt64, echo.GetMapping(idInt64)-1)
+			//减少递归计数器
+			echo.AddMapping(idInt64, echo.GetMapping(idInt64)-1)
 
-		//递归3次枚举类型
-		if echo.GetMapping(idInt64) > 0 {
-			tryMessageTypes := []string{"group", "guild", "guild_private"}
-			messageCopy := message // 创建message的副本
-			echo.AddMsgType(config.GetAppIDStr(), idInt64, tryMessageTypes[echo.GetMapping(idInt64)-1])
-			delay := config.GetSendDelay()
-			time.Sleep(time.Duration(delay) * time.Millisecond)
-			retmsg, _ = HandleSendGroupMsg(client, api, apiv2, messageCopy)
+			//递归3次枚举类型
+			if echo.GetMapping(idInt64) > 0 {
+				tryMessageTypes := []string{"group", "guild", "guild_private"}
+				messageCopy := message // 创建message的副本
+				echo.AddMsgType(config.GetAppIDStr(), idInt64, tryMessageTypes[echo.GetMapping(idInt64)-1])
+				delay := config.GetSendDelay()
+				time.Sleep(time.Duration(delay) * time.Millisecond)
+				retmsg, _ = HandleSendGroupMsg(client, api, apiv2, messageCopy)
+			}
 		}
 	}
 
