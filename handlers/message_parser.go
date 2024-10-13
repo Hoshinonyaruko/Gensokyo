@@ -53,6 +53,21 @@ type ServerResponse struct {
 	Echo      interface{} `json:"echo"`
 }
 
+// 定义响应结构体
+type ServerResponseSB struct {
+	Data struct {
+		MessageID string `json:"message_id"`
+	} `json:"data"`
+	Message   string      `json:"message"`
+	GroupID   string      `json:"group_id,omitempty"`
+	UserID    string      `json:"user_id,omitempty"`
+	ChannelID string      `json:"channel_id,omitempty"`
+	GuildID   string      `json:"guild_id,omitempty"`
+	RetCode   int         `json:"retcode"`
+	Status    string      `json:"status"`
+	Echo      interface{} `json:"echo"`
+}
+
 // 定义了一个符合 Client 接口的 HttpAPIClient 结构体
 type HttpAPIClient struct {
 	// 可添加所需字段
@@ -216,6 +231,52 @@ func SendResponse(client callapi.Client, err error, message *callapi.ActionMessa
 	//mylog.Printf("convert GroupID64 to int: %v", GroupID64) 测试
 	// TODO: 改为动态参数 不是固定GroupID 但应用端不支持.会报错.暂时统一从group取id,自己判断类型发撤回请求.
 	response.GroupID = GroupID64
+	response.Echo = message.Echo
+	if err != nil {
+		response.Message = err.Error() // 可选：在响应中添加错误消息
+		//response.RetCode = -1          // 可以是任何非零值，表示出错
+		//response.Status = "failed"
+		response.RetCode = 0 //官方api审核异步的 审核中默认返回失败,但其实信息发送成功了
+		response.Status = "ok"
+	} else {
+		response.Message = ""
+		response.RetCode = 0
+		response.Status = "ok"
+	}
+
+	// 转化为map并发送
+	outputMap := structToMap(response)
+	// 将map转换为JSON字符串
+	jsonResponse, jsonErr := json.Marshal(outputMap)
+	if jsonErr != nil {
+		log.Printf("Error marshaling response to JSON: %v", jsonErr)
+		return "", jsonErr
+	}
+	//发送给ws 客户端
+	sendErr := client.SendMessage(outputMap)
+	if sendErr != nil {
+		mylog.Printf("Error sending message via client: %v", sendErr)
+		return "", sendErr
+	}
+
+	mylog.Printf("发送成功回执: %+v", string(jsonResponse))
+	return string(jsonResponse), nil
+}
+
+// 发送成功回执 todo 返回可互转的messageid 实现群撤回api
+func SendResponseSB(client callapi.Client, err error, message *callapi.ActionMessage, resp *dto.GroupMessageResponse, api openapi.OpenAPI, apiv2 openapi.OpenAPI) (string, error) {
+	// 设置响应值
+	response := ServerResponseSB{}
+	if resp != nil {
+
+		response.Data.MessageID = resp.Message.ID
+
+	} else {
+		// Default ID handling
+		response.Data.MessageID = ""
+	}
+
+	response.GroupID = message.Params.GroupID.(string)
 	response.Echo = message.Echo
 	if err != nil {
 		response.Message = err.Error() // 可选：在响应中添加错误消息
@@ -480,7 +541,33 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 				}
 			case "image":
 				fileContent, _ := segmentMap["data"].(map[string]interface{})["file"].(string)
-				foundItems["image"] = append(foundItems["image"], fileContent)
+
+				// 检查是否为 Base64 图片
+				if strings.HasPrefix(fileContent, "base64://") {
+					// 去掉 "base64://" 头部
+					cleanContent := strings.TrimPrefix(fileContent, "base64://")
+					foundItems["base64_image"] = append(foundItems["base64_image"], cleanContent)
+				} else if strings.HasPrefix(fileContent, "http://") {
+					// HTTP 图片，去掉 "http://" 头部
+					cleanContent := strings.TrimPrefix(fileContent, "http://")
+					foundItems["url_image"] = append(foundItems["url_image"], cleanContent)
+				} else if strings.HasPrefix(fileContent, "https://") {
+					// HTTPS 图片，去掉 "https://" 头部
+					cleanContent := strings.TrimPrefix(fileContent, "https://")
+					foundItems["url_images"] = append(foundItems["url_images"], cleanContent)
+				} else if strings.HasPrefix(fileContent, "file://") {
+					// 本地文件，根据系统区分前缀
+					var cleanContent string
+					if runtime.GOOS == "windows" {
+						cleanContent = strings.TrimPrefix(fileContent, "file:///")
+					} else {
+						cleanContent = strings.TrimPrefix(fileContent, "file://")
+					}
+					foundItems["local_image"] = append(foundItems["local_image"], cleanContent)
+				} else {
+					// 默认情况，直接将内容存储到 foundItems 中
+					foundItems["unknown_image"] = append(foundItems["unknown_image"], fileContent)
+				}
 
 			case "voice", "record":
 				fileContent, _ := segmentMap["data"].(map[string]interface{})["file"].(string)
@@ -513,7 +600,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 						mdContentEncoded = base64.StdEncoding.EncodeToString(mdContentBytes)
 					} else if mdContentStr, isString := mdContent.(string); isString {
 						if strings.HasPrefix(mdContentStr, "base64://") {
-							mdContentEncoded = mdContentStr
+							mdContentEncoded = strings.TrimPrefix(mdContentStr, "base64://")
 						} else {
 							mdContentStr = strings.ReplaceAll(mdContentStr, "&amp;", "&")
 							mdContentStr = strings.ReplaceAll(mdContentStr, "&#91;", "[")
@@ -561,7 +648,33 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 
 		case "image":
 			fileContent, _ := message["data"].(map[string]interface{})["file"].(string)
-			foundItems["image"] = append(foundItems["image"], fileContent)
+
+			// 检查是否为 Base64 图片
+			if strings.HasPrefix(fileContent, "base64://") {
+				// 去掉 "base64://" 头部
+				cleanContent := strings.TrimPrefix(fileContent, "base64://")
+				foundItems["base64_image"] = append(foundItems["base64_image"], cleanContent)
+			} else if strings.HasPrefix(fileContent, "http://") {
+				// HTTP 图片，去掉 "http://" 头部
+				cleanContent := strings.TrimPrefix(fileContent, "http://")
+				foundItems["url_image"] = append(foundItems["url_image"], cleanContent)
+			} else if strings.HasPrefix(fileContent, "https://") {
+				// HTTPS 图片，去掉 "https://" 头部
+				cleanContent := strings.TrimPrefix(fileContent, "https://")
+				foundItems["url_images"] = append(foundItems["url_images"], cleanContent)
+			} else if strings.HasPrefix(fileContent, "file://") {
+				// 本地文件，根据系统区分前缀
+				var cleanContent string
+				if runtime.GOOS == "windows" {
+					cleanContent = strings.TrimPrefix(fileContent, "file:///")
+				} else {
+					cleanContent = strings.TrimPrefix(fileContent, "file://")
+				}
+				foundItems["local_image"] = append(foundItems["local_image"], cleanContent)
+			} else {
+				// 默认情况，直接将内容存储到 foundItems 中
+				foundItems["unknown_image"] = append(foundItems["unknown_image"], fileContent)
+			}
 
 		case "voice", "record":
 			fileContent, _ := message["data"].(map[string]interface{})["file"].(string)
@@ -593,7 +706,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 					mdContentEncoded = base64.StdEncoding.EncodeToString(mdContentBytes)
 				} else if mdContentStr, isString := mdContent.(string); isString {
 					if strings.HasPrefix(mdContentStr, "base64://") {
-						mdContentEncoded = mdContentStr
+						mdContentEncoded = strings.TrimPrefix(mdContentStr, "base64://")
 					} else {
 						mdContentStr = strings.ReplaceAll(mdContentStr, "&amp;", "&")
 						mdContentStr = strings.ReplaceAll(mdContentStr, "&#91;", "[")
