@@ -100,7 +100,7 @@ jobs:
           go build -ldflags="-s -w" -o output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}
         fi
 
-    - name: Compress executable files with UPX (except for gensokyo-android-arm64)
+    - name: Compress executable files with UPX (except for gensokyo-android-arm64 and macOS)
       run: |
         sudo apt-get update
         sudo apt-get install -y upx
@@ -109,14 +109,14 @@ jobs:
         else
           FILENAME="output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}"
         fi
-        if [[ "${{ matrix.os }}" == "android" && "${{ matrix.goarch }}" == "arm64" ]]; then
+        if [[ "${{ matrix.os }}" == "android" && "${{ matrix.goarch }}" == "arm64" ]] || [[ "${{ matrix.os }}" == "macos" ]]; then
           echo "Skipping UPX compression for $FILENAME"
         else
           upx --best --lzma "$FILENAME"
-        fi
+        fi      
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: gensokyo-${{ matrix.os }}-${{ matrix.goarch }}
         path: output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}${{ endsWith(matrix.os, 'windows') && '.exe' || '' }}

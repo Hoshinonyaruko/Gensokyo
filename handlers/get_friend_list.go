@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"regexp"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
@@ -25,14 +26,27 @@ type APIOutput struct {
 func HandleGetFriendList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
 	var output APIOutput
 
+	// 检查字符串是否是数字
+	isNumeric := func(s string) bool {
+		return regexp.MustCompile(`^\d+$`).MatchString(s)
+	}
+
 	// 从数据库获取所有用户信息
 	users, err := idmap.ListAllUsers()
 	if err != nil {
 		mylog.Errorf("Failed to list users: %v", err)
 	}
 
+	// 过滤用户ID是数字的用户
+	filteredUsers := []structs.FriendData{} // 假设 User 是你用户结构体的类型
+	for _, user := range users {
+		if !isNumeric(user.UserID) {
+			filteredUsers = append(filteredUsers, user)
+		}
+	}
+
 	// 添加数据库中读取的用户数据到output.Data
-	output.Data = append(output.Data, users...)
+	output.Data = append(output.Data, filteredUsers...)
 
 	output.Message = ""
 	output.RetCode = 0

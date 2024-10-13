@@ -380,10 +380,20 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 
 			if !config.GetNoRetMsg() {
 				if config.GetThreadsRetMsg() {
-					go SendResponse(client, err, &message, resp, api, apiv2)
+					if !config.GetStringOb11() {
+						go SendResponse(client, err, &message, resp, api, apiv2)
+					} else {
+						go SendResponseSB(client, err, &message, resp, api, apiv2)
+					}
 				} else {
-					// 发送成功回执
-					retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
+					if !config.GetStringOb11() {
+						// 发送成功回执
+						retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
+					} else {
+						// 发送成功回执
+						retmsg, _ = SendResponseSB(client, err, &message, resp, api, apiv2)
+					}
+
 				}
 			}
 
@@ -442,9 +452,19 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			if !config.GetNoRetMsg() {
 				//发送成功回执
 				if config.GetThreadsRetMsg() {
-					go SendResponse(client, err, &message, resp, api, apiv2)
+					if !config.GetStringOb11() {
+						go SendResponse(client, err, &message, resp, api, apiv2)
+					} else {
+						go SendResponseSB(client, err, &message, resp, api, apiv2)
+					}
+
 				} else {
-					retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
+					if !config.GetStringOb11() {
+						retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
+					} else {
+						retmsg, _ = SendResponseSB(client, err, &message, resp, api, apiv2)
+					}
+
 				}
 			}
 
@@ -520,9 +540,19 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 						if !config.GetNoRetMsg() {
 							//发送成功回执
 							if config.GetThreadsRetMsg() {
-								go SendResponse(client, err, &message, resp, api, apiv2)
+								if !config.GetStringOb11() {
+									go SendResponse(client, err, &message, resp, api, apiv2)
+								} else {
+									go SendResponseSB(client, err, &message, resp, api, apiv2)
+								}
+
 							} else {
-								retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
+								if !config.GetStringOb11() {
+									retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
+								} else {
+									retmsg, _ = SendResponseSB(client, err, &message, resp, api, apiv2)
+								}
+
 							}
 						}
 					}
@@ -617,9 +647,19 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				if !config.GetNoRetMsg() {
 					//发送成功回执
 					if config.GetThreadsRetMsg() {
-						go SendResponse(client, err, &message, resp, api, apiv2)
+						if !config.GetStringOb11() {
+							go SendResponse(client, err, &message, resp, api, apiv2)
+						} else {
+							go SendResponseSB(client, err, &message, resp, api, apiv2)
+						}
+
 					} else {
-						retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
+						if !config.GetStringOb11() {
+							retmsg, _ = SendResponse(client, err, &message, resp, api, apiv2)
+						} else {
+							retmsg, _ = SendResponseSB(client, err, &message, resp, api, apiv2)
+						}
+
 					}
 				}
 

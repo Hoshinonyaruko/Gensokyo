@@ -318,7 +318,7 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 		echo.AddMsgID(AppIDString, s, data.ID)
 		echo.AddMsgType(AppIDString, s, "group")
 		//储存当前群或频道号的类型
-		//idmap.WriteConfigv2(data.GroupID, "type", "group")
+		go idmap.WriteConfigv2(data.GroupID, "type", "group")
 		//懒message_id池
 		echo.AddLazyMessageId(data.GroupID, data.ID, time.Now())
 		//懒message_id池

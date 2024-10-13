@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"regexp"
 	"strconv"
 	"time"
@@ -189,7 +190,7 @@ func GetGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 		for _, idStr := range groupIDs {
 			var originalGroupID string
 			if isNumeric(idStr) {
-				originalGroupID, _ = idmap.RetrieveRowByIDv2(idStr)
+				continue
 			} else {
 				originalGroupID = idStr
 			}
@@ -216,17 +217,27 @@ func GetGroupList(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.Open
 		outputMap = structToMap(groupListString)
 	}
 
-	//mylog.Printf("getGroupList(频道): %+v\n", outputMap)
+	//fmt.Printf("getGroupList(频道): %+v\n", outputMap)
+	fmt.Printf("getGroupList(数量): %+v\n", len(outputMap["data"].([]interface{})))
 
 	err = client.SendMessage(outputMap)
 	if err != nil {
 		mylog.Printf("error sending group info via wsclient: %v", err)
 	}
 
-	result, err := json.Marshal(groupList)
-	if err != nil {
-		mylog.Printf("Error marshaling data: %v", err)
-		return "", nil
+	var result []byte
+	if !config.GetStringOb11() {
+		result, err = json.Marshal(groupList)
+		if err != nil {
+			mylog.Printf("Error marshaling data: %v", err)
+			return "", nil
+		}
+	} else {
+		result, err = json.Marshal(groupListString)
+		if err != nil {
+			mylog.Printf("Error marshaling data: %v", err)
+			return "", nil
+		}
 	}
 
 	//mylog.Printf("get_group_list: %s", result)
