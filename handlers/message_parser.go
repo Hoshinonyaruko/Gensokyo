@@ -571,11 +571,36 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 
 			case "voice", "record":
 				fileContent, _ := segmentMap["data"].(map[string]interface{})["file"].(string)
-				foundItems["record"] = append(foundItems["record"], fileContent)
+
+				// 检查是否为 Base64 语音文件
+				if strings.HasPrefix(fileContent, "base64://") {
+					cleanContent := strings.TrimPrefix(fileContent, "base64://")
+					foundItems["base64_record"] = append(foundItems["base64_record"], cleanContent)
+				} else if strings.HasPrefix(fileContent, "http://") {
+					// HTTP 语音文件
+					cleanContent := strings.TrimPrefix(fileContent, "http://")
+					foundItems["url_record"] = append(foundItems["url_record"], cleanContent)
+				} else if strings.HasPrefix(fileContent, "https://") {
+					// HTTPS 语音文件
+					cleanContent := strings.TrimPrefix(fileContent, "https://")
+					foundItems["url_records"] = append(foundItems["url_records"], cleanContent)
+				} else if strings.HasPrefix(fileContent, "file://") {
+					// 本地文件，根据系统区分前缀
+					var cleanContent string
+					if runtime.GOOS == "windows" {
+						cleanContent = strings.TrimPrefix(fileContent, "file:///")
+					} else {
+						cleanContent = strings.TrimPrefix(fileContent, "file://")
+					}
+					foundItems["local_record"] = append(foundItems["local_record"], cleanContent)
+				} else {
+					// 无法识别的类型，直接存储
+					foundItems["unknown_record"] = append(foundItems["unknown_record"], fileContent)
+				}
 
 			case "at":
 				qqNumber, _ := segmentMap["data"].(map[string]interface{})["qq"].(string)
-				foundItems["at"] = append(foundItems["at"], qqNumber)
+				messageText += "[CQ:at,qq=" + qqNumber + "]"
 
 			case "avatar":
 				qqNumber, _ := segmentMap["data"].(map[string]interface{})["qq"].(string)
@@ -585,7 +610,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 				} else {
 					avatarCQCode, _ = GetAvatarCQCode(paramsMessage.GroupID.(string), qqNumber)
 				}
-				foundItems["avatar"] = append(foundItems["avatar"], avatarCQCode)
+				messageText += avatarCQCode
 
 			case "markdown":
 				mdContent, ok := segmentMap["data"].(map[string]interface{})["data"]
@@ -678,11 +703,36 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 
 		case "voice", "record":
 			fileContent, _ := message["data"].(map[string]interface{})["file"].(string)
-			foundItems["record"] = append(foundItems["record"], fileContent)
+
+			// 检查是否为 Base64 语音文件
+			if strings.HasPrefix(fileContent, "base64://") {
+				cleanContent := strings.TrimPrefix(fileContent, "base64://")
+				foundItems["base64_record"] = append(foundItems["base64_record"], cleanContent)
+			} else if strings.HasPrefix(fileContent, "http://") {
+				// HTTP 语音文件
+				cleanContent := strings.TrimPrefix(fileContent, "http://")
+				foundItems["url_record"] = append(foundItems["url_record"], cleanContent)
+			} else if strings.HasPrefix(fileContent, "https://") {
+				// HTTPS 语音文件
+				cleanContent := strings.TrimPrefix(fileContent, "https://")
+				foundItems["url_records"] = append(foundItems["url_records"], cleanContent)
+			} else if strings.HasPrefix(fileContent, "file://") {
+				// 本地文件，根据系统区分前缀
+				var cleanContent string
+				if runtime.GOOS == "windows" {
+					cleanContent = strings.TrimPrefix(fileContent, "file:///")
+				} else {
+					cleanContent = strings.TrimPrefix(fileContent, "file://")
+				}
+				foundItems["local_record"] = append(foundItems["local_record"], cleanContent)
+			} else {
+				// 无法识别的类型，直接存储
+				foundItems["unknown_record"] = append(foundItems["unknown_record"], fileContent)
+			}
 
 		case "at":
 			qqNumber, _ := message["data"].(map[string]interface{})["qq"].(string)
-			foundItems["at"] = append(foundItems["at"], qqNumber)
+			messageText += "[CQ:at,qq=" + qqNumber + "]"
 
 		case "avatar":
 			qqNumber, _ := message["data"].(map[string]interface{})["qq"].(string)
@@ -692,7 +742,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 			} else {
 				avatarCQCode, _ = GetAvatarCQCode(paramsMessage.GroupID.(string), qqNumber)
 			}
-			foundItems["avatar"] = append(foundItems["avatar"], avatarCQCode)
+			messageText += avatarCQCode
 
 		case "markdown":
 			mdContent, ok := message["data"].(map[string]interface{})["data"]
