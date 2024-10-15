@@ -69,6 +69,7 @@ type Settings struct {
 	IdentifyAppids []int64 `yaml:"identify_appids"`
 	Crt            string  `yaml:"crt"`
 	Key            string  `yaml:"key"`
+	UseSelfCrt     bool    `yaml:"use_self_crt"`
 	//日志类
 	DeveloperLog     bool `yaml:"developer_log"`
 	LogLevel         int  `yaml:"log_level"`
