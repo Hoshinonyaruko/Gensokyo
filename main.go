@@ -446,11 +446,19 @@ func main() {
 			}
 		}
 	}
+
+	webhookHandler := server.NewWebhookHandler(100)
+
+	// 启动消息处理协程
+	go webhookHandler.ListenAndProcessMessages()
+
 	r.GET("/updateport", server.HandleIpupdate)
 	r.POST("/uploadpic", server.UploadBase64ImageHandler(rateLimiter))
 	r.POST("/uploadpicv2", server.UploadBase64ImageHandlerV2(rateLimiter, apiV2))
 	r.POST("/uploadpicv3", server.UploadBase64ImageHandlerV3(rateLimiter, api))
 	r.POST("/uploadrecord", server.UploadBase64RecordHandler(rateLimiter))
+	// 使用 CreateHandleValidation，传入 WebhookHandler 实例
+	r.POST("/webhook", server.CreateHandleValidation(conf.Settings.ClientSecret, webhookHandler))
 	r.Static("/channel_temp", "./channel_temp")
 	if config.GetFrpPort() == "0" && !config.GetDisableWebui() {
 		//webui和它的api
