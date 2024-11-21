@@ -85,6 +85,7 @@ settings:
   identify_appids : []               #默认不需要设置,完成SSL配置类+server_dir设置为域名+完成备案+ssl全套设置后,若有多个机器人需要过域名校验(自己名下)可设置,格式为,整数appid,组成的数组
   crt : ""                           #证书路径 从你的域名服务商或云服务商申请签发SSL证书(qq要求SSL) 
   key : ""                           #密钥路径 Apache（crt文件、key文件）示例: "C:\\123.key" \需要双写成\\
+  webhook_path : "webhook"           #webhook监听的地址,默认\webhook
   
   #日志类
   developer_log : false             #开启开发者日志 默认关闭

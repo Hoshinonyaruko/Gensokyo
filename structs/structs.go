@@ -70,6 +70,7 @@ type Settings struct {
 	Crt            string  `yaml:"crt"`
 	Key            string  `yaml:"key"`
 	UseSelfCrt     bool    `yaml:"use_self_crt"`
+	WebhookPath    string  `yaml:"webhook_path"`
 	//日志类
 	DeveloperLog     bool `yaml:"developer_log"`
 	LogLevel         int  `yaml:"log_level"`
