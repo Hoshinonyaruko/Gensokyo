@@ -458,7 +458,7 @@ func main() {
 	r.POST("/uploadpicv3", server.UploadBase64ImageHandlerV3(rateLimiter, api))
 	r.POST("/uploadrecord", server.UploadBase64RecordHandler(rateLimiter))
 	// 使用 CreateHandleValidation，传入 WebhookHandler 实例
-	r.POST("/webhook", server.CreateHandleValidation(conf.Settings.ClientSecret, webhookHandler))
+	r.POST("/"+conf.Settings.WebhookPath, server.CreateHandleValidation(conf.Settings.ClientSecret, webhookHandler))
 	r.Static("/channel_temp", "./channel_temp")
 	if config.GetFrpPort() == "0" && !config.GetDisableWebui() {
 		//webui和它的api
