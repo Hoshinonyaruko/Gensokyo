@@ -36,6 +36,9 @@ _✨ 基于 [OneBot](https://github.com/howmanybots/onebot/blob/master/README.md
   ·
   <a href="https://github.com/hoshinonyaruko/gensokyo/releases">下载</a>
   ·
+  <a
+href="https://gitee.com/sanaefox/Gensokyo/releases">下载(Gitee)</a>
+  ·
   <a href="https://github.com/hoshinonyaruko/gensokyo/releases">开始使用</a>
   ·
   <a href="https://github.com/hoshinonyaruko/gensokyo/blob/master/CONTRIBUTING.md">参与贡献</a>
