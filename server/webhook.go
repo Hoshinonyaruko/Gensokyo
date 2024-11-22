@@ -50,8 +50,26 @@ func NewWebhookHandler(queueSize int) *WebhookHandler {
 	}
 }
 
+// 在启动时生成私钥
+var privateKey ed25519.PrivateKey
+
+func InitPrivateKey(botSecret string) {
+	seed := botSecret
+	for len(seed) < ed25519.SeedSize {
+		seed = strings.Repeat(seed, 2)
+	}
+	seed = seed[:ed25519.SeedSize]
+	reader := strings.NewReader(seed)
+
+	_, key, err := ed25519.GenerateKey(reader)
+	if err != nil {
+		log.Fatalf("Failed to generate ed25519 private key: %v", err)
+	}
+	privateKey = key
+}
+
 // CreateHandleValidation 创建用于签名验证和消息入队的处理函数
-func CreateHandleValidation(botSecret string, wh *WebhookHandler) gin.HandlerFunc {
+func CreateHandleValidation(wh *WebhookHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		httpBody, err := io.ReadAll(c.Request.Body)
 		if err != nil {
@@ -60,6 +78,7 @@ func CreateHandleValidation(botSecret string, wh *WebhookHandler) gin.HandlerFun
 			return
 		}
 
+		// 解析请求数据
 		var payload Payload
 		if err := json.Unmarshal(httpBody, &payload); err != nil {
 			log.Println("Failed to parse HTTP payload:", err)
@@ -67,39 +86,44 @@ func CreateHandleValidation(botSecret string, wh *WebhookHandler) gin.HandlerFun
 			return
 		}
 
-		// 生成种子并创建私钥
-		seed := botSecret
-		for len(seed) < ed25519.SeedSize {
-			seed = strings.Repeat(seed, 2)
-		}
-		seed = seed[:ed25519.SeedSize]
-		reader := strings.NewReader(seed)
-		_, privateKey, err := ed25519.GenerateKey(reader)
-		if err != nil {
-			log.Println("Failed to generate ed25519 key:", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate ed25519 key"})
-			return
-		}
+		// 判断 Op 类型
+		switch payload.Op {
+		case 13:
+			// 签名验证逻辑
+			var msg bytes.Buffer
+			msg.WriteString(payload.D.EventTs)
+			msg.WriteString(payload.D.PlainToken)
+			signature := hex.EncodeToString(ed25519.Sign(privateKey, msg.Bytes()))
 
-		// 拼接消息并生成签名
-		var msg bytes.Buffer
-		msg.WriteString(payload.D.EventTs)
-		msg.WriteString(payload.D.PlainToken)
-		signature := hex.EncodeToString(ed25519.Sign(privateKey, msg.Bytes()))
+			// 返回签名验证响应
+			c.JSON(http.StatusOK, gin.H{
+				"plain_token": payload.D.PlainToken,
+				"signature":   signature,
+			})
 
-		// 推送验证成功消息到队列
-		webhookPayload := &WebhookPayload{
-			PlainToken: payload.D.PlainToken,
-			EventTs:    payload.D.EventTs,
-			RawMessage: httpBody,
+		default:
+			// 异步推送消息到队列
+			go func(httpBody []byte, payload Payload) {
+				webhookPayload := &WebhookPayload{
+					PlainToken: payload.D.PlainToken,
+					EventTs:    payload.D.EventTs,
+					RawMessage: httpBody,
+				}
+
+				// 尝试写入队列
+				select {
+				case wh.messageQueue <- webhookPayload:
+					log.Println("Message enqueued successfully")
+				default:
+					log.Println("Message queue is full, dropping message")
+				}
+			}(httpBody, payload)
+
+			// 返回 HTTP Callback ACK 响应
+			c.JSON(http.StatusOK, gin.H{
+				"op": 12,
+			})
 		}
-		wh.messageQueue <- webhookPayload
-
-		// 返回签名验证响应
-		c.JSON(http.StatusOK, gin.H{
-			"plain_token": payload.D.PlainToken,
-			"signature":   signature,
-		})
 	}
 }
 

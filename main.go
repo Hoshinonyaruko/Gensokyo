@@ -447,7 +447,7 @@ func main() {
 		}
 	}
 
-	webhookHandler := server.NewWebhookHandler(100)
+	webhookHandler := server.NewWebhookHandler(5000)
 
 	// 启动消息处理协程
 	go webhookHandler.ListenAndProcessMessages()
@@ -458,7 +458,8 @@ func main() {
 	r.POST("/uploadpicv3", server.UploadBase64ImageHandlerV3(rateLimiter, api))
 	r.POST("/uploadrecord", server.UploadBase64RecordHandler(rateLimiter))
 	// 使用 CreateHandleValidation，传入 WebhookHandler 实例
-	r.POST("/"+conf.Settings.WebhookPath, server.CreateHandleValidation(conf.Settings.ClientSecret, webhookHandler))
+	server.InitPrivateKey(conf.Settings.ClientSecret)
+	r.POST("/"+conf.Settings.WebhookPath, server.CreateHandleValidation(webhookHandler))
 	r.Static("/channel_temp", "./channel_temp")
 	if config.GetFrpPort() == "0" && !config.GetDisableWebui() {
 		//webui和它的api
