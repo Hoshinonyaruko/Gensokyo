@@ -459,7 +459,12 @@ func main() {
 	r.POST("/uploadrecord", server.UploadBase64RecordHandler(rateLimiter))
 	// 使用 CreateHandleValidation，传入 WebhookHandler 实例
 	server.InitPrivateKey(conf.Settings.ClientSecret)
-	r.POST("/"+conf.Settings.WebhookPath, server.CreateHandleValidation(webhookHandler))
+	if len(conf.Settings.WebhookPrefixIp) == 0 {
+		r.POST("/"+conf.Settings.WebhookPath, server.CreateHandleValidationSafe(webhookHandler))
+	} else {
+		r.POST("/"+conf.Settings.WebhookPath, server.CreateHandleValidation(webhookHandler, conf.Settings.WebhookPrefixIp))
+	}
+
 	r.Static("/channel_temp", "./channel_temp")
 	if config.GetFrpPort() == "0" && !config.GetDisableWebui() {
 		//webui和它的api
