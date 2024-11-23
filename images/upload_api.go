@@ -14,7 +14,6 @@ import (
 	"sync"
 
 	"github.com/hoshinonyaruko/gensokyo/config"
-	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/hoshinonyaruko/gensokyo/oss"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/openapi"
@@ -147,7 +146,8 @@ func UploadBase64ImageToServer(base64Image string, apiv2 openapi.OpenAPI) (strin
 
 	height, width, err := GetImageDimensions(picURL)
 	if err != nil {
-		mylog.Printf("获取图片宽高出错")
+		log.Printf("获取图片宽高出错: %v", err) // 打印详细的错误信息
+		return "", 0, 0, err
 	}
 
 	return picURL, width, height, nil
