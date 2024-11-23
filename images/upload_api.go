@@ -14,7 +14,6 @@ import (
 	"sync"
 
 	"github.com/hoshinonyaruko/gensokyo/config"
-	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/hoshinonyaruko/gensokyo/oss"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/openapi"
@@ -147,7 +146,8 @@ func UploadBase64ImageToServer(base64Image string, apiv2 openapi.OpenAPI) (strin
 
 	height, width, err := GetImageDimensions(picURL)
 	if err != nil {
-		mylog.Printf("获取图片宽高出错")
+		log.Printf("获取图片宽高出错: %v", err) // 打印详细的错误信息
+		return "", 0, 0, err
 	}
 
 	return picURL, width, height, nil
@@ -174,10 +174,15 @@ func UploadBase64RecordToServer(base64Record string) (string, error) {
 }
 
 func originalUploadBehavior(base64Image string) (string, error) {
+	// 加载配置
+	conf, err := config.LoadConfig("config.yml", false)
+	if err != nil {
+		log.Fatalf("error: %v", err)
+	}
 	// 原有的UploadBase64ImageToServer函数的实现
 	protocol := "http"
 	serverPort := config.GetPortValue()
-	if serverPort == "443" {
+	if serverPort == "443" || conf.Settings.ForceSSL {
 		protocol = "https"
 	}
 
@@ -194,9 +199,9 @@ func originalUploadBehavior(base64Image string) (string, error) {
 	}
 
 	serverDir := config.GetServer_dir()
-	if serverPort == "443" {
+	if serverPort == "443" || conf.Settings.ForceSSL {
 		protocol = "http"
-		serverPort = "444"
+		serverPort = conf.Settings.HttpPortAfterSSL
 	}
 
 	if isPublicAddress(serverDir) {
@@ -212,6 +217,12 @@ func originalUploadBehavior(base64Image string) (string, error) {
 }
 
 func UploadBehaviorV3(base64Image string) (string, int, int, error) {
+	// 加载配置
+	conf, err := config.LoadConfig("config.yml", false)
+	if err != nil {
+		log.Fatalf("error: %v", err)
+	}
+
 	urls := config.GetServerTempQQguildPool()
 	if len(urls) > 0 {
 		urlsMutex.Lock()
@@ -227,7 +238,7 @@ func UploadBehaviorV3(base64Image string) (string, int, int, error) {
 	} else {
 		protocol := "http"
 		serverPort := config.GetPortValue()
-		if serverPort == "443" {
+		if serverPort == "443" || conf.Settings.ForceSSL {
 			protocol = "https"
 		}
 
@@ -241,9 +252,9 @@ func UploadBehaviorV3(base64Image string) (string, int, int, error) {
 			}
 			return resp, width, height, nil
 		} else {
-			if serverPort == "443" {
+			if serverPort == "443" || conf.Settings.ForceSSL {
 				protocol = "http"
-				serverPort = "444"
+				serverPort = conf.Settings.HttpPortAfterSSL
 			}
 			url = fmt.Sprintf("%s://127.0.0.1:%s/uploadpicv3", protocol, serverPort)
 
@@ -258,10 +269,16 @@ func UploadBehaviorV3(base64Image string) (string, int, int, error) {
 
 // 将base64语音通过lotus转换成url
 func originalUploadBehaviorRecord(base64Image string) (string, error) {
+	// 加载配置
+	conf, err := config.LoadConfig("config.yml", false)
+	if err != nil {
+		log.Fatalf("error: %v", err)
+	}
+
 	// 根据serverPort确定协议
 	protocol := "http"
 	serverPort := config.GetPortValue()
-	if serverPort == "443" {
+	if serverPort == "443" || conf.Settings.ForceSSL {
 		protocol = "https"
 	}
 
@@ -277,10 +294,10 @@ func originalUploadBehaviorRecord(base64Image string) (string, error) {
 	}
 
 	serverDir := config.GetServer_dir()
-	// 当端口是443时，使用HTTP和444端口
-	if serverPort == "443" {
+	// 当端口是443或conf.Settings.ForceSSL为true时，使用HTTP和conf.Settings.HttpPortAfterSSL端口
+	if serverPort == "443" || conf.Settings.ForceSSL {
 		protocol = "http"
-		serverPort = "444"
+		serverPort = conf.Settings.HttpPortAfterSSL
 	}
 
 	if isPublicAddress(serverDir) {

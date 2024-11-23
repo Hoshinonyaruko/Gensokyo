@@ -46,6 +46,12 @@ func NewRateLimiter() *RateLimiter {
 // 闭包,网页后端,图床逻辑,基于gin和www静态文件的简易图床
 func UploadBase64ImageHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 加载配置
+		conf, err := config.LoadConfig("config.yml", false)
+		if err != nil {
+			mylog.Fatalf("error: %v", err)
+		}
+
 		ipAddress := c.ClientIP()
 		if !rateLimiter.CheckAndUpdateRateLimit(ipAddress) {
 			c.JSON(http.StatusTooManyRequests, gin.H{"error": "rate limit exceeded"})
@@ -110,20 +116,25 @@ func UploadBase64ImageHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "server address is not configured"})
 			return
 		}
+
 		// 根据serverPort确定协议
 		protocol := "http"
-		if serverPort == "443" {
+		if serverPort == "443" || conf.Settings.ForceSSL {
 			protocol = "https"
 		}
+
 		stun, err := idmap.ReadConfigv2("stun", "addr")
 		var imageURL string
 		if err == nil && stun != "" {
 			imageURL = fmt.Sprintf("http://%s/channel_temp/%s", stun, fileName)
 		} else {
+			if serverPort == "443" || conf.Settings.ForceSSL {
+				protocol = "https"
+				serverPort = conf.Settings.Port
+			}
 			imageURL = fmt.Sprintf("%s://%s:%s/channel_temp/%s", protocol, serverAddress, serverPort, fileName)
 		}
 		c.JSON(http.StatusOK, gin.H{"url": imageURL})
-
 	}
 }
 
@@ -228,6 +239,12 @@ func UploadBase64ImageHandlerV3(rateLimiter *RateLimiter, apiv1 openapi.OpenAPI)
 // 闭包,网页后端,语音床逻辑,基于gin和www静态文件的简易语音床
 func UploadBase64RecordHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 加载配置
+		conf, err := config.LoadConfig("config.yml", false)
+		if err != nil {
+			mylog.Fatalf("error: %v", err)
+		}
+
 		ipAddress := c.ClientIP()
 		if !rateLimiter.CheckAndUpdateRateLimit(ipAddress) {
 			c.JSON(http.StatusTooManyRequests, gin.H{"error": "rate limit exceeded"})
@@ -277,8 +294,9 @@ func UploadBase64RecordHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 
 		// 根据serverPort确定协议
 		protocol := "http"
-		if serverPort == "443" {
+		if serverPort == "443" || conf.Settings.ForceSSL {
 			protocol = "https"
+			serverPort = conf.Settings.Port
 		}
 
 		imageURL := fmt.Sprintf("%s://%s:%s/channel_temp/%s", protocol, serverAddress, serverPort, fileName)
