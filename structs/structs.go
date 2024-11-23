@@ -73,6 +73,7 @@ type Settings struct {
 	WebhookPath     string   `yaml:"webhook_path"`
 	WebhookPrefixIp []string `yaml:"webhook_prefix_ip"`
 	ForceSSL        bool     `yaml:"force_ssl"`
+	HttpPortAfterSSL string  `yaml:"http_port_after_ssl"`
 	//日志类
 	DeveloperLog     bool `yaml:"developer_log"`
 	LogLevel         int  `yaml:"log_level"`
