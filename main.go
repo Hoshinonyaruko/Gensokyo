@@ -548,7 +548,7 @@ func main() {
 	mylog.Printf("gin运行在%v端口", serverPort)
 	// 在一个新的goroutine中启动主服务器
 	go func() {
-		if serverPort == "443" {
+		if serverPort == "443" || conf.Settings.ForceSSL {
 			// 使用HTTPS
 			crtPath := config.GetCrtPath()
 			keyPath := config.GetKeyPath()
