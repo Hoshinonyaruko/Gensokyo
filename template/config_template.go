@@ -88,6 +88,7 @@ settings:
   webhook_path : "webhook"           #webhook监听的地址,默认\webhook
   webhook_prefix_ip : []             #默认为空,通过webhook进行签名验证来源,设置时,只允许ip前缀的请求,不验证签名. 2024年11月22日最近的webhookip都是 183.47.105. 开始的.
   force_ssl : false                  #默认当port设置为443时启用ssl,true可以在其他port设置下强制启用ssl.
+  http_port_after_ssl : "444"       # 指定启动SSL之后的备用HTTP服务器的端口号，默认为444
   
   #日志类
   developer_log : false             #开启开发者日志 默认关闭
