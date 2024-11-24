@@ -177,7 +177,7 @@ func originalUploadBehavior(base64Image string) (string, error) {
 	// 原有的UploadBase64ImageToServer函数的实现
 	protocol := "http"
 	serverPort := config.GetPortValue()
-	if serverPort == "443" {
+	if serverPort == "443" ||config.GetForceSsl(){
 		protocol = "https"
 	}
 
@@ -194,9 +194,9 @@ func originalUploadBehavior(base64Image string) (string, error) {
 	}
 
 	serverDir := config.GetServer_dir()
-	if serverPort == "443" {
+	if serverPort == "443" ||config.GetForceSsl(){
 		protocol = "http"
-		serverPort = "444"
+		serverPort = config.GetHttpPortAfterSsl()
 	}
 
 	if isPublicAddress(serverDir) {
@@ -227,7 +227,7 @@ func UploadBehaviorV3(base64Image string) (string, int, int, error) {
 	} else {
 		protocol := "http"
 		serverPort := config.GetPortValue()
-		if serverPort == "443" {
+		if serverPort == "443" ||config.GetForceSsl(){
 			protocol = "https"
 		}
 
@@ -241,9 +241,9 @@ func UploadBehaviorV3(base64Image string) (string, int, int, error) {
 			}
 			return resp, width, height, nil
 		} else {
-			if serverPort == "443" {
+			if serverPort == "443" ||config.GetForceSsl(){
 				protocol = "http"
-				serverPort = "444"
+				serverPort = config.GetHttpPortAfterSsl()
 			}
 			url = fmt.Sprintf("%s://127.0.0.1:%s/uploadpicv3", protocol, serverPort)
 
@@ -261,7 +261,7 @@ func originalUploadBehaviorRecord(base64Image string) (string, error) {
 	// 根据serverPort确定协议
 	protocol := "http"
 	serverPort := config.GetPortValue()
-	if serverPort == "443" {
+	if serverPort == "443" ||config.GetForceSsl(){
 		protocol = "https"
 	}
 
@@ -278,9 +278,9 @@ func originalUploadBehaviorRecord(base64Image string) (string, error) {
 
 	serverDir := config.GetServer_dir()
 	// 当端口是443时，使用HTTP和444端口
-	if serverPort == "443" {
+	if serverPort == "443" ||config.GetForceSsl(){
 		protocol = "http"
-		serverPort = "444"
+		serverPort = config.GetHttpPortAfterSsl()
 	}
 
 	if isPublicAddress(serverDir) {

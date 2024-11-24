@@ -2471,3 +2471,26 @@ func GetNoRetMsg() bool {
 	}
 	return instance.Settings.NoRetMsg
 }
+
+func GetForceSsl() bool {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	if instance == nil {
+		fmt.Println("Warning: instance is nil when trying to ForceSSL value.")
+		return false
+	}
+	return instance.Settings.ForceSSL
+}
+
+func GetHttpPortAfterSsl() string {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	if instance == nil {
+		fmt.Println("Warning: instance is nil when trying to get HttpPortAfterSSL.")
+		return "444" // 或者返回一个默认的 ImageLimit 值
+	}
+
+	return instance.Settings.HttpPortAfterSSL
+}

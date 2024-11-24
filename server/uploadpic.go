@@ -112,7 +112,7 @@ func UploadBase64ImageHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 		}
 		// 根据serverPort确定协议
 		protocol := "http"
-		if serverPort == "443" {
+		if serverPort == "443"||config.GetForceSsl() {
 			protocol = "https"
 		}
 		stun, err := idmap.ReadConfigv2("stun", "addr")
@@ -277,7 +277,7 @@ func UploadBase64RecordHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 
 		// 根据serverPort确定协议
 		protocol := "http"
-		if serverPort == "443" {
+		if serverPort == "443" ||config.GetForceSsl(){
 			protocol = "https"
 		}
 

@@ -126,7 +126,7 @@ func GenerateShortURL(longURL string) string {
 	// 根据portValue确定协议
 	protocol := "http"
 	portValue := config.GetPortValue()
-	if portValue == "443" {
+	if portValue == "443" ||config.GetForceSsl(){
 		protocol = "https"
 	}
 
@@ -242,7 +242,7 @@ func getLongURLFromDB(shortURL string) (string, error) {
 	// 根据portValue确定协议
 	protocol := "http"
 	portValue := config.GetPortValue()
-	if portValue == "443" {
+	if portValue == "443" ||config.GetForceSsl(){
 		protocol = "https"
 	}
 
