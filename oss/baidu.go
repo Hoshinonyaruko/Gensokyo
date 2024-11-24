@@ -133,7 +133,7 @@ func originalUploadBehavior(base64Image string) (string, error) {
 	// 原有的UploadBase64ImageToServer函数的实现
 	protocol := "http"
 	serverPort := config.GetPortValue()
-	if serverPort == "443" {
+	if serverPort == "443" ||config.GetForceSsl(){
 		protocol = "https"
 	}
 
@@ -149,9 +149,9 @@ func originalUploadBehavior(base64Image string) (string, error) {
 	}
 
 	serverDir := config.GetServer_dir()
-	if serverPort == "443" {
+	if serverPort == "443" ||config.GetForceSsl(){
 		protocol = "http"
-		serverPort = "444"
+		serverPort = config.GetHttpPortAfterSsl()
 	}
 
 	if isPublicAddress(serverDir) {
