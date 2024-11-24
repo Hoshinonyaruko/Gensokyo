@@ -456,7 +456,7 @@ func SimplifiedStoreIDv2(id string) (int64, error) {
 
 		// 根据portValue确定协议
 		protocol := "http"
-		if portValue == "443" {
+		if portValue == "443" || config.GetForceSsl(){
 			protocol = "https"
 		}
 
@@ -553,7 +553,7 @@ func StoreIDv2(id string) (int64, error) {
 
 		// 根据portValue确定协议
 		protocol := "http"
-		if portValue == "443" {
+		if portValue == "443" ||config.GetForceSsl(){
 			protocol = "https"
 		}
 
@@ -603,7 +603,7 @@ func StoreCachev2(id string) (int64, error) {
 
 		// 根据portValue确定协议
 		protocol := "http"
-		if portValue == "443" {
+		if portValue == "443" ||config.GetForceSsl(){
 			protocol = "https"
 		}
 
@@ -653,7 +653,7 @@ func StoreIDv2Pro(id string, subid string) (int64, int64, error) {
 
 		// 根据portValue确定协议
 		protocol := "http"
-		if portValue == "443" {
+		if portValue == "443" ||config.GetForceSsl(){
 			protocol = "https"
 		}
 
@@ -746,7 +746,7 @@ func RetrieveRowByIDv2Pro(newRowID string, newSubRowID string) (string, string, 
 
 		// 根据portValue确定协议
 		protocol := "http"
-		if portValue == "443" {
+		if portValue == "443" ||config.GetForceSsl(){
 			protocol = "https"
 		}
 
@@ -817,7 +817,7 @@ func RetrieveRowByIDv2(rowid string) (string, error) {
 	// 根据portValue确定协议
 	protocol := "http"
 	portValue := config.GetPortValue()
-	if portValue == "443" {
+	if portValue == "443" ||config.GetForceSsl(){
 		protocol = "https"
 	}
 	if config.GetLotusGrpc() && config.GetLotusValue() {
@@ -866,7 +866,7 @@ func RetrieveRowByCachev2(rowid string) (string, error) {
 	// 根据portValue确定协议
 	protocol := "http"
 	portValue := config.GetPortValue()
-	if portValue == "443" {
+	if portValue == "443" ||config.GetForceSsl(){
 		protocol = "https"
 	}
 	if config.GetLotusGrpc() && config.GetLotusValue() {
@@ -947,7 +947,7 @@ func WriteConfigv2(sectionName, keyName, value string) error {
 
 		// 根据portValue确定协议
 		protocol := "http"
-		if portValue == "443" {
+		if portValue == "443" ||config.GetForceSsl(){
 			protocol = "https"
 		}
 
@@ -1023,7 +1023,7 @@ func DeleteConfigv2(sectionName, keyName string) error {
 	// 根据portValue确定协议
 	protocol := "http"
 	portValue := config.GetPortValue()
-	if portValue == "443" {
+	if portValue == "443" ||config.GetForceSsl(){
 		protocol = "https"
 	}
 
@@ -1072,7 +1072,7 @@ func ReadConfigv2(sectionName, keyName string) (string, error) {
 	// 根据portValue确定协议
 	protocol := "http"
 	portValue := config.GetPortValue()
-	if portValue == "443" {
+	if portValue == "443" ||config.GetForceSsl(){
 		protocol = "https"
 	}
 	if config.GetLotusGrpc() && config.GetLotusValue() {
@@ -1236,7 +1236,7 @@ func UpdateVirtualValuev2(oldRowValue, newRowValue int64) error {
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
 		protocol := "http"
-		if portValue == "443" {
+		if portValue == "443" ||config.GetForceSsl(){
 			protocol = "https"
 		}
 		url := fmt.Sprintf("%s://%s:%s/getid?type=5&oldRowValue=%d&newRowValue=%d", protocol, serverDir, portValue, oldRowValue, newRowValue)
@@ -1272,7 +1272,7 @@ func RetrieveRealValuev2(virtualValue int64) (string, string, error) {
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
 		protocol := "http"
-		if portValue == "443" {
+		if portValue == "443" ||config.GetForceSsl(){
 			protocol = "https"
 		}
 		url := fmt.Sprintf("%s://%s:%s/getid?type=6&virtualValue=%d", protocol, serverDir, portValue, virtualValue)
@@ -1320,7 +1320,7 @@ func RetrieveVirtualValuev2(realValue string) (string, string, error) {
 
 		// 根据portValue确定协议
 		protocol := "http"
-		if portValue == "443" {
+		if portValue == "443" ||config.GetForceSsl(){
 			protocol = "https"
 		}
 
@@ -1374,7 +1374,7 @@ func RetrieveVirtualValuev2Pro(realValue string, realValueSub string) (string, s
 
 		// 根据portValue确定协议
 		protocol := "http"
-		if portValue == "443" {
+		if portValue == "443" ||config.GetForceSsl(){
 			protocol = "https"
 		}
 
@@ -1499,7 +1499,7 @@ func RetrieveRealValuesv2Pro(virtualValue int64, virtualValueSub int64) (string,
 
 		// 根据portValue确定协议
 		protocol := "http"
-		if portValue == "443" {
+		if portValue == "443" ||config.GetForceSsl(){
 			protocol = "https"
 		}
 
@@ -1593,7 +1593,7 @@ func UpdateVirtualValuev2Pro(oldVirtualValue1, newVirtualValue1, oldVirtualValue
 		serverDir := config.GetServer_dir()
 		portValue := config.GetPortValue()
 		protocol := "http"
-		if portValue == "443" {
+		if portValue == "443" ||config.GetForceSsl(){
 			protocol = "https"
 		}
 
@@ -1695,7 +1695,7 @@ func FindSubKeysByIdPro(id string) ([]string, error) {
 
 		// 根据portValue确定协议
 		protocol := "http"
-		if portValue == "443" {
+		if portValue == "443" ||config.GetForceSsl(){
 			protocol = "https"
 		}
 
