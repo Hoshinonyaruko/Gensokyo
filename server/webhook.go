@@ -13,6 +13,7 @@ import (
 	"sync/atomic"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/event"
 	"github.com/tencent-connect/botgo/websocket/client"
@@ -71,84 +72,6 @@ func InitPrivateKey(botSecret string) {
 	publicKey = pkey
 }
 
-// CreateHandleValidation 创建用于签名验证和消息入队的处理函数
-func CreateHandleValidation(wh *WebhookHandler, allowedPrefixes []string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// 提取客户端 IP
-		clientIP := c.ClientIP()
-
-		// 检查是否匹配任意一个允许的前缀
-		allowed := false
-		for _, prefix := range allowedPrefixes {
-			if strings.HasPrefix(clientIP, prefix) {
-				allowed = true
-				break
-			}
-		}
-
-		if !allowed {
-			log.Printf("Request from unauthorized IP: %s", clientIP)
-			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
-			return
-		}
-
-		// 读取 HTTP Body
-		httpBody, err := io.ReadAll(c.Request.Body)
-		if err != nil {
-			log.Println("Failed to read HTTP body:", err)
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
-			return
-		}
-
-		// 解析请求数据
-		var payload Payload
-		if err := json.Unmarshal(httpBody, &payload); err != nil {
-			log.Println("Failed to parse HTTP payload:", err)
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse payload"})
-			return
-		}
-
-		// 判断 Op 类型
-		switch payload.Op {
-		case 13:
-			// 签名验证逻辑
-			var msg bytes.Buffer
-			msg.WriteString(payload.D.EventTs)
-			msg.WriteString(payload.D.PlainToken)
-			signature := hex.EncodeToString(ed25519.Sign(privateKey, msg.Bytes()))
-
-			// 返回签名验证响应
-			c.JSON(http.StatusOK, gin.H{
-				"plain_token": payload.D.PlainToken,
-				"signature":   signature,
-			})
-
-		default:
-			// 异步推送消息到队列
-			go func(httpBody []byte, payload Payload) {
-				webhookPayload := &WebhookPayload{
-					PlainToken: payload.D.PlainToken,
-					EventTs:    payload.D.EventTs,
-					RawMessage: httpBody,
-				}
-
-				// 尝试写入队列
-				select {
-				case wh.messageQueue <- webhookPayload:
-					log.Println("Message enqueued successfully")
-				default:
-					log.Println("Message queue is full, dropping message")
-				}
-			}(httpBody, payload)
-
-			// 返回 HTTP Callback ACK 响应
-			c.JSON(http.StatusOK, gin.H{
-				"op": 12,
-			})
-		}
-	}
-}
-
 func CreateHandleValidationSafe(wh *WebhookHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 读取 HTTP Body
@@ -204,7 +127,7 @@ func CreateHandleValidationSafe(wh *WebhookHandler) gin.HandlerFunc {
 				// 尝试写入队列
 				select {
 				case wh.messageQueue <- webhookPayload:
-					log.Println("Message enqueued successfully")
+					mylog.Println("Message enqueued successfully")
 				default:
 					log.Println("Message queue is full, dropping message")
 				}
@@ -265,7 +188,7 @@ func validateSignature(req *http.Request, publicKey ed25519.PublicKey) error {
 func (wh *WebhookHandler) ListenAndProcessMessages() {
 	for payload := range wh.messageQueue {
 		go func(p *WebhookPayload) {
-			log.Printf("Processing Webhook event with token: %s", p.PlainToken)
+			mylog.Printf("Processing Webhook event with token: %s", p.PlainToken)
 			// 业务逻辑处理的地方
 			payload := &dto.WSPayload{}
 			if err := json.Unmarshal(p.RawMessage, payload); err != nil {
@@ -276,7 +199,7 @@ func (wh *WebhookHandler) ListenAndProcessMessages() {
 			atomic.StoreInt64(&client.Global_s, payload.S)
 
 			payload.RawMessage = p.RawMessage
-			log.Printf("%s receive %s message, %s", p.EventTs, dto.OPMeans(payload.OPCode), string(p.RawMessage))
+			mylog.Printf("%s receive %s message, %s", p.EventTs, dto.OPMeans(payload.OPCode), string(p.RawMessage))
 
 			// 性能不够 报错也没用 就扬了
 			go event.ParseAndHandle(payload)
