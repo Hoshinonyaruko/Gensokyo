@@ -992,7 +992,11 @@ func transformMessageTextUrl(messageText string, message callapi.ActionMessage, 
 				// 自己是主节点
 				shortURL := url.GenerateShortURL(originalURL)
 				// 使用getBaseURL函数来获取baseUrl并与shortURL组合
-				return url.GetBaseURL() + "/url/" + shortURL
+				baseURL := url.GetBaseURL()
+				if customDomain := config.GetCustomDomain(); customDomain != "" {
+					baseURL = customDomain
+				}
+				return baseURL + "/url/" + shortURL
 			}
 		})
 	}
