@@ -65,15 +65,15 @@ type Settings struct {
 	EnableWsServer bool   `yaml:"enable_ws_server"`
 	WsServerToken  string `yaml:"ws_server_token"`
 	//ssl和链接转换类
-	IdentifyFile    bool     `yaml:"identify_file"`
-	IdentifyAppids  []int64  `yaml:"identify_appids"`
-	Crt             string   `yaml:"crt"`
-	Key             string   `yaml:"key"`
-	UseSelfCrt      bool     `yaml:"use_self_crt"`
-	WebhookPath     string   `yaml:"webhook_path"`
-	WebhookPrefixIp []string `yaml:"webhook_prefix_ip"`
-	ForceSSL        bool     `yaml:"force_ssl"`
-	HttpPortAfterSSL string  `yaml:"http_port_after_ssl"`
+	IdentifyFile     bool     `yaml:"identify_file"`
+	IdentifyAppids   []int64  `yaml:"identify_appids"`
+	Crt              string   `yaml:"crt"`
+	Key              string   `yaml:"key"`
+	UseSelfCrt       bool     `yaml:"use_self_crt"`
+	WebhookPath      string   `yaml:"webhook_path"`
+	WebhookPrefixIp  []string `yaml:"webhook_prefix_ip"`
+	ForceSSL         bool     `yaml:"force_ssl"`
+	HttpPortAfterSSL string   `yaml:"http_port_after_ssl"`
 	//日志类
 	DeveloperLog     bool `yaml:"developer_log"`
 	LogLevel         int  `yaml:"log_level"`
@@ -137,10 +137,11 @@ type Settings struct {
 	StringOb11       bool `yaml:"string_ob11"`
 	StringAction     bool `yaml:"string_action"`
 	//url相关
-	VisibleIp    bool `yaml:"visible_ip"`
-	UrlToQrimage bool `yaml:"url_to_qrimage"`
-	QrSize       int  `yaml:"qr_size"`
-	TransferUrl  bool `yaml:"transfer_url"`
+	VisibleIp    bool   `yaml:"visible_ip"`
+	UrlToQrimage bool   `yaml:"url_to_qrimage"`
+	QrSize       int    `yaml:"qr_size"`
+	TransferUrl  bool   `yaml:"transfer_url"`
+	CustomUrl    string `yaml:"custom_url"`
 	//框架修改
 	Title   string `yaml:"title"`
 	FrpPort string `yaml:"frp_port"`
