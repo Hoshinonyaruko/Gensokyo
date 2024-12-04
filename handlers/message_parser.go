@@ -988,15 +988,14 @@ func transformMessageTextUrl(messageText string, message callapi.ActionMessage, 
 				mylog.Printf("转换url:%v", originalURL)
 				shortURL := url.GenerateShortURL(originalURL)
 				return shortURL
+			} else if config.GetCustomUrl() != "" {
+				shortURL := url.GenerateShortURL(originalURL)
+				return url.GetCustomUrl() + "/url/" + shortURL
 			} else {
 				// 自己是主节点
 				shortURL := url.GenerateShortURL(originalURL)
 				// 使用getBaseURL函数来获取baseUrl并与shortURL组合
-				baseURL := url.GetBaseURL()
-				if customDomain := config.GetCustomDomain(); customDomain != "" {
-					baseURL = customDomain
-				}
-				return baseURL + "/url/" + shortURL
+				return url.GetBaseURL() + "/url/" + shortURL
 			}
 		})
 	}
