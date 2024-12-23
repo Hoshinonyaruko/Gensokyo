@@ -143,6 +143,10 @@ func (e *EchoMapping) GenerateKeyEventID(appid string, groupid int64) string {
 	return appid + "_" + strconv.FormatInt(groupid, 10)
 }
 
+func (e *EchoMapping) GenerateKeyEventIDV2(appid string, groupid string) string {
+	return appid + "_" + groupid
+}
+
 func (e *EchoMapping) GenerateKeyv3(appid string, s string) string {
 	return appid + "_" + s
 }
@@ -178,6 +182,12 @@ func AddMsgIDv2(appid string, groupid int64, userid int64, msgID string) {
 // 添加group对应的eventid
 func AddEvnetID(appid string, groupid int64, eventID string) {
 	key := globalEchoMapping.GenerateKeyEventID(appid, groupid)
+	globalEchoMapping.eventIDMapping.Store(key, eventID)
+}
+
+// 添加group对应的eventid
+func AddEvnetIDv2(appid string, groupid string, eventID string) {
+	key := globalEchoMapping.GenerateKeyEventIDV2(appid, groupid)
 	globalEchoMapping.eventIDMapping.Store(key, eventID)
 }
 

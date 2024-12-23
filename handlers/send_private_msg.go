@@ -165,7 +165,11 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		if messageID == "2000" {
 			messageID = ""
 			mylog.Println("通过lazymsgid发送群私聊主动信息,每月可发送1次")
-			eventID = GetEventIDByUseridOrGroupid(config.GetAppIDStr(), message.Params.UserID)
+			if len(message.Params.UserID.(string)) != 32 {
+				eventID = GetEventIDByUseridOrGroupid(config.GetAppIDStr(), message.Params.UserID)
+			} else {
+				eventID = GetEventIDByUseridOrGroupidv2(config.GetAppIDStr(), message.Params.UserID)
+			}
 			mylog.Printf("尝试获取当前是否有eventID可用,如果有则不消耗主动次数:%v", eventID)
 		}
 		//开发环境用 私聊不可用1000
