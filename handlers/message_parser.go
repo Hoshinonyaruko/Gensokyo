@@ -988,6 +988,9 @@ func transformMessageTextUrl(messageText string, message callapi.ActionMessage, 
 				mylog.Printf("转换url:%v", originalURL)
 				shortURL := url.GenerateShortURL(originalURL)
 				return shortURL
+			} else if config.GetCustomUrl() != "" {
+				shortURL := url.GenerateShortURL(originalURL)
+				return url.GetCustomUrl() + "/url/" + shortURL
 			} else {
 				// 自己是主节点
 				shortURL := url.GenerateShortURL(originalURL)
