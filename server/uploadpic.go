@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -32,15 +33,14 @@ const (
 	RequestInterval         = time.Minute
 )
 
+// RateLimiter 使用 sync.Map 来支持并发操作
 type RateLimiter struct {
-	Counts map[string][]time.Time
+	Counts sync.Map
 }
 
-// 频率限制器
+// NewRateLimiter 创建一个新的 RateLimiter
 func NewRateLimiter() *RateLimiter {
-	return &RateLimiter{
-		Counts: make(map[string][]time.Time),
-	}
+	return &RateLimiter{}
 }
 
 // 闭包,网页后端,图床逻辑,基于gin和www静态文件的简易图床
@@ -112,7 +112,7 @@ func UploadBase64ImageHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 		}
 		// 根据serverPort确定协议
 		protocol := "http"
-		if serverPort == "443"||config.GetForceSsl() {
+		if serverPort == "443" || config.GetForceSsl() {
 			protocol = "https"
 		}
 		stun, err := idmap.ReadConfigv2("stun", "addr")
@@ -277,7 +277,7 @@ func UploadBase64RecordHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 
 		// 根据serverPort确定协议
 		protocol := "http"
-		if serverPort == "443" ||config.GetForceSsl(){
+		if serverPort == "443" || config.GetForceSsl() {
 			protocol = "https"
 		}
 
@@ -287,20 +287,31 @@ func UploadBase64RecordHandler(rateLimiter *RateLimiter) gin.HandlerFunc {
 	}
 }
 
-// 检查是否超过调用频率限制
+// CheckAndUpdateRateLimit 检查某个 IP 是否超过了请求频率限制
 func (rl *RateLimiter) CheckAndUpdateRateLimit(ipAddress string) bool {
-	// 获取 MaxRequests 的当前值
-	maxRequests := config.GetImageLimitB()
+	maxRequests := config.GetImageLimitB() // 获取最大请求数
 
 	now := time.Now()
-	rl.Counts[ipAddress] = append(rl.Counts[ipAddress], now)
+	// 从 sync.Map 获取当前 IP 的请求时间戳列表
+	val, _ := rl.Counts.LoadOrStore(ipAddress, []time.Time{})
 
-	// Remove expired entries
-	for len(rl.Counts[ipAddress]) > 0 && now.Sub(rl.Counts[ipAddress][0]) > RequestInterval {
-		rl.Counts[ipAddress] = rl.Counts[ipAddress][1:]
+	// 将现有的请求时间戳列表转化为 []time.Time
+	counts := val.([]time.Time)
+	// 将当前请求时间戳添加到列表
+	counts = append(counts, now)
+
+	// 清理过期的请求时间戳
+	expiredCount := 0
+	for len(counts) > 0 && now.Sub(counts[0]) > RequestInterval {
+		counts = counts[1:]
+		expiredCount++
 	}
 
-	return len(rl.Counts[ipAddress]) <= maxRequests
+	// 更新 sync.Map 中的 IP 请求时间戳列表
+	rl.Counts.Store(ipAddress, counts)
+
+	// 返回是否超过限制
+	return len(counts) <= maxRequests
 }
 
 // 获取图片类型

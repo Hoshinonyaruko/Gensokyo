@@ -93,11 +93,11 @@ func (o *openAPI) setupClient() {
 		OnBeforeRequest(
 			func(c *resty.Client, r *resty.Request) error {
 				// 设置授权方案为 "QQBot"
-				//c.SetAuthScheme("QQBot")
-				c.SetAuthScheme("Bot")
-				c.SetAuthToken(o.token.GetString_old())
+				c.SetAuthScheme("QQBot")
+				//c.SetAuthScheme("Bot")
+				//c.SetAuthToken(o.token.GetString_old())
 				//t.GetAccessToken() 是群的
-				//c.SetAuthToken(o.token.GetAccessToken())
+				c.SetAuthToken(o.token.GetAccessToken())
 				return nil
 			},
 		).

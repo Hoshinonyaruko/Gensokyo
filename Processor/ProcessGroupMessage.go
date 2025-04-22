@@ -259,6 +259,11 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 		// Convert OnebotGroupMessage to map and send
 		groupMsgMap = structToMap(groupMsg)
 	} else {
+		var imgurl string
+		// 自用的地方,也有一点用,有图片的时候Sender.Area是图片url(这个字段本是废弃了)
+		if len(data.Attachments) > 0 {
+			imgurl = data.Attachments[0].URL
+		}
 		groupMsgS = OnebotGroupMessageS{
 			RawMessage:  messageText,
 			Message:     segmentedMessages,
@@ -272,7 +277,7 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 				UserID: userid64,
 				Sex:    "0",
 				Age:    0,
-				Area:   "0",
+				Area:   imgurl,
 				Level:  "0",
 			},
 			SubType: "normal",
