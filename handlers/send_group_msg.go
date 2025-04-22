@@ -209,6 +209,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 					}
 				}
 			}
+			// 这里已经重复覆盖为32位数ID了
 			message.Params.GroupID = originalGroupID
 			message.Params.UserID = originalUserID
 		}
@@ -243,9 +244,10 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		if messageID == "2000" {
 			messageID = ""
 			mylog.Println("通过lazymessage_id模式发送群聊/频道主动信息,群聊每月仅4次机会,如果本信息非主动推送信息,请提交issue")
-			if len(message.Params.GroupID.(string)) != 32 {
+			// 不使用stringob11的
+			if !config.GetStringOb11() {
 				eventID = GetEventIDByUseridOrGroupid(config.GetAppIDStr(), message.Params.GroupID)
-			}else{
+			} else {
 				eventID = GetEventIDByUseridOrGroupidv2(config.GetAppIDStr(), message.Params.GroupID)
 			}
 			mylog.Printf("尝试获取当前是否有eventID可用,如果有则不消耗主动次数:%v", eventID)
