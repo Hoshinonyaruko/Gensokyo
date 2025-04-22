@@ -36,20 +36,20 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Set up Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v4
       with:
         go-version: '1.21.1' # Set to specific Go version.
 
     - name: Set up Node.js
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@v4
       with:
         node-version: '20.9.0' # 使用最新的 LTS 版本
 
     - name: Cache Node modules
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         path: |
           frontend/node_modules
@@ -70,7 +70,7 @@ jobs:
         quasar build
 
     - name: Cache Android NDK
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         path: |
           ${{ github.workspace }}/android-ndk-r21e
@@ -116,7 +116,7 @@ jobs:
         fi      
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: gensokyo-${{ matrix.os }}-${{ matrix.goarch }}
         path: output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}${{ endsWith(matrix.os, 'windows') && '.exe' || '' }}
@@ -126,13 +126,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: output
 
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
+        uses: actions/create-release@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
