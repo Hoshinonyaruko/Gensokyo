@@ -1091,7 +1091,7 @@ func generateGroupMessage(id string, eventid string, foundItems map[string][]str
 			base64Encoded := base64.StdEncoding.EncodeToString(fileRecordData)
 			if config.GetUploadPicV2Base64() {
 				// 直接上传语音返回 MessageToCreate type=7
-				messageToCreate, err := images.CreateAndUploadMediaMessage(context.TODO(), base64Encoded, eventid, 1, false, "", groupid, id, msgseq, apiv2)
+				messageToCreate, err := images.CreateAndUploadMediaMessage(context.TODO(), base64Encoded, eventid, 3, false, "", groupid, id, msgseq, apiv2)
 				if err != nil {
 					mylog.Printf("Error messageToCreate: %v", err)
 					return &dto.MessageToCreate{
@@ -1695,7 +1695,7 @@ func generatePrivateMessage(id string, eventid string, foundItems map[string][]s
 			base64Encoded := base64.StdEncoding.EncodeToString(fileRecordData)
 			if config.GetUploadPicV2Base64() {
 				// 直接上传语音返回 MessageToCreate type=7
-				messageToCreate, err := images.CreateAndUploadMediaMessagePrivate(context.TODO(), base64Encoded, eventid, 1, false, "", userid, id, msgseq, apiv2)
+				messageToCreate, err := images.CreateAndUploadMediaMessagePrivate(context.TODO(), base64Encoded, eventid, 3, false, "", userid, id, msgseq, apiv2)
 				if err != nil {
 					mylog.Printf("Error messageToCreate: %v", err)
 					return &dto.MessageToCreate{
