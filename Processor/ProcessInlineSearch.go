@@ -328,6 +328,7 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 					},
 					SubType: "normal",
 					Time:    time.Now().Unix(),
+					Platform:    "qq",
 				}
 				//增强配置
 				if !config.GetNativeOb11() {
@@ -556,6 +557,7 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 					},
 					SubType: "normal",
 					Time:    time.Now().Unix(),
+					Platform:    "qq",
 				}
 				//增强配置
 				if !config.GetNativeOb11() {

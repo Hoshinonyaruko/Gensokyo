@@ -305,6 +305,53 @@ func SendResponseSB(client callapi.Client, err error, message *callapi.ActionMes
 		return "", sendErr
 	}
 
+	//  是否自动撤回
+	if echoStr, ok := message.Echo.(string); ok {
+		msg_on_touch := echo.GetMsgIDv3(config.GetAppIDStr(), echoStr)
+		// 检查是否需要自动撤回
+		autoWithdrawPrefixes := config.GetAutoWithdraw()
+		if len(autoWithdrawPrefixes) > 0 {
+			for _, prefix := range autoWithdrawPrefixes {
+				if strings.HasPrefix(msg_on_touch, prefix) {
+					go func() {
+						delay := config.GetAutoWithdrawTime() // 获取延迟时间
+						time.Sleep(time.Duration(delay) * time.Second)
+
+						// 构建参数
+						var params callapi.ParamsContent
+						if groupID, ok := message.Params.GroupID.(string); ok && groupID != "" {
+							params.GroupID = message.Params.GroupID.(string)
+						} else {
+							return // 如果没有有效的参数，则退出
+						}
+
+						// 确保 `resp` 和 `resp.Message` 都有效
+						if resp == nil || resp.Message == nil {
+							mylog.Printf("Error: resp or resp.Message is nil")
+							return // 防止访问 nil 引发 panic
+						}
+
+						params.MessageID = resp.Message.ID
+
+						// 创建撤回消息的请求
+						deleteMessage := callapi.ActionMessage{
+							Action: "delete_msg",
+							Params: params,
+						}
+
+						// 调用删除消息函数
+						client := &HttpAPIClient{}
+						_, err := DeleteMsg(client, api, apiv2, deleteMessage)
+						if err != nil {
+							mylog.Printf("Error DeleteMsg: %v", err)
+						}
+					}()
+					break
+				}
+			}
+		}
+	}
+
 	mylog.Printf("发送成功回执: %+v", string(jsonResponse))
 	return string(jsonResponse), nil
 }
