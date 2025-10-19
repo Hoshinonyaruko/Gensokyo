@@ -65,15 +65,15 @@ type Settings struct {
 	EnableWsServer bool   `yaml:"enable_ws_server"`
 	WsServerToken  string `yaml:"ws_server_token"`
 	//ssl和链接转换类
-	IdentifyFile    bool     `yaml:"identify_file"`
-	IdentifyAppids  []int64  `yaml:"identify_appids"`
-	Crt             string   `yaml:"crt"`
-	Key             string   `yaml:"key"`
-	UseSelfCrt      bool     `yaml:"use_self_crt"`
-	WebhookPath     string   `yaml:"webhook_path"`
-	WebhookPrefixIp []string `yaml:"webhook_prefix_ip"`
-	ForceSSL        bool     `yaml:"force_ssl"`
-	HttpPortAfterSSL string  `yaml:"http_port_after_ssl"`
+	IdentifyFile     bool     `yaml:"identify_file"`
+	IdentifyAppids   []int64  `yaml:"identify_appids"`
+	Crt              string   `yaml:"crt"`
+	Key              string   `yaml:"key"`
+	UseSelfCrt       bool     `yaml:"use_self_crt"`
+	WebhookPath      string   `yaml:"webhook_path"`
+	WebhookPrefixIp  []string `yaml:"webhook_prefix_ip"`
+	ForceSSL         bool     `yaml:"force_ssl"`
+	HttpPortAfterSSL string   `yaml:"http_port_after_ssl"`
 	//日志类
 	DeveloperLog     bool `yaml:"developer_log"`
 	LogLevel         int  `yaml:"log_level"`
@@ -142,8 +142,10 @@ type Settings struct {
 	QrSize       int  `yaml:"qr_size"`
 	TransferUrl  bool `yaml:"transfer_url"`
 	//框架修改
-	Title   string `yaml:"title"`
-	FrpPort string `yaml:"frp_port"`
+	Title        string `yaml:"title"`
+	FrpPort      string `yaml:"frp_port"`
+	UnionWebhook string `yaml:"union_webhook"`
+	UnionID      bool   `yaml:"union_id"`
 	//MD相关
 	CustomTemplateID string `yaml:"custom_template_id"`
 	KeyBoardID       string `yaml:"keyboard_id"`

@@ -2494,3 +2494,26 @@ func GetHttpPortAfterSsl() string {
 
 	return instance.Settings.HttpPortAfterSSL
 }
+
+// 获取UnionWebhook的值
+func GetUnionWebhook() string {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	if instance == nil {
+		fmt.Println("Warning: instance is nil when trying to UnionWebhook value.")
+		return "0"
+	}
+	return instance.Settings.UnionWebhook
+}
+
+func GetUnionID() bool {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	if instance == nil {
+		fmt.Println("Warning: instance is nil when trying to UnionID value.")
+		return false
+	}
+	return instance.Settings.UnionID
+}

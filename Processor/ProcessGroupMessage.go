@@ -41,6 +41,14 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 		return nil
 	}
 
+	var platform string
+	if config.GetUnionID() {
+		data.Author.ID = data.Author.UnionOpenID
+		platform = "unionqq"
+	} else {
+		platform = "qq"
+	}
+
 	if !config.GetStringOb11() {
 		if config.GetIdmapPro() {
 			//将真实id转为int userid64
@@ -280,9 +288,9 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 				Area:   imgurl,
 				Level:  "0",
 			},
-			SubType: "normal",
-			Time:    time.Now().Unix(),
-			Platform:    "qq",
+			SubType:  "normal",
+			Time:     time.Now().Unix(),
+			Platform: platform,
 		}
 		// 增强配置
 		if !config.GetNativeOb11() {

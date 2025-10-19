@@ -180,6 +180,8 @@ settings:
   #框架修改
   title : "Gensokyo © 2023 - Hoshinonyaruko"              #程序的标题 如果多个机器人 可根据标题区分
   frp_port : "0"                    #不使用请保持为0,frp的端口,frp有内外端口,请在frp软件设置gensokyo的port,并将frp显示的对外端口填入这里
+  union_webhook : ""                #罚壳模式,将webhook流量转发给另一个gensokyo一起运行.
+  union_id : false                  #启用罚壳id,将传入的罚壳id作为主id使用.
  
   #MD相关
   custom_template_id : ""           #自动转换图文信息到md所需要的id *需要应用端支持双方向echo

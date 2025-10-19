@@ -2,10 +2,12 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -459,7 +461,9 @@ func main() {
 	r.POST("/uploadrecord", server.UploadBase64RecordHandler(rateLimiter))
 	// 使用 CreateHandleValidation，传入 WebhookHandler 实例
 	server.InitPrivateKey(conf.Settings.ClientSecret)
-	r.POST("/"+conf.Settings.WebhookPath, server.CreateHandleValidationSafe(webhookHandler))
+	//r.POST("/"+conf.Settings.WebhookPath, server.CreateHandleValidationSafe(webhookHandler))
+
+	r.POST("/"+conf.Settings.WebhookPath, UnionFanout(server.CreateHandleValidationSafe(webhookHandler)))
 
 	r.Static("/channel_temp", "./channel_temp")
 	if config.GetFrpPort() == "0" && !config.GetDisableWebui() {
@@ -911,5 +915,48 @@ func setupConfigWatcher(configFilePath string) {
 	err = watcher.Add(configFilePath)
 	if err != nil {
 		log.Fatalf("Error adding watcher: %v", err)
+	}
+}
+
+// 包装器：在执行原有处理器前，抓取 Body；在本地处理器运行的同时，异步原样转发到 UnionWebhook。
+func UnionFanout(base gin.HandlerFunc) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 1) 读取并缓存原始请求体
+		body, err := io.ReadAll(c.Request.Body)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "read body failed"})
+			return
+		}
+		// 2) 复位 Body 给本地处理链使用
+		c.Request.Body = io.NopCloser(bytes.NewReader(body))
+
+		// 3) 异步转发一份到 UnionWebhook（若配置非空）
+		if uw := config.GetUnionWebhook(); uw != "" && uw != "0" {
+			method := c.Request.Method
+			headers := c.Request.Header.Clone() // 原样复制请求头
+
+			go func(method, url string, headers http.Header, payload []byte) {
+				defer func() { _ = recover() }()
+
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+
+				req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(payload))
+				if err != nil {
+					return
+				}
+				// 复制请求头（最小实现：不剔除 hop-by-hop 头；若需更严谨，可过滤 Connection/Keep-Alive 等）
+				for k, vs := range headers {
+					for _, v := range vs {
+						req.Header.Add(k, v)
+					}
+				}
+				// 发起转发（忽略返回结果，不影响主流程）
+				_, _ = http.DefaultClient.Do(req)
+			}(method, uw, headers, body)
+		}
+
+		// 4) 继续执行原有处理器（本地业务逻辑）
+		base(c)
 	}
 }
