@@ -397,32 +397,18 @@ func HandleSendGroupMsgRaw(client callapi.Client, api openapi.OpenAPI, apiv2 ope
 				}
 				message_return, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), richMediaMessage)
 				if err != nil {
-					mylog.Printf("发送 %s 信息失败_send_group_msg: %v", key, err)
-					if config.GetSendError() { //把报错当作文本发出去
-						msgseq := echo.GetMappingSeq(messageID)
-						echo.AddMappingSeq(messageID, msgseq+1)
-						groupReply := generateGroupMessage(messageID, "", nil, err.Error(), msgseq+1, apiv2, message.Params.GroupID.(string))
-						// 进行类型断言
-						groupMessage, ok := groupReply.(*dto.MessageToCreate)
-						if !ok {
-							mylog.Println("Error: Expected MessageToCreate type.")
-							return "", nil // 或其他错误处理
-						}
-						groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
-						//重新为err赋值
-						resp, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
-						if err != nil {
-							mylog.Printf("发送文本报错信息失败: %v", err)
-						}
-						if err != nil && strings.Contains(err.Error(), `"code":22009`) {
-							mylog.Printf("信息发送失败,加入到队列中,下次被动信息进行发送")
-							var pair echo.MessageGroupPair
-							pair.Group = message.Params.GroupID.(string)
-							pair.GroupMessage = groupMessage
-							echo.PushGlobalStack(pair)
-						}
+					mylog.Printf("发送 richMediaMessage 信息失败: %v", err)
+					// 错误保存到本地
+					if config.GetSaveError() {
+						mylog.ErrLogToFile("type", "PostGroupMessage-richMediaMessage")
+						mylog.ErrInterfaceToFile("request", richMediaMessage)
+						mylog.ErrLogToFile("error", err.Error())
 					}
 				}
+				if err != nil && strings.Contains(err.Error(), "context deadline exceeded") {
+					postGroupRichMediaMessageWithRetry(apiv2, message.Params.GroupID.(string), richMediaMessage)
+				}
+
 				if message_return != nil && message_return.MediaResponse != nil && message_return.MediaResponse.FileInfo != "" {
 					msgseq := echo.GetMappingSeq(messageID)
 					echo.AddMappingSeq(messageID, msgseq+1)
