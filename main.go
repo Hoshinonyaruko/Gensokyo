@@ -169,28 +169,28 @@ func main() {
 			if err := botgo.SelectOpenAPIVersion(openapi.APIv1); err != nil {
 				log.Fatalln(err)
 			}
-			api = botgo.NewOpenAPI(token).WithTimeout(3 * time.Second)
+			api = botgo.NewOpenAPI(token).WithTimeout(15 * time.Second)
 			log.Println("创建 apiv1 成功")
 
 			// 创建 v2 版本的 OpenAPI 实例
 			if err := botgo.SelectOpenAPIVersion(openapi.APIv2); err != nil {
 				log.Fatalln(err)
 			}
-			apiV2 = botgo.NewOpenAPI(token).WithTimeout(3 * time.Second)
+			apiV2 = botgo.NewOpenAPI(token).WithTimeout(15 * time.Second)
 			log.Println("创建 apiv2 成功")
 		} else {
 			// 创建 v1 版本的 OpenAPI 实例
 			if err := botgo.SelectOpenAPIVersion(openapi.APIv1); err != nil {
 				log.Fatalln(err)
 			}
-			api = botgo.NewSandboxOpenAPI(token).WithTimeout(3 * time.Second)
+			api = botgo.NewSandboxOpenAPI(token).WithTimeout(15 * time.Second)
 			log.Println("创建 沙箱 apiv1 成功")
 
 			// 创建 v2 版本的 OpenAPI 实例
 			if err := botgo.SelectOpenAPIVersion(openapi.APIv2); err != nil {
 				log.Fatalln(err)
 			}
-			apiV2 = botgo.NewSandboxOpenAPI(token).WithTimeout(3 * time.Second)
+			apiV2 = botgo.NewSandboxOpenAPI(token).WithTimeout(15 * time.Second)
 			log.Println("创建 沙箱 apiv2 成功")
 		}
 
@@ -830,6 +830,39 @@ func GroupMsgReceiveHandler() event.GroupMsgReceiveHandler {
 	}
 }
 
+// FriendAddEventHandler 实现处理 用户添加机器人 事件的回调
+func FriendAddEventHandler() event.FriendAddEventHandler {
+	return func(event *dto.WSPayload, data *dto.WSFriendAddData) error {
+		// data.SceneParam 即为 generate_url_link 中的 callbackData
+		go p.ProcessFriendAdd(data)
+		return nil
+	}
+}
+
+// FriendDelEventHandler 实现处理 用户删除机器人 事件的回调
+func FriendDelEventHandler() event.FriendDelEventHandler {
+	return func(event *dto.WSPayload, data *dto.WSFriendDelData) error {
+		go p.ProcessFriendDel(data)
+		return nil
+	}
+}
+
+// C2CMsgRejectHandler 实现处理 用户关闭机器人C2C消息推送 事件的回调
+func C2CMsgRejectHandler() event.C2CMsgRejectHandler {
+	return func(event *dto.WSPayload, data *dto.WSC2CMsgRejectData) error {
+		go p.ProcessC2CMsgReject(data)
+		return nil
+	}
+}
+
+// C2CMsgReceiveHandler 实现处理 用户开启机器人C2C消息推送 事件的回调
+func C2CMsgReceiveHandler() event.C2CMsgReceiveHandler {
+	return func(event *dto.WSPayload, data *dto.WSC2CMsgReceiveData) error {
+		go p.ProcessC2CMsgReceive(data)
+		return nil
+	}
+}
+
 func getHandlerByName(handlerName string) (interface{}, bool) {
 	switch handlerName {
 	case "ReadyHandler": //连接成功
@@ -864,6 +897,15 @@ func getHandlerByName(handlerName string) (interface{}, bool) {
 		return GroupMsgRejectHandler(), true
 	case "GroupMsgReceiveHandler": //群请求开启机器人主动推送
 		return GroupMsgReceiveHandler(), true
+		// [新增] 下面是补全的4个用户/C2C相关事件
+	case "FriendAddEventHandler": //用户添加机器人
+		return FriendAddEventHandler(), true
+	case "FriendDelEventHandler": //用户删除机器人
+		return FriendDelEventHandler(), true
+	case "C2CMsgRejectHandler": //用户请求关闭机器人C2C主动推送
+		return C2CMsgRejectHandler(), true
+	case "C2CMsgReceiveHandler": //用户请求开启机器人C2C主动推送
+		return C2CMsgReceiveHandler(), true
 	default:
 		log.Printf("Unknown handler: %s\n", handlerName)
 		return nil, false

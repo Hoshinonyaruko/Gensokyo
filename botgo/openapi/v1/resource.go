@@ -37,6 +37,9 @@ const (
 	messageURI       uri = "/channels/{channel_id}/messages/{message_id}"
 	groupMessagesURL uri = "/v2/groups/{group_id}/messages/{message_id}"
 
+	// [新增] 获取机器人资料页分享链接
+	generateURLLinkURI uri = "/v2/generate_url_link"
+
 	userMeURI       uri = "/users/@me"
 	userMeGuildsURI uri = "/users/@me/guilds"
 	userMeDMURI     uri = "/users/@me/dms"

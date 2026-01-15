@@ -18,6 +18,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/images"
+	"github.com/hoshinonyaruko/gensokyo/mdutil"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/hoshinonyaruko/gensokyo/silk"
 	"github.com/hoshinonyaruko/gensokyo/structs"
@@ -574,8 +575,8 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 						mylog.ErrLogToFile("error", err.Error())
 					}
 				}
-				if err != nil && strings.Contains(err.Error(), "context deadline exceeded") {
-					postGroupRichMediaMessageWithRetry(apiv2, message.Params.GroupID.(string), richMediaMessage)
+				if err != nil && (strings.Contains(err.Error(), "context deadline exceeded") || strings.Contains(err.Error(), "富媒体文件上传超时")) {
+					message_return, err = postGroupRichMediaMessageWithRetry(apiv2, message.Params.GroupID.(string), richMediaMessage)
 				}
 
 				if message_return != nil && message_return.MediaResponse != nil && message_return.MediaResponse.FileInfo != "" {
@@ -1278,6 +1279,11 @@ func generateGroupMessage(id string, eventid string, foundItems map[string][]str
 			mylog.Printf("failed to parseMDData: %v", err)
 			return nil
 		}
+
+		if config.GetUnionID() && markdown != nil && markdown.Content != "" {
+			markdown.Content = mdutil.ReplaceQQBotAtUserIDUnionToRaw(markdown.Content)
+		}
+
 		return &dto.MessageToCreate{
 			Content:  "markdown",
 			MsgID:    id,
@@ -2484,7 +2490,7 @@ func postGroupRichMediaMessageWithRetry(apiv2 openapi.OpenAPI, groupID string, r
 	retryCount := 3 // 设置最大重试次数为 3
 	for i := 0; i < retryCount; i++ {
 		resp, err = apiv2.PostGroupMessage(context.TODO(), groupID, richMediaMessage)
-		if err != nil && strings.Contains(err.Error(), "context deadline exceeded") {
+		if err != nil && (strings.Contains(err.Error(), "context deadline exceeded") || strings.Contains(err.Error(), "富媒体文件上传超时")) {
 			// 仅对超时做重试
 			mylog.Printf("富媒体超时重试第 %d 次: %v", i+1, err)
 			if config.GetSaveError() {
@@ -2492,7 +2498,7 @@ func postGroupRichMediaMessageWithRetry(apiv2 openapi.OpenAPI, groupID string, r
 				mylog.ErrInterfaceToFile("request", richMediaMessage)
 				mylog.ErrLogToFile("error", err.Error())
 			}
-			time.Sleep(1 * time.Second) // 重试间隔 1 秒
+			time.Sleep(3 * time.Second) // 重试间隔 3 秒
 			continue
 		}
 

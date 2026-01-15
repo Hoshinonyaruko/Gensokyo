@@ -359,8 +359,8 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 				}
 
 				// 仅对超时做重试，使用原始富媒体消息，不再构造错误文本消息
-				if err != nil && strings.Contains(err.Error(), "context deadline exceeded") {
-					postC2CRichMediaMessageWithRetry(apiv2, UserID, richMediaMessage)
+				if err != nil && (strings.Contains(err.Error(), "context deadline exceeded") || strings.Contains(err.Error(), "富媒体文件上传超时")) {
+					message_return, err = postC2CRichMediaMessageWithRetry(apiv2, UserID, richMediaMessage)
 				}
 
 				if message_return != nil && message_return.MediaResponse != nil && message_return.MediaResponse.FileInfo != "" {
@@ -543,14 +543,14 @@ func postC2CMessageWithRetry(apiv2 openapi.OpenAPI, userID string, msg *dto.Mess
 		msg.MsgSeq = msgseq + 1
 
 		resp, err = apiv2.PostC2CMessage(context.TODO(), userID, msg)
-		if err != nil && strings.Contains(err.Error(), "context deadline exceeded") {
+		if err != nil && (strings.Contains(err.Error(), "context deadline exceeded") || strings.Contains(err.Error(), "富媒体文件上传超时")) {
 			mylog.Printf("私聊超时重试第 %d 次: %v", i+1, err)
 			if config.GetSaveError() {
 				mylog.ErrLogToFile("type", "PostC2CMessage-context-deadline-exceeded-retry-"+strconv.Itoa(i+1))
 				mylog.ErrInterfaceToFile("request", msg)
 				mylog.ErrLogToFile("error", err.Error())
 			}
-			time.Sleep(1 * time.Second) // 重试间隔 1 秒
+			time.Sleep(3 * time.Second) // 重试间隔 3 秒
 			continue
 		} else {
 			// 成功 或 非超时错误，统一在这里收尾

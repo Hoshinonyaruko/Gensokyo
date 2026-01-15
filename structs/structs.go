@@ -32,6 +32,9 @@ type Settings struct {
 	GlobalGroupMsgRejectReciveEventToMessage bool   `yaml:"global_group_msg_rre_to_message"`
 	GlobalGroupMsgRejectMessage              string `yaml:"global_group_msg_reject_message"`
 	GlobalGroupMsgReceiveMessage             string `yaml:"global_group_msg_receive_message"`
+	GlobalC2CMsgSwitchEventToMessage         bool   `yaml:"global_c2c_msg_switch_to_message"`
+	GlobalC2CMsgRejectMessage                string `yaml:"global_c2c_msg_reject_message"`
+	GlobalC2CMsgReceiveMessage               string `yaml:"global_c2c_msg_receive_message"`
 	HashID                                   bool   `yaml:"hash_id"`
 	IdmapPro                                 bool   `yaml:"idmap_pro"`
 	//gensokyo互联类

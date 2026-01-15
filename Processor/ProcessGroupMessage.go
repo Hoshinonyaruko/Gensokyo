@@ -13,6 +13,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/handlers"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
+	"github.com/hoshinonyaruko/gensokyo/unioncache"
 
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/websocket/client"
@@ -39,6 +40,11 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 	if data.Author.ID == "" {
 		mylog.Printf("出现ID为空未知错误.%v\n", data)
 		return nil
+	}
+
+	// 改变之前先存
+	if data.Author.UnionOpenID != "" && data.Author.ID != "" {
+		unioncache.Store(data.Author.ID, data.Author.UnionOpenID)
 	}
 
 	var platform string

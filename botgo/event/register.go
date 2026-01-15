@@ -38,6 +38,12 @@ var DefaultHandlers struct {
 	GroupDelbot     GroupDelRobotEventHandler
 	GroupMsgReject  GroupMsgRejectHandler
 	GroupMsgReceive GroupMsgReceiveHandler
+
+	// [新增] 用户(C2C)关系链与消息开关事件
+	FriendAdd     FriendAddEventHandler
+	FriendDel     FriendDelEventHandler
+	C2CMsgReject  C2CMsgRejectHandler
+	C2CMsgReceive C2CMsgReceiveHandler
 }
 
 // ReadyHandler 可以处理 ws 的 ready 事件
@@ -123,6 +129,22 @@ type GroupMsgReceiveHandler func(event *dto.WSPayload, data *dto.GroupMsgReceive
 
 // ************************************************
 
+// ***************** 用户关系链/C2C开关事件 (新增部分) *****************
+
+// FriendAddEventHandler 机器人被用户添加事件 handler (FRIEND_ADD)
+type FriendAddEventHandler func(event *dto.WSPayload, data *dto.WSFriendAddData) error
+
+// FriendDelEventHandler 机器人被用户删除事件 handler (FRIEND_DEL)
+type FriendDelEventHandler func(event *dto.WSPayload, data *dto.WSFriendDelData) error
+
+// C2CMsgRejectHandler 用户拒绝机器人C2C消息事件 handler (C2C_MSG_REJECT)
+type C2CMsgRejectHandler func(event *dto.WSPayload, data *dto.WSC2CMsgRejectData) error
+
+// C2CMsgReceiveHandler 用户接受机器人C2C消息事件 handler (C2C_MSG_RECEIVE)
+type C2CMsgReceiveHandler func(event *dto.WSPayload, data *dto.WSC2CMsgReceiveData) error
+
+// *******************************************************************
+
 // RegisterHandlers 注册事件回调，并返回 intent 用于 websocket 的鉴权
 func RegisterHandlers(handlers ...interface{}) dto.Intent {
 	var i dto.Intent
@@ -151,6 +173,16 @@ func RegisterHandlers(handlers ...interface{}) dto.Intent {
 			DefaultHandlers.GroupMsgReject = handle
 		case GroupMsgReceiveHandler:
 			DefaultHandlers.GroupMsgReceive = handle
+
+			// [新增] 用户关系链相关注册
+		case FriendAddEventHandler:
+			DefaultHandlers.FriendAdd = handle
+		case FriendDelEventHandler:
+			DefaultHandlers.FriendDel = handle
+		case C2CMsgRejectHandler:
+			DefaultHandlers.C2CMsgReject = handle
+		case C2CMsgReceiveHandler:
+			DefaultHandlers.C2CMsgReceive = handle
 		default:
 		}
 	}

@@ -321,3 +321,19 @@ func (o *openAPI) PostC2CMessageSSE(ctx context.Context, userID string, msg dto.
 
 	return result, nil
 }
+
+// GenerateURLLink 获取机器人资料页分享链接
+// 实现文档: https://bot.q.qq.com/wiki/develop/api-v2/server-inter/user/share_url.html
+func (o *openAPI) GenerateURLLink(ctx context.Context, params *dto.GenerateURLLinkToCreate) (*dto.GenerateURLLink, error) {
+	resp, err := o.request(ctx).
+		SetResult(dto.GenerateURLLink{}).  // 设置预期的返回结构
+		SetBody(params).                   // 设置请求体 (callbackData)
+		Post(o.getURL(generateURLLinkURI)) // 发送 POST 请求
+
+	if err != nil {
+		return nil, err
+	}
+
+	// 类型断言并返回结果
+	return resp.Result().(*dto.GenerateURLLink), nil
+}

@@ -2517,3 +2517,35 @@ func GetUnionID() bool {
 	}
 	return instance.Settings.UnionID
 }
+
+// GetGlobalC2CMsgSwitchEventToMessage 获取是否将C2C开关事件转换为消息
+func GetGlobalC2CMsgSwitchEventToMessage() bool {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	if instance == nil {
+		fmt.Println("Warning: instance is nil when trying to GetGlobalC2CMsgSwitchEventToMessage.")
+		return false
+	}
+	return instance.Settings.GlobalC2CMsgSwitchEventToMessage
+}
+
+// GetGlobalC2CMsgRejectMessage 获取C2C拒绝时的自定义文本
+func GetGlobalC2CMsgRejectMessage() string {
+	mu.RLock()
+	defer mu.RUnlock()
+	if instance != nil {
+		return instance.Settings.GlobalC2CMsgRejectMessage
+	}
+	return ""
+}
+
+// GetGlobalC2CMsgReceiveMessage 获取C2C开启时的自定义文本
+func GetGlobalC2CMsgReceiveMessage() string {
+	mu.RLock()
+	defer mu.RUnlock()
+	if instance != nil {
+		return instance.Settings.GlobalC2CMsgReceiveMessage
+	}
+	return ""
+}

@@ -85,6 +85,10 @@ type MessageAPI interface {
 	PostC2CMessage(ctx context.Context, userID string, msg dto.APIMessage) (*dto.C2CMessageResponse, error)
 	// PostC2CMessage 发送C2CSSE消息
 	PostC2CMessageSSE(ctx context.Context, userID string, msg dto.APIMessage) (*dto.C2CMessageResponse, error)
+
+	// 如果你有 UserAPI interface，加在这里；如果没有，加在你汇总的 API interface 里
+	// GenerateURLLink 获取机器人资料页分享链接
+	GenerateURLLink(ctx context.Context, params *dto.GenerateURLLinkToCreate) (*dto.GenerateURLLink, error)
 }
 
 // GuildAPI guild 相关接口

@@ -57,6 +57,10 @@ type MessageToCreate struct {
 	EventID          string                    `json:"event_id,omitempty"`  // 要回复的事件id, 逻辑同MsgID
 	Timestamp        int64                     `json:"timestamp,omitempty"` //TODO delete this
 	MsgSeq           int                       `json:"msg_seq,omitempty"`   //回复消息的序号，与 msg_id 联合使用，避免相同消息id回复重复发送，不填默认是1。相同的 msg_id + msg_seq 重复发送会失败。
+
+	// [新增] 互动召回消息标记
+	// 指明发送消息为互动召回消息，与 msg_id，event_id 互斥使用
+	IsWakeup bool `json:"is_wakeup,omitempty"`
 }
 
 // FourmToCreate 发送帖子结构体定义
