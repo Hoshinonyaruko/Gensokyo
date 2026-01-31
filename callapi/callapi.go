@@ -79,8 +79,9 @@ type ParamsContent struct {
 	Duration  int         `json:"duration,omitempty"`   // 可选的整数
 	Enable    bool        `json:"enable,omitempty"`     // 可选的布尔值
 	// handle quick operation
-	Context   Context   `json:"context,omitempty"`   // context 字段
-	Operation Operation `json:"operation,omitempty"` // operation 字段
+	Context      Context   `json:"context,omitempty"`       // context 字段
+	Operation    Operation `json:"operation,omitempty"`     // operation 字段
+	CallbackData string    `json:"callback_data,omitempty"` // 新增: 用于接收 GenerateURLLink 的参数
 }
 
 // Context 结构体用于存储 context 字段相关信息

@@ -34,6 +34,10 @@ settings:
     # - "GroupATMessageEventHandler"                 # 群at信息 仅频道机器人时候需要注释
     # - "C2CMessageEventHandler"                     # 群私聊 仅频道机器人时候需要注释
     # - "ThreadEventHandler"                         # 频道发帖事件 仅频道私域机器人可用
+    # - "FriendAddEventHandler"                      # 用户添加机器人(成为好友)
+    # - "FriendDelEventHandler"                      # 用户删除机器人(解除好友)
+    # - "C2CMsgRejectHandler"                        # 用户拒绝(关闭)C2C消息推送
+    # - "C2CMsgReceiveHandler"                       # 用户开启(接收)C2C消息推送
 
   #转换类
   global_channel_to_group: true                      # 是否将频道转换成群 默认true
@@ -43,6 +47,11 @@ settings:
   global_group_msg_rre_to_message : false            # 是否将用户开关机器人资料页的机器人推送开关 产生的事件转换为文本信息并发送给应用端.false将使用onebotv11的notice类型上报.
   global_group_msg_reject_message : "机器人主动消息被关闭"  # 当开启 global_group_msg_rre_to_message 时,机器人主动信息被关闭将上报的信息. 自行添加intent - GroupMsgRejectHandler
   global_group_msg_receive_message : "机器人主动消息被开启" # 建议设置为无规则复杂随机内容,避免用户指令内容碰撞. 自行添加 intent - GroupMsgReceiveHandler
+
+  global_c2c_msg_switch_to_message: false          # 是否将用户(C2C)开关机器人资料页的机器人推送开关 产生的事件转换为文本信息. false将使用自定义notice类型上报.
+  global_c2c_msg_reject_message: "机器人C2C推送被关闭" # 当开启 global_c2c_msg_switch_to_message 时, C2C主动信息被关闭将上报的信息.
+  global_c2c_msg_receive_message: "机器人C2C推送已开启" # 当开启 global_c2c_msg_switch_to_message 时, C2C主动信息被开启将上报的信息.
+  
   hash_id : true                                    # 使用hash来进行idmaps转换,可以让user_id不是123开始的递增值
   idmap_pro : false                                  # 需开启hash_id配合,高级id转换增强,可以多个真实值bind到同一个虚拟值,对于每个用户,每个群\私聊\判断私聊\频道,都会产生新的虚拟值,但可以多次bind,bind到同一个数字.数据库负担会变大.
 
@@ -180,6 +189,8 @@ settings:
   #框架修改
   title : "Gensokyo © 2023 - Hoshinonyaruko"              #程序的标题 如果多个机器人 可根据标题区分
   frp_port : "0"                    #不使用请保持为0,frp的端口,frp有内外端口,请在frp软件设置gensokyo的port,并将frp显示的对外端口填入这里
+  union_webhook : ""                #罚壳模式,将webhook流量转发给另一个gensokyo一起运行.
+  union_id : false                  #启用罚壳id,将传入的罚壳id作为主id使用.
  
   #MD相关
   custom_template_id : ""           #自动转换图文信息到md所需要的id *需要应用端支持双方向echo

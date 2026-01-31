@@ -80,6 +80,12 @@ var eventParseFuncMap = map[dto.OPCode]map[dto.EventType]eventParseFunc{
 		dto.EventGroupDelRobot:        groupdelbothandler,
 		dto.EventGroupMsgReject:       groupMsgRejecthandler,
 		dto.EventGroupMsgReceive:      groupMsgReceivehandler,
+
+		// [新增] 注册用户关系链与C2C开关事件处理函数
+		dto.EventFriendAdd:     friendAddHandler,
+		dto.EventFriendDel:     friendDelHandler,
+		dto.EventC2CMsgReject:  c2cMsgRejectHandler,
+		dto.EventC2CMsgReceive: c2cMsgReceiveHandler,
 	},
 }
 
@@ -149,6 +155,35 @@ func ParseData(message []byte, target interface{}) error {
 			return err
 		}
 		// 设置ID字段
+		v.EventID = eventid
+		return nil
+
+		// [新增] 处理用户/C2C相关事件，注入 EventID
+	case *dto.WSFriendAddData:
+		if err := json.Unmarshal([]byte(data.String()), v); err != nil {
+			return err
+		}
+		v.EventID = eventid
+		return nil
+
+	case *dto.WSFriendDelData:
+		if err := json.Unmarshal([]byte(data.String()), v); err != nil {
+			return err
+		}
+		v.EventID = eventid
+		return nil
+
+	case *dto.WSC2CMsgRejectData:
+		if err := json.Unmarshal([]byte(data.String()), v); err != nil {
+			return err
+		}
+		v.EventID = eventid
+		return nil
+
+	case *dto.WSC2CMsgReceiveData:
+		if err := json.Unmarshal([]byte(data.String()), v); err != nil {
+			return err
+		}
 		v.EventID = eventid
 		return nil
 
@@ -410,6 +445,54 @@ func groupMsgReceivehandler(payload *dto.WSPayload, message []byte) error {
 	}
 	if DefaultHandlers.GroupMsgReceive != nil {
 		return DefaultHandlers.GroupMsgReceive(payload, data)
+	}
+	return nil
+}
+
+// [新增] 好友添加事件处理
+func friendAddHandler(payload *dto.WSPayload, message []byte) error {
+	data := &dto.WSFriendAddData{}
+	if err := ParseData(message, data); err != nil {
+		return err
+	}
+	if DefaultHandlers.FriendAdd != nil {
+		return DefaultHandlers.FriendAdd(payload, data)
+	}
+	return nil
+}
+
+// [新增] 好友删除事件处理
+func friendDelHandler(payload *dto.WSPayload, message []byte) error {
+	data := &dto.WSFriendDelData{}
+	if err := ParseData(message, data); err != nil {
+		return err
+	}
+	if DefaultHandlers.FriendDel != nil {
+		return DefaultHandlers.FriendDel(payload, data)
+	}
+	return nil
+}
+
+// [新增] C2C消息拒绝事件处理
+func c2cMsgRejectHandler(payload *dto.WSPayload, message []byte) error {
+	data := &dto.WSC2CMsgRejectData{}
+	if err := ParseData(message, data); err != nil {
+		return err
+	}
+	if DefaultHandlers.C2CMsgReject != nil {
+		return DefaultHandlers.C2CMsgReject(payload, data)
+	}
+	return nil
+}
+
+// [新增] C2C消息接收事件处理
+func c2cMsgReceiveHandler(payload *dto.WSPayload, message []byte) error {
+	data := &dto.WSC2CMsgReceiveData{}
+	if err := ParseData(message, data); err != nil {
+		return err
+	}
+	if DefaultHandlers.C2CMsgReceive != nil {
+		return DefaultHandlers.C2CMsgReceive(payload, data)
 	}
 	return nil
 }

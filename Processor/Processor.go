@@ -120,6 +120,7 @@ type OnebotGroupMessageS struct {
 	RealGroupID     string      `json:"real_group_id,omitempty"`      //当前真实gid
 	IsBindedGroupId bool        `json:"is_binded_group_id,omitempty"` //当前群号是否是binded后的
 	IsBindedUserId  bool        `json:"is_binded_user_id,omitempty"`  //当前用户号号是否是binded后的
+	Platform        string      `json:"platform"`                     //平台类型
 }
 
 // 私聊信息事件

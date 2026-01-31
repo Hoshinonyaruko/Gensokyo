@@ -21,16 +21,21 @@ func DeleteMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI
 	var RealMsgID string
 	var err error
 
-	// 如果从内存取
-	if config.GetMemoryMsgid() {
-		//还原msgid
-		RealMsgID, _ = echo.GetCacheIDFromMemoryByRowID(message.Params.MessageID.(string))
-	} else {
-		//还原msgid
-		RealMsgID, err = idmap.RetrieveRowByCachev2(message.Params.MessageID.(string))
-		if err != nil {
-			mylog.Printf("error retrieving real RChannelID: %v", err)
+	// 不是stringob才需要转换
+	if !config.GetStringOb11() {
+		// 如果从内存取
+		if config.GetMemoryMsgid() {
+			//还原msgid
+			RealMsgID, _ = echo.GetCacheIDFromMemoryByRowID(message.Params.MessageID.(string))
+		} else {
+			//还原msgid
+			RealMsgID, err = idmap.RetrieveRowByCachev2(message.Params.MessageID.(string))
+			if err != nil {
+				mylog.Printf("error retrieving real RChannelID: %v", err)
+			}
 		}
+	} else {
+		RealMsgID = message.Params.MessageID.(string)
 	}
 
 	//重新赋值
@@ -66,17 +71,24 @@ func DeleteMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI
 
 	//撤回群信息
 	if message.Params.GroupID != nil && message.Params.GroupID != "" {
-		var originalGroupID string
-		originalGroupID, err := idmap.RetrieveRowByIDv2(message.Params.GroupID.(string))
-		if err != nil {
-			mylog.Printf("Error retrieving original GroupID: %v", err)
+		// 判断是否是原始id
+		if len(message.Params.GroupID.(string)) != 32 {
+			var originalGroupID string
+			originalGroupID, err := idmap.RetrieveRowByIDv2(message.Params.GroupID.(string))
+			if err != nil {
+				mylog.Printf("Error retrieving original GroupID: %v", err)
+			}
+			message.Params.GroupID = originalGroupID
+			err = api.RetractGroupMessage(context.TODO(), message.Params.GroupID.(string), message.Params.MessageID.(string), openapi.RetractMessageOptionHidetip)
+			if err != nil {
+				fmt.Println("Error retracting group message:", err)
+			}
+		} else {
+			err = api.RetractGroupMessage(context.TODO(), message.Params.GroupID.(string), message.Params.MessageID.(string), openapi.RetractMessageOptionHidetip)
+			if err != nil {
+				fmt.Println("Error retracting group message:", err)
+			}
 		}
-		message.Params.GroupID = originalGroupID
-		err = api.RetractGroupMessage(context.TODO(), message.Params.GroupID.(string), message.Params.MessageID.(string), openapi.RetractMessageOptionHidetip)
-		if err != nil {
-			fmt.Println("Error retracting group message:", err)
-		}
-
 	}
 
 	//撤回C2C私信消息列表

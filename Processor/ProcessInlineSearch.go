@@ -15,6 +15,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/handlers"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
+	"github.com/hoshinonyaruko/gensokyo/unioncache"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/openapi"
 	"github.com/tencent-connect/botgo/websocket/client"
@@ -106,6 +107,21 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 		selfid64 = config.GetUinint64()
 	} else {
 		selfid64 = int64(p.Settings.AppID)
+	}
+
+	var platform string
+	if config.GetUnionID() {
+		platform = "unionqq"
+
+		// 用 GroupMemberOpenID 作为“原始ID”去查 unionOpenID
+		// 成功则把 GroupMemberOpenID 赋值为 unionOpenID
+		if data.GroupMemberOpenID != "" {
+			if u, ok := unioncache.Union(data.GroupMemberOpenID); ok && u != "" {
+				data.GroupMemberOpenID = u
+			}
+		}
+	} else {
+		platform = "qq"
 	}
 
 	if !config.GetGlobalInteractionToMessage() {
@@ -326,8 +342,9 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 						Area:   "0",
 						Level:  "0",
 					},
-					SubType: "normal",
-					Time:    time.Now().Unix(),
+					SubType:  "normal",
+					Time:     time.Now().Unix(),
+					Platform: platform,
 				}
 				//增强配置
 				if !config.GetNativeOb11() {
@@ -554,8 +571,9 @@ func (p *Processors) ProcessInlineSearch(data *dto.WSInteractionData) error {
 					Sender: Sender{
 						UserID: userid64,
 					},
-					SubType: "normal",
-					Time:    time.Now().Unix(),
+					SubType:  "normal",
+					Time:     time.Now().Unix(),
+					Platform: platform,
 				}
 				//增强配置
 				if !config.GetNativeOb11() {

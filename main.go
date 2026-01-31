@@ -2,10 +2,12 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -167,28 +169,28 @@ func main() {
 			if err := botgo.SelectOpenAPIVersion(openapi.APIv1); err != nil {
 				log.Fatalln(err)
 			}
-			api = botgo.NewOpenAPI(token).WithTimeout(3 * time.Second)
+			api = botgo.NewOpenAPI(token).WithTimeout(15 * time.Second)
 			log.Println("创建 apiv1 成功")
 
 			// 创建 v2 版本的 OpenAPI 实例
 			if err := botgo.SelectOpenAPIVersion(openapi.APIv2); err != nil {
 				log.Fatalln(err)
 			}
-			apiV2 = botgo.NewOpenAPI(token).WithTimeout(3 * time.Second)
+			apiV2 = botgo.NewOpenAPI(token).WithTimeout(15 * time.Second)
 			log.Println("创建 apiv2 成功")
 		} else {
 			// 创建 v1 版本的 OpenAPI 实例
 			if err := botgo.SelectOpenAPIVersion(openapi.APIv1); err != nil {
 				log.Fatalln(err)
 			}
-			api = botgo.NewSandboxOpenAPI(token).WithTimeout(3 * time.Second)
+			api = botgo.NewSandboxOpenAPI(token).WithTimeout(15 * time.Second)
 			log.Println("创建 沙箱 apiv1 成功")
 
 			// 创建 v2 版本的 OpenAPI 实例
 			if err := botgo.SelectOpenAPIVersion(openapi.APIv2); err != nil {
 				log.Fatalln(err)
 			}
-			apiV2 = botgo.NewSandboxOpenAPI(token).WithTimeout(3 * time.Second)
+			apiV2 = botgo.NewSandboxOpenAPI(token).WithTimeout(15 * time.Second)
 			log.Println("创建 沙箱 apiv2 成功")
 		}
 
@@ -459,7 +461,9 @@ func main() {
 	r.POST("/uploadrecord", server.UploadBase64RecordHandler(rateLimiter))
 	// 使用 CreateHandleValidation，传入 WebhookHandler 实例
 	server.InitPrivateKey(conf.Settings.ClientSecret)
-	r.POST("/"+conf.Settings.WebhookPath, server.CreateHandleValidationSafe(webhookHandler))
+	//r.POST("/"+conf.Settings.WebhookPath, server.CreateHandleValidationSafe(webhookHandler))
+
+	r.POST("/"+conf.Settings.WebhookPath, UnionFanout(server.CreateHandleValidationSafe(webhookHandler)))
 
 	r.Static("/channel_temp", "./channel_temp")
 	if config.GetFrpPort() == "0" && !config.GetDisableWebui() {
@@ -826,6 +830,39 @@ func GroupMsgReceiveHandler() event.GroupMsgReceiveHandler {
 	}
 }
 
+// FriendAddEventHandler 实现处理 用户添加机器人 事件的回调
+func FriendAddEventHandler() event.FriendAddEventHandler {
+	return func(event *dto.WSPayload, data *dto.WSFriendAddData) error {
+		// data.SceneParam 即为 generate_url_link 中的 callbackData
+		go p.ProcessFriendAdd(data)
+		return nil
+	}
+}
+
+// FriendDelEventHandler 实现处理 用户删除机器人 事件的回调
+func FriendDelEventHandler() event.FriendDelEventHandler {
+	return func(event *dto.WSPayload, data *dto.WSFriendDelData) error {
+		go p.ProcessFriendDel(data)
+		return nil
+	}
+}
+
+// C2CMsgRejectHandler 实现处理 用户关闭机器人C2C消息推送 事件的回调
+func C2CMsgRejectHandler() event.C2CMsgRejectHandler {
+	return func(event *dto.WSPayload, data *dto.WSC2CMsgRejectData) error {
+		go p.ProcessC2CMsgReject(data)
+		return nil
+	}
+}
+
+// C2CMsgReceiveHandler 实现处理 用户开启机器人C2C消息推送 事件的回调
+func C2CMsgReceiveHandler() event.C2CMsgReceiveHandler {
+	return func(event *dto.WSPayload, data *dto.WSC2CMsgReceiveData) error {
+		go p.ProcessC2CMsgReceive(data)
+		return nil
+	}
+}
+
 func getHandlerByName(handlerName string) (interface{}, bool) {
 	switch handlerName {
 	case "ReadyHandler": //连接成功
@@ -860,6 +897,15 @@ func getHandlerByName(handlerName string) (interface{}, bool) {
 		return GroupMsgRejectHandler(), true
 	case "GroupMsgReceiveHandler": //群请求开启机器人主动推送
 		return GroupMsgReceiveHandler(), true
+		// [新增] 下面是补全的4个用户/C2C相关事件
+	case "FriendAddEventHandler": //用户添加机器人
+		return FriendAddEventHandler(), true
+	case "FriendDelEventHandler": //用户删除机器人
+		return FriendDelEventHandler(), true
+	case "C2CMsgRejectHandler": //用户请求关闭机器人C2C主动推送
+		return C2CMsgRejectHandler(), true
+	case "C2CMsgReceiveHandler": //用户请求开启机器人C2C主动推送
+		return C2CMsgReceiveHandler(), true
 	default:
 		log.Printf("Unknown handler: %s\n", handlerName)
 		return nil, false
@@ -911,5 +957,48 @@ func setupConfigWatcher(configFilePath string) {
 	err = watcher.Add(configFilePath)
 	if err != nil {
 		log.Fatalf("Error adding watcher: %v", err)
+	}
+}
+
+// 包装器：在执行原有处理器前，抓取 Body；在本地处理器运行的同时，异步原样转发到 UnionWebhook。
+func UnionFanout(base gin.HandlerFunc) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 1) 读取并缓存原始请求体
+		body, err := io.ReadAll(c.Request.Body)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "read body failed"})
+			return
+		}
+		// 2) 复位 Body 给本地处理链使用
+		c.Request.Body = io.NopCloser(bytes.NewReader(body))
+
+		// 3) 异步转发一份到 UnionWebhook（若配置非空）
+		if uw := config.GetUnionWebhook(); uw != "" && uw != "0" {
+			method := c.Request.Method
+			headers := c.Request.Header.Clone() // 原样复制请求头
+
+			go func(method, url string, headers http.Header, payload []byte) {
+				defer func() { _ = recover() }()
+
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+
+				req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(payload))
+				if err != nil {
+					return
+				}
+				// 复制请求头（最小实现：不剔除 hop-by-hop 头；若需更严谨，可过滤 Connection/Keep-Alive 等）
+				for k, vs := range headers {
+					for _, v := range vs {
+						req.Header.Add(k, v)
+					}
+				}
+				// 发起转发（忽略返回结果，不影响主流程）
+				_, _ = http.DefaultClient.Do(req)
+			}(method, uw, headers, body)
+		}
+
+		// 4) 继续执行原有处理器（本地业务逻辑）
+		base(c)
 	}
 }

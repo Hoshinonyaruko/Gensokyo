@@ -336,3 +336,46 @@ func (o *openAPIv2) PostC2CMessageSSE(ctx context.Context, userID string, msg dt
 
 	return result, nil
 }
+
+// GenerateURLLink 获取机器人资料页分享链接
+// 实现文档: https://bot.q.qq.com/wiki/develop/api-v2/server-inter/user/share_url.html
+func (o *openAPIv2) GenerateURLLink(ctx context.Context, params *dto.GenerateURLLinkToCreate) (*dto.GenerateURLLink, error) {
+	// 1. 发起请求 (不再使用 SetResult，直接拿 String)
+	resp, err := o.request(ctx).
+		SetBody(params).                   // 设置请求体
+		Post(o.getURL(generateURLLinkURI)) // 发送 POST 请求
+
+	// 保留日志记录，方便以后排查 (可选)
+	// debugToSplog("GenerateURLLink", o.getURL(generateURLLinkURI), params, resp, err)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. 处理业务错误 (Resty 只要网络通了 err 可能是 nil)
+	if resp.IsError() {
+		return nil, fmt.Errorf("API error: status=%s, body=%s", resp.Status(), resp.String())
+	}
+
+	// 3. 【核心修正】使用 gjson 提取嵌套的 url 字段
+	// 腾讯返回格式: {"retcode":0, "data": {"url": "..."}}
+	jsonStr := resp.String()
+
+	// 检查 retcode (可选，但推荐)
+	retCode := gjson.Get(jsonStr, "retcode").Int()
+	if retCode != 0 {
+		errMsg := gjson.Get(jsonStr, "msg").String()
+		return nil, fmt.Errorf("API business error: code=%d, msg=%s", retCode, errMsg)
+	}
+
+	// 提取 data.url
+	url := gjson.Get(jsonStr, "data.url").String()
+	if url == "" {
+		return nil, fmt.Errorf("API success but url is empty. Response: %s", jsonStr)
+	}
+
+	// 4. 手动构造返回对象
+	return &dto.GenerateURLLink{
+		URL: url,
+	}, nil
+}

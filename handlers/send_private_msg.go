@@ -294,7 +294,7 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 						"base64_record": true,
 						"base64_image":  true,
 					}
-					// key是 for key, urls := range foundItems { 这里的key
+					// key 是 for key, urls := range foundItems { 这里的 key
 					if _, exists := keyMap[key]; exists {
 						// 进行类型断言
 						groupMessage, ok := groupReply.(*dto.MessageToCreate)
@@ -302,25 +302,25 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 							mylog.Println("Error: Expected MessageToCreate type.")
 							return "", nil // 或其他错误处理
 						}
-						//重新为err赋值
+
+						// 首次发送私聊 MessageToCreate
 						resp, err = apiv2.PostC2CMessage(context.TODO(), UserID, groupMessage)
 						if err != nil {
 							mylog.Printf("发送 MessageToCreate 私聊信息失败: %v", err)
 							// 错误保存到本地
 							if config.GetSaveError() {
-								mylog.ErrLogToFile("type", "PostGroupMessage")
+								mylog.ErrLogToFile("type", "PostC2CMessage")
 								mylog.ErrInterfaceToFile("request", groupMessage)
 								mylog.ErrLogToFile("error", err.Error())
 							}
 						}
+
 						if err != nil && strings.Contains(err.Error(), `"code":22009`) {
 							mylog.Printf("私信主动转被动待实现")
-							// var pair echo.MessageGroupPair
-							// pair.Group = message.Params.GroupID.(string)
-							// pair.GroupMessage = groupMessage
-							// echo.PushGlobalStack(pair)
+							// TODO: 私聊 22009 转被动逻辑
+
 						} else if err != nil && strings.Contains(err.Error(), `"code":40034025`) {
-							//请求参数event_id无效 重试
+							// 请求参数 event_id 无效，清空后重试一次
 							groupMessage.EventID = ""
 							//重新为err赋值
 							resp, err = apiv2.PostC2CMessage(context.TODO(), UserID, groupMessage)
@@ -328,38 +328,41 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 								mylog.Printf("发送 MessageToCreate 私聊信息失败 on code 40034025: %v", err)
 								// 错误保存到本地
 								if config.GetSaveError() {
-									mylog.ErrLogToFile("type", "PostGroupMessage")
+									mylog.ErrLogToFile("type", "PostC2CMessage")
 									mylog.ErrInterfaceToFile("request", groupMessage)
 									mylog.ErrLogToFile("error", err.Error())
 								}
 							}
+
+						} else if err != nil && strings.Contains(err.Error(), "context deadline exceeded") {
+							// 仅对超时做有限次重试
+							resp, err = postC2CMessageWithRetry(apiv2, UserID, groupMessage)
 						}
-						//发送成功回执
+
+						// 发送成功或最终失败后，都尝试回执（err 里能体现成功/失败）
 						retmsg, _ = SendC2CResponse(client, err, &message, resp)
 					}
 					continue // 跳过这个项，继续下一个
 				}
+
+				// 发媒体
 				message_return, err := apiv2.PostC2CMessage(context.TODO(), UserID, richMediaMessage)
 				if err != nil {
 					mylog.Printf("发送 %s 信息失败_send_private_msg: %v", key, err)
-					if config.GetSendError() { //把报错当作文本发出去
-						msgseq := echo.GetMappingSeq(messageID)
-						echo.AddMappingSeq(messageID, msgseq+1)
-						groupReply := generatePrivateMessage(messageID, eventID, nil, err.Error(), msgseq+1, apiv2, UserID)
-						// 进行类型断言
-						groupMessage, ok := groupReply.(*dto.MessageToCreate)
-						if !ok {
-							mylog.Println("Error: Expected MessageToCreate type.")
-							return "", nil // 或其他错误处理
-						}
-						groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
-						//重新为err赋值
-						_, err = apiv2.PostC2CMessage(context.TODO(), UserID, groupMessage)
-						if err != nil {
-							mylog.Printf("发送 %s 私聊信息失败: %v", key, err)
-						}
+
+					// 错误保存到本地
+					if config.GetSaveError() {
+						mylog.ErrLogToFile("type", "PostC2CMessage")
+						mylog.ErrInterfaceToFile("request", richMediaMessage)
+						mylog.ErrLogToFile("error", err.Error())
 					}
 				}
+
+				// 仅对超时做重试，使用原始富媒体消息，不再构造错误文本消息
+				if err != nil && (strings.Contains(err.Error(), "context deadline exceeded") || strings.Contains(err.Error(), "富媒体文件上传超时")) {
+					message_return, err = postC2CRichMediaMessageWithRetry(apiv2, UserID, richMediaMessage)
+				}
+
 				if message_return != nil && message_return.MediaResponse != nil && message_return.MediaResponse.FileInfo != "" {
 					msgseq := echo.GetMappingSeq(messageID)
 					echo.AddMappingSeq(messageID, msgseq+1)
@@ -487,4 +490,87 @@ func uploadMediaPrivate(ctx context.Context, UserID string, richMediaMessage *dt
 	}
 	// 返回上传后的FileInfo
 	return messageReturn.MediaResponse.FileInfo, nil
+}
+
+// 私聊富媒体专用重试：针对 context deadline exceeded
+func postC2CRichMediaMessageWithRetry(
+	apiv2 openapi.OpenAPI,
+	userID string,
+	richMediaMessage *dto.RichMediaMessage,
+) (resp *dto.C2CMessageResponse, err error) {
+	richMediaMessage.EventID = ""
+	retryCount := 3 // 设置最大重试次数为 3
+	for i := 0; i < retryCount; i++ {
+		resp, err = apiv2.PostC2CMessage(context.TODO(), userID, richMediaMessage)
+
+		if err != nil && strings.Contains(err.Error(), "context deadline exceeded") {
+			// 仅对超时做重试
+			mylog.Printf("私聊富媒体超时重试第 %d 次: %v", i+1, err)
+			if config.GetSaveError() {
+				mylog.ErrLogToFile("type", "PostC2CRichMediaMessage-context-deadline-exceeded-retry-"+strconv.Itoa(i+1))
+				mylog.ErrInterfaceToFile("request", richMediaMessage)
+				mylog.ErrLogToFile("error", err.Error())
+			}
+			time.Sleep(1 * time.Second) // 重试间隔 1 秒
+			continue
+		}
+
+		// 成功 或 非超时错误，统一在这里收尾然后 break
+		if config.GetSaveError() {
+			logType := "PostC2CRichMediaMessage-final"
+			if err == nil {
+				logType = "PostC2CRichMediaMessage-retry-success-" + strconv.Itoa(i+1)
+			}
+			mylog.ErrLogToFile("type", logType)
+			mylog.ErrInterfaceToFile("request", richMediaMessage)
+			if err != nil {
+				mylog.ErrLogToFile("error", err.Error())
+			} else if resp != nil {
+				mylog.ErrLogToFile("Ret", fmt.Sprintf("%d", resp.MediaResponse.Ret))
+			}
+		}
+		break
+	}
+	return resp, err
+}
+
+func postC2CMessageWithRetry(apiv2 openapi.OpenAPI, userID string, msg *dto.MessageToCreate) (resp *dto.C2CMessageResponse, err error) {
+	retryCount := 3 // 设置最大重试次数为 3
+	for i := 0; i < retryCount; i++ {
+		// 递增 msgseq（沿用你群聊那套映射逻辑）
+		msgseq := echo.GetMappingSeq(msg.MsgID)
+		echo.AddMappingSeq(msg.MsgID, msgseq+1)
+		msg.MsgSeq = msgseq + 1
+
+		resp, err = apiv2.PostC2CMessage(context.TODO(), userID, msg)
+		if err != nil && (strings.Contains(err.Error(), "context deadline exceeded") || strings.Contains(err.Error(), "富媒体文件上传超时")) {
+			mylog.Printf("私聊超时重试第 %d 次: %v", i+1, err)
+			if config.GetSaveError() {
+				mylog.ErrLogToFile("type", "PostC2CMessage-context-deadline-exceeded-retry-"+strconv.Itoa(i+1))
+				mylog.ErrInterfaceToFile("request", msg)
+				mylog.ErrLogToFile("error", err.Error())
+			}
+			time.Sleep(3 * time.Second) // 重试间隔 3 秒
+			continue
+		} else {
+			// 成功 或 非超时错误，统一在这里收尾
+			mylog.Printf("私聊超时重试第 %d 次结束: %v", i+1, err)
+			if config.GetSaveError() {
+				suffix := "-successed"
+				if err != nil {
+					suffix = "-failed"
+				}
+				mylog.ErrLogToFile("type", "PostC2CMessage-context-deadline-exceeded-retry-"+strconv.Itoa(i+1)+suffix)
+				mylog.ErrInterfaceToFile("request", msg)
+				if resp != nil {
+					mylog.ErrLogToFile("msgid", resp.Message.ID)
+				}
+				if err != nil {
+					mylog.ErrLogToFile("error", err.Error())
+				}
+			}
+		}
+		break
+	}
+	return resp, err
 }

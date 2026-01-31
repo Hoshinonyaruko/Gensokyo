@@ -18,6 +18,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/images"
+	"github.com/hoshinonyaruko/gensokyo/mdutil"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/hoshinonyaruko/gensokyo/silk"
 	"github.com/hoshinonyaruko/gensokyo/structs"
@@ -566,47 +567,18 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				}
 				message_return, err := apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), richMediaMessage)
 				if err != nil {
-					mylog.Printf("发送 %s 信息失败_send_group_msg: %v", key, err)
-					//把报错当作文本发出去
-					if config.GetSendError() {
-						msgseq := echo.GetMappingSeq(messageID)
-						echo.AddMappingSeq(messageID, msgseq+1)
-						groupReply := generateGroupMessage(messageID, eventID, nil, err.Error(), msgseq+1, apiv2, message.Params.GroupID.(string))
-						// 进行类型断言
-						groupMessage, ok := groupReply.(*dto.MessageToCreate)
-						if !ok {
-							mylog.Println("Error: Expected MessageToCreate type.")
-							return "", nil // 或其他错误处理
-						}
-						groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
-						//重新为err赋值
-						resp, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
-						if err != nil {
-							mylog.Printf("发送文本报错信息失败: %v", err)
-						}
-						if err != nil && strings.Contains(err.Error(), `"code":22009`) {
-							mylog.Printf("信息发送失败,加入到队列中,下次被动信息进行发送")
-							var pair echo.MessageGroupPair
-							pair.Group = message.Params.GroupID.(string)
-							pair.GroupMessage = groupMessage
-							echo.PushGlobalStack(pair)
-						} else if err != nil && strings.Contains(err.Error(), `"code":40034025`) {
-							groupMessage.EventID = ""
-							resp, err = apiv2.PostGroupMessage(context.TODO(), message.Params.GroupID.(string), groupMessage)
-							if err != nil {
-								mylog.Printf("发送文本报错信息失败: %v", err)
-							}
-						} else if err != nil && strings.Contains(err.Error(), "context deadline exceeded") {
-							postGroupMessageWithRetry(apiv2, message.Params.GroupID.(string), groupMessage)
-						}
-					}
+					mylog.Printf("发送 richMediaMessage 信息失败: %v", err)
 					// 错误保存到本地
-					if err != nil && config.GetSaveError() {
-						mylog.ErrLogToFile("type", "PostGroupMessage")
+					if config.GetSaveError() {
+						mylog.ErrLogToFile("type", "PostGroupMessage-richMediaMessage")
 						mylog.ErrInterfaceToFile("request", richMediaMessage)
 						mylog.ErrLogToFile("error", err.Error())
 					}
 				}
+				if err != nil && (strings.Contains(err.Error(), "context deadline exceeded") || strings.Contains(err.Error(), "富媒体文件上传超时")) {
+					message_return, err = postGroupRichMediaMessageWithRetry(apiv2, message.Params.GroupID.(string), richMediaMessage)
+				}
+
 				if message_return != nil && message_return.MediaResponse != nil && message_return.MediaResponse.FileInfo != "" {
 					msgseq := echo.GetMappingSeq(messageID)
 					echo.AddMappingSeq(messageID, msgseq+1)
@@ -1307,6 +1279,11 @@ func generateGroupMessage(id string, eventid string, foundItems map[string][]str
 			mylog.Printf("failed to parseMDData: %v", err)
 			return nil
 		}
+
+		if config.GetUnionID() && markdown != nil && markdown.Content != "" {
+			markdown.Content = mdutil.ReplaceQQBotAtUserIDUnionToRaw(markdown.Content)
+		}
+
 		return &dto.MessageToCreate{
 			Content:  "markdown",
 			MsgID:    id,
@@ -2500,6 +2477,43 @@ func postGroupMessageWithRetry(apiv2 openapi.OpenAPI, groupID string, groupMessa
 				if resp != nil {
 					mylog.ErrLogToFile("msgid", resp.Message.ID)
 				}
+			}
+		}
+		break
+	}
+	return resp, err
+}
+
+// 富媒体专用重试：针对 context deadline exceeded
+func postGroupRichMediaMessageWithRetry(apiv2 openapi.OpenAPI, groupID string, richMediaMessage *dto.RichMediaMessage) (resp *dto.GroupMessageResponse, err error) {
+	richMediaMessage.EventID = ""
+	retryCount := 3 // 设置最大重试次数为 3
+	for i := 0; i < retryCount; i++ {
+		resp, err = apiv2.PostGroupMessage(context.TODO(), groupID, richMediaMessage)
+		if err != nil && (strings.Contains(err.Error(), "context deadline exceeded") || strings.Contains(err.Error(), "富媒体文件上传超时")) {
+			// 仅对超时做重试
+			mylog.Printf("富媒体超时重试第 %d 次: %v", i+1, err)
+			if config.GetSaveError() {
+				mylog.ErrLogToFile("type", "PostGroupRichMediaMessage-context-deadline-exceeded-retry-"+strconv.Itoa(i+1))
+				mylog.ErrInterfaceToFile("request", richMediaMessage)
+				mylog.ErrLogToFile("error", err.Error())
+			}
+			time.Sleep(3 * time.Second) // 重试间隔 3 秒
+			continue
+		}
+
+		// 成功 或 非超时错误，都直接退出循环
+		if config.GetSaveError() {
+			logType := "PostGroupRichMediaMessage-final"
+			if err == nil {
+				logType = "PostGroupRichMediaMessage-retry-success-" + strconv.Itoa(i+1)
+			}
+			mylog.ErrLogToFile("type", logType)
+			mylog.ErrInterfaceToFile("request", richMediaMessage)
+			if err != nil {
+				mylog.ErrLogToFile("error", err.Error())
+			} else if resp != nil {
+				mylog.ErrLogToFile("Ret", fmt.Sprintf("%d", resp.MediaResponse.Ret))
 			}
 		}
 		break

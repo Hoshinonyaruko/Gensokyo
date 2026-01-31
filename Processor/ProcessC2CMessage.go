@@ -400,6 +400,7 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 				},
 				SubType: "normal",
 				Time:    time.Now().Unix(),
+				Platform:    "qq",
 			}
 
 			//增强配置

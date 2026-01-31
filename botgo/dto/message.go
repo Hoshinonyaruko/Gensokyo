@@ -74,6 +74,36 @@ type GroupMsgReceiveEvent struct {
 	Timestamp      interface{} `json:"timestamp"`
 }
 
+// WSFriendAddData 机器人被用户添加 (FRIEND_ADD)
+type WSFriendAddData struct {
+	EventID    string `json:"event_id,omitempty"` // 来自外层 Payload，解析时注入
+	OpenID     string `json:"openid"`             // 用户 openid
+	Timestamp  uint64 `json:"timestamp"`          // 添加时间戳
+	Scene      int    `json:"scene"`              // [新增] 加好友场景值，详见定义
+	SceneParam string `json:"scene_param"`        // [新增] 开发者自定义的回调数据（callbackData）
+}
+
+// WSFriendDelData 机器人被用户删除 (FRIEND_DEL)
+type WSFriendDelData struct {
+	EventID   string `json:"event_id,omitempty"`
+	OpenID    string `json:"openid"`    // 用户openid
+	Timestamp uint64 `json:"timestamp"` // 删除时间戳
+}
+
+// WSC2CMsgRejectData 用户关闭机器人C2C消息推送 (C2C_MSG_REJECT)
+type WSC2CMsgRejectData struct {
+	EventID   string `json:"event_id,omitempty"`
+	OpenID    string `json:"openid"`    // 用户 openid
+	Timestamp uint64 `json:"timestamp"` // 操作时间戳
+}
+
+// WSC2CMsgReceiveData 用户开启机器人C2C消息推送 (C2C_MSG_RECEIVE)
+type WSC2CMsgReceiveData struct {
+	EventID   string `json:"event_id,omitempty"`
+	OpenID    string `json:"openid"`    // 用户 openid
+	Timestamp uint64 `json:"timestamp"` // 操作时间戳
+}
+
 type MediaResponse struct {
 	//UUID
 	FileUUID string `json:"file_uuid"`
@@ -131,4 +161,18 @@ type MessageReactionUsers struct {
 	Users  []*User `json:"users,omitempty"`
 	Cookie string  `json:"cookie,omitempty"`
 	IsEnd  bool    `json:"is_end,omitempty"`
+}
+
+// 在 dto 包中新增 (例如 dto/user.go 或 dto/message.go)
+
+// GenerateURLLinkToCreate 获取机器人资料页分享链接请求结构
+type GenerateURLLinkToCreate struct {
+	// 添加好友时会回传该参数给到开发者，最大 32 字符
+	CallbackData string `json:"callbackData,omitempty"`
+}
+
+// GenerateURLLink 获取机器人资料页分享链接响应结构
+type GenerateURLLink struct {
+	// 生成的分享链接
+	URL string `json:"url"`
 }
