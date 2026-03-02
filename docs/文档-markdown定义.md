@@ -1,9 +1,8 @@
-```markdown
 ## md cq码/segment格式
 
 ### CQ码格式
 
-```markdown
+```
 [CQ:markdown,data=xxx]
 ```
 
@@ -161,7 +160,5 @@
 注意：在`{{}}`中不可以使用`![]()`这种Markdown格式的关键字。
 
 ![text #208px #320px](https://xxxxx.png)
-```
 
 详细文档请参考：[发消息含有消息按钮组件的消息](https://bot.q.qq.com/wiki/develop/api/openapi/message/post_keyboard_messages.html#%E5%8F%91%E9%80%81%E5%90%AB%E6%9C%89%E6%B6%88%E6%81%AF%E6%8C%89%E9%92%AE%E7%BB%84%E4%BB%B6%E7%9A%84%E6%B6%88%E6%81%AF)
-```
