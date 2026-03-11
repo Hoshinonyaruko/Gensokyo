@@ -1364,6 +1364,18 @@ func GetTransferUrl() bool {
 	return instance.Settings.TransferUrl
 }
 
+// 获取CustomDomain的值
+func GetCustomUrl() string {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	if instance == nil {
+		fmt.Println("Warning: instance is nil when trying to GetCustomDomain value.")
+		return ""
+	}
+	return instance.Settings.CustomUrl
+}
+
 // 获取 HTTP 地址
 func GetHttpAddress() string {
 	mu.RLock()

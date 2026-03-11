@@ -126,7 +126,7 @@ func GenerateShortURL(longURL string) string {
 	// 根据portValue确定协议
 	protocol := "http"
 	portValue := config.GetPortValue()
-	if portValue == "443" ||config.GetForceSsl(){
+	if portValue == "443" || config.GetForceSsl() {
 		protocol = "https"
 	}
 
@@ -242,7 +242,7 @@ func getLongURLFromDB(shortURL string) (string, error) {
 	// 根据portValue确定协议
 	protocol := "http"
 	portValue := config.GetPortValue()
-	if portValue == "443" ||config.GetForceSsl(){
+	if portValue == "443" || config.GetForceSsl() {
 		protocol = "https"
 	}
 
@@ -359,6 +359,12 @@ func isValidToken(token string) bool {
 func GetBaseURL() string {
 	serverDir := config.GetServer_dir()
 	return "https://" + serverDir
+}
+
+// 自定义短链接url
+func GetCustomUrl() string {
+	customUrl := config.GetCustomUrl()
+	return "https://" + customUrl
 }
 
 // RedirectFromShortURLHandler
