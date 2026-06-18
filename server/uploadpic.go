@@ -18,6 +18,8 @@ import (
 	"sync"
 	"time"
 
+	_ "golang.org/x/image/webp" // ✅ [必须补上] 否则服务端的 DecodeConfig 认不出 WebP
+
 	"github.com/gin-gonic/gin"
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
@@ -338,6 +340,8 @@ func getImageFormat(data []byte) (format string, err error) {
 // 判断并返回图片类型
 func getFileExtensionFromImageFormat(format string) string {
 	switch format {
+	case "webp": // ✅ [新增] 支持 webp 识别
+		return "webp"
 	case "jpeg":
 		return "jpg"
 	case "gif":

@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/hoshinonyaruko/gensokyo/config"
-	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/tencent-connect/botgo/dto"
 )
@@ -37,17 +36,18 @@ type FriendNoticeEvent struct {
 
 // ProcessFriendAdd 处理好友添加 (用户添加机器人)
 func (p *Processors) ProcessFriendAdd(data *dto.WSFriendAddData) error {
+
+	// 【修复1】 Panic 防护
+	if data == nil {
+		return fmt.Errorf("ProcessFriendAdd data is nil")
+	}
+
 	var userid64 int64
-	var err error
 	var Request FriendRequestEvent
 	var Notice FriendNoticeEvent
 
 	// 1. ID 转换
-	userid64, err = idmap.StoreIDv2(data.OpenID)
-	if err != nil {
-		mylog.Printf("Error storing ID: %v", err)
-		return nil
-	}
+	userid64 = 0
 
 	// 2. 时间戳转换
 	timestampInt64 := int64(data.Timestamp)
@@ -114,17 +114,17 @@ func (p *Processors) ProcessFriendAdd(data *dto.WSFriendAddData) error {
 
 // ProcessFriendDel 处理好友删除 (用户删除机器人)
 func (p *Processors) ProcessFriendDel(data *dto.WSFriendDelData) error {
+
+	// 【修复1】 Panic 防护
+	if data == nil {
+		return fmt.Errorf("ProcessFriendDel data is nil")
+	}
+
 	var userid64 int64
-	var err error
 	var Notice FriendNoticeEvent
 
 	// 1. ID 转换
-	userid64, err = idmap.StoreIDv2(data.OpenID)
-	if err != nil {
-		mylog.Printf("Error storing ID: %v", err)
-		return nil
-	}
-
+	userid64 = 0
 	// 2. 时间戳转换
 	timestampInt64 := int64(data.Timestamp)
 

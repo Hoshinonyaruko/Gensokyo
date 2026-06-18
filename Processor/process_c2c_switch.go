@@ -8,21 +8,19 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/handlers"
-	"github.com/hoshinonyaruko/gensokyo/idmap"
-	"github.com/hoshinonyaruko/gensokyo/mylog"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/websocket/client"
 )
 
 // ProcessC2CMsgReject 处理用户拒绝机器人主动消息
 func (p *Processors) ProcessC2CMsgReject(data *dto.WSC2CMsgRejectData) error {
-	// 转换appid
-	var userid64 int64
-	var err error
-	var fromuid string
-	if data.OpenID != "" {
-		fromuid = data.OpenID
+
+	if data == nil {
+		return fmt.Errorf("ProcessC2CMsgReject data is nil")
 	}
+
+	// 转换appid
+	userid64 := int64(0)
 
 	// 获取s
 	s := client.GetGlobalS()
@@ -34,29 +32,6 @@ func (p *Processors) ProcessC2CMsgReject(data *dto.WSC2CMsgRejectData) error {
 
 	// 构造echostr，包括AppID，原始的s变量和当前时间戳
 	echostr := fmt.Sprintf("%s_%d_%d", AppIDString, s, currentTimeMillis)
-
-	// ID 转换逻辑 (复刻 Group 逻辑，但仅针对 User)
-	if config.GetIdmapPro() {
-		//将真实id转为int userid64
-		// 注意：StoreUserIdv2Pro 假设你实现了类似方法，或者直接用 StoreIDv2Pro 传空 GroupID
-		// 这里为了保险起见，只处理 UserID
-		_, userid64, err = idmap.StoreIDv2Pro("", fromuid)
-		if err != nil {
-			mylog.Errorf("Error storing ID: %v", err)
-		}
-		// 当哈希碰撞 因为获取时候是用的非idmap的get函数
-		_, _ = idmap.StoreIDv2(fromuid)
-		if !config.GetHashIDValue() {
-			mylog.Fatalf("避坑日志:你开启了高级id转换,请设置hash_id为true,并且删除idmaps并重启")
-		}
-	} else {
-		// 映射str的userid到int
-		userid64, err = idmap.StoreIDv2(fromuid)
-		if err != nil {
-			mylog.Printf("Error storing ID: %v", err)
-			return nil
-		}
-	}
 
 	var selfid64 int64
 	if config.GetUseUin() {
@@ -107,13 +82,6 @@ func (p *Processors) ProcessC2CMsgReject(data *dto.WSC2CMsgRejectData) error {
 				segmentedMessages = handlers.ConvertToSegmentedMessage(newdata)
 			}
 
-			var IsBindedUserId bool
-			if config.GetHashIDValue() {
-				IsBindedUserId = idmap.CheckValue(data.OpenID, userid64)
-			} else {
-				IsBindedUserId = idmap.CheckValuev2(userid64)
-			}
-
 			// 平台事件,不是真实信息,无需messageID
 			messageID64 := 123
 			messageID := int(messageID64)
@@ -138,7 +106,7 @@ func (p *Processors) ProcessC2CMsgReject(data *dto.WSC2CMsgRejectData) error {
 			// 增强配置
 			if !config.GetNativeOb11() {
 				privateMsg.RealMessageType = "c2c_msg_reject"
-				privateMsg.IsBindedUserId = IsBindedUserId
+				privateMsg.IsBindedUserId = false
 				privateMsg.RealUserID = data.OpenID
 				privateMsg.Avatar, _ = GenerateAvatarURLV2(data.OpenID)
 			}
@@ -172,13 +140,14 @@ func (p *Processors) ProcessC2CMsgReject(data *dto.WSC2CMsgRejectData) error {
 
 // ProcessC2CMsgReceive 处理用户开启机器人主动消息
 func (p *Processors) ProcessC2CMsgReceive(data *dto.WSC2CMsgReceiveData) error {
-	// 转换appid
-	var userid64 int64
-	var err error
-	var fromuid string
-	if data.OpenID != "" {
-		fromuid = data.OpenID
+
+	// 【修复1】保留了这里的 nil 检查，很好
+	if data == nil {
+		return fmt.Errorf("ProcessC2CMsgReject data is nil")
 	}
+
+	// 转换appid
+	userid64 := int64(0)
 
 	// 获取s
 	s := client.GetGlobalS()
@@ -190,24 +159,6 @@ func (p *Processors) ProcessC2CMsgReceive(data *dto.WSC2CMsgReceiveData) error {
 
 	// 构造echostr
 	echostr := fmt.Sprintf("%s_%d_%d", AppIDString, s, currentTimeMillis)
-
-	// ID 转换逻辑
-	if config.GetIdmapPro() {
-		_, userid64, err = idmap.StoreIDv2Pro("", fromuid)
-		if err != nil {
-			mylog.Errorf("Error storing ID: %v", err)
-		}
-		_, _ = idmap.StoreIDv2(fromuid)
-		if !config.GetHashIDValue() {
-			mylog.Fatalf("避坑日志:你开启了高级id转换,请设置hash_id为true,并且删除idmaps并重启")
-		}
-	} else {
-		userid64, err = idmap.StoreIDv2(fromuid)
-		if err != nil {
-			mylog.Printf("Error storing ID: %v", err)
-			return nil
-		}
-	}
 
 	var selfid64 int64
 	if config.GetUseUin() {
@@ -245,13 +196,6 @@ func (p *Processors) ProcessC2CMsgReceive(data *dto.WSC2CMsgReceiveData) error {
 				segmentedMessages = handlers.ConvertToSegmentedMessage(newdata)
 			}
 
-			var IsBindedUserId bool
-			if config.GetHashIDValue() {
-				IsBindedUserId = idmap.CheckValue(data.OpenID, userid64)
-			} else {
-				IsBindedUserId = idmap.CheckValuev2(userid64)
-			}
-
 			messageID64 := 123
 			messageID := int(messageID64)
 
@@ -273,7 +217,7 @@ func (p *Processors) ProcessC2CMsgReceive(data *dto.WSC2CMsgReceiveData) error {
 
 			if !config.GetNativeOb11() {
 				privateMsg.RealMessageType = "c2c_msg_receive"
-				privateMsg.IsBindedUserId = IsBindedUserId
+				privateMsg.IsBindedUserId = false
 				privateMsg.RealUserID = data.OpenID
 				privateMsg.Avatar, _ = GenerateAvatarURLV2(data.OpenID)
 			}
@@ -298,8 +242,11 @@ func (p *Processors) ProcessC2CMsgReceive(data *dto.WSC2CMsgReceiveData) error {
 // ConvertC2CRejectToMessage 转换 C2C Reject 到 Message
 func ConvertC2CRejectToMessage(r *dto.WSC2CMsgRejectData) *dto.Message {
 	var message dto.Message
-	// 直接映射的字段
-	message.Author.ID = r.OpenID
+
+	// ✅ 修复：初始化 User 指针
+	message.Author = &dto.User{
+		ID: r.OpenID,
+	}
 
 	// 特殊处理的字段: 这里的文本需要从 config 获取
 	// 请在 config 包中定义 GetGlobalC2CMsgRejectMessage()，例如返回 "关闭主动消息"
@@ -313,8 +260,10 @@ func ConvertC2CRejectToMessage(r *dto.WSC2CMsgRejectData) *dto.Message {
 func ConvertC2CReceiveToMessage(r *dto.WSC2CMsgReceiveData) *dto.Message {
 	var message dto.Message
 
-	// 直接映射的字段
-	message.Author.ID = r.OpenID
+	// ✅ 修复：初始化 User 指针
+	message.Author = &dto.User{
+		ID: r.OpenID,
+	}
 
 	// 请在 config 包中定义 GetGlobalC2CMsgReceiveMessage()，例如返回 "开启主动消息"
 	message.Content = config.GetGlobalC2CMsgReceiveMessage()
