@@ -75,6 +75,7 @@ var eventParseFuncMap = map[dto.OPCode]map[dto.EventType]eventParseFunc{
 
 		dto.EventInteractionCreate:    interactionHandler,
 		dto.EventGroupAtMessageCreate: groupAtMessageHandler,
+		dto.EventGroupMessageCreate:   groupMessageHandler,
 		dto.EventC2CMessageCreate:     c2cMessageHandler,
 		dto.EventGroupAddRobot:        groupaddbothandler,
 		dto.EventGroupDelRobot:        groupdelbothandler,
@@ -280,6 +281,20 @@ func groupAtMessageHandler(payload *dto.WSPayload, message []byte) error {
 	}
 	if DefaultHandlers.GroupATMessage != nil {
 		return DefaultHandlers.GroupATMessage(payload, data)
+	}
+	return nil
+}
+
+func groupMessageHandler(payload *dto.WSPayload, message []byte) error {
+	data := &dto.WSGroupMessageData{}
+	if err := ParseData(message, data); err != nil {
+		return err
+	}
+	if _, loaded := processedIDs.LoadOrStore(data.ID, struct{}{}); loaded {
+		return nil
+	}
+	if DefaultHandlers.GroupMessage != nil {
+		return DefaultHandlers.GroupMessage(payload, data)
 	}
 	return nil
 }

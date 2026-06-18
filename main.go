@@ -778,6 +778,26 @@ func GroupATMessageEventHandler() event.GroupATMessageEventHandler {
 	}
 }
 
+// GroupMessageEventHandler 实现处理 群at 消息的回调
+func GroupMessageEventHandler() event.GroupMessageEventHandler {
+	return func(event *dto.WSPayload, data *dto.WSGroupMessageData) error {
+		go p.ProcessGroupMessageALL(data)
+
+		if !config.GetDisableErrorChan() {
+			botstats.RecordMessageReceived()
+		}
+
+		if config.GetEnableChangeWord() {
+			data.Content = acnode.CheckWordIN(data.Content)
+			if data.Author.Username != "" {
+				data.Author.Username = acnode.CheckWordIN(data.Author.Username)
+			}
+		}
+
+		return nil
+	}
+}
+
 // C2CMessageEventHandler 实现处理 群私聊 消息的回调
 func C2CMessageEventHandler() event.C2CMessageEventHandler {
 	return func(event *dto.WSPayload, data *dto.WSC2CMessageData) error {
@@ -887,6 +907,8 @@ func getHandlerByName(handlerName string) (interface{}, bool) {
 		return ThreadEventHandler(), true
 	case "GroupATMessageEventHandler": //群at信息
 		return GroupATMessageEventHandler(), true
+	case "GroupMessageEventHandler": //群信息
+		return GroupMessageEventHandler(), true
 	case "C2CMessageEventHandler": //群私聊
 		return C2CMessageEventHandler(), true
 	case "GroupAddRobotEventHandler": //群添加机器人
