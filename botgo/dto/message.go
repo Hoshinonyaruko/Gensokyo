@@ -104,6 +104,24 @@ type WSC2CMsgReceiveData struct {
 	Timestamp uint64 `json:"timestamp"` // 操作时间戳
 }
 
+// --- [新增] 群成员变动结构体 (根据 GROUP_MEMBER_ADD/REMOVE Payload 定义) ---
+
+// WSGroupMemberAddData 群成员增加 (GROUP_MEMBER_ADD)
+type WSGroupMemberAddData struct {
+	EventID      string `json:"event_id,omitempty"` // 用于接收外层的 id
+	Timestamp    uint64 `json:"timestamp"`          // 进群时间戳
+	GroupOpenID  string `json:"group_openid"`       // 群 openid
+	MemberOpenID string `json:"member_openid"`      // 进群用户的 openid
+}
+
+// WSGroupMemberRemoveData 群成员减少 (GROUP_MEMBER_REMOVE)
+type WSGroupMemberRemoveData struct {
+	EventID      string `json:"event_id,omitempty"` // 用于接收外层的 id
+	Timestamp    uint64 `json:"timestamp"`          // 退群时间戳
+	GroupOpenID  string `json:"group_openid"`       // 群 openid
+	MemberOpenID string `json:"member_openid"`      // 退群用户的 openid
+}
+
 type MediaResponse struct {
 	//UUID
 	FileUUID string `json:"file_uuid"`

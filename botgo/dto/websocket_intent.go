@@ -43,6 +43,12 @@ const (
 	IntentDirectMessageReactions
 	IntentDirectMessageTyping
 
+	// --- [新增] 群事件 (进群/退群等系统通知) ---
+	// IntentGroupEvents 包含例如:
+	// - GROUP_MEMBER_ADD
+	// - GROUP_MEMBER_REMOVE
+	IntentGroupEvents Intent = 1 << 24 // 群事件
+
 	// IntentGroupMessages 群消息事件
 	// - GROUP_AT_MESSAGE_CREATE // 群中@机器人时的消息
 	IntentGroupMessages Intent = 1 << 25 // 群消息事件

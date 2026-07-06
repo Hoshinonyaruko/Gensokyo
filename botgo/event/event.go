@@ -87,6 +87,10 @@ var eventParseFuncMap = map[dto.OPCode]map[dto.EventType]eventParseFunc{
 		dto.EventFriendDel:     friendDelHandler,
 		dto.EventC2CMsgReject:  c2cMsgRejectHandler,
 		dto.EventC2CMsgReceive: c2cMsgReceiveHandler,
+
+		// --- [新增] 群成员变动事件 ---
+		dto.EventGroupMemberAdd:    groupMemberAddHandler,
+		dto.EventGroupMemberRemove: groupMemberRemoveHandler,
 	},
 }
 
@@ -182,6 +186,21 @@ func ParseData(message []byte, target interface{}) error {
 		return nil
 
 	case *dto.WSC2CMsgReceiveData:
+		if err := json.Unmarshal([]byte(data.String()), v); err != nil {
+			return err
+		}
+		v.EventID = eventid
+		return nil
+
+		// --- [新增] 拦截并注入群成员变动事件的 EventID ---
+	case *dto.WSGroupMemberAddData:
+		if err := json.Unmarshal([]byte(data.String()), v); err != nil {
+			return err
+		}
+		v.EventID = eventid
+		return nil
+
+	case *dto.WSGroupMemberRemoveData:
 		if err := json.Unmarshal([]byte(data.String()), v); err != nil {
 			return err
 		}
@@ -508,6 +527,30 @@ func c2cMsgReceiveHandler(payload *dto.WSPayload, message []byte) error {
 	}
 	if DefaultHandlers.C2CMsgReceive != nil {
 		return DefaultHandlers.C2CMsgReceive(payload, data)
+	}
+	return nil
+}
+
+// --- [新增] 群成员变动的 Handler 包装器 ---
+
+func groupMemberAddHandler(payload *dto.WSPayload, message []byte) error {
+	data := &dto.WSGroupMemberAddData{}
+	if err := ParseData(message, data); err != nil {
+		return err
+	}
+	if DefaultHandlers.GroupMemberAdd != nil {
+		return DefaultHandlers.GroupMemberAdd(payload, data)
+	}
+	return nil
+}
+
+func groupMemberRemoveHandler(payload *dto.WSPayload, message []byte) error {
+	data := &dto.WSGroupMemberRemoveData{}
+	if err := ParseData(message, data); err != nil {
+		return err
+	}
+	if DefaultHandlers.GroupMemberRemove != nil {
+		return DefaultHandlers.GroupMemberRemove(payload, data)
 	}
 	return nil
 }

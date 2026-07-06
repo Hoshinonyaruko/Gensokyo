@@ -883,6 +883,22 @@ func C2CMsgReceiveHandler() event.C2CMsgReceiveHandler {
 	}
 }
 
+// GroupMemberAddEventHandler 实现处理 群成员增加 事件的回调
+func GroupMemberAddEventHandler() event.GroupMemberAddEventHandler {
+	return func(event *dto.WSPayload, data *dto.WSGroupMemberAddData) error {
+		go p.ProcessGroupMemberAdd(data)
+		return nil
+	}
+}
+
+// GroupMemberRemoveEventHandler 实现处理 群成员减少 事件的回调
+func GroupMemberRemoveEventHandler() event.GroupMemberRemoveEventHandler {
+	return func(event *dto.WSPayload, data *dto.WSGroupMemberRemoveData) error {
+		go p.ProcessGroupMemberRemove(data)
+		return nil
+	}
+}
+
 func getHandlerByName(handlerName string) (interface{}, bool) {
 	switch handlerName {
 	case "ReadyHandler": //连接成功
@@ -928,6 +944,11 @@ func getHandlerByName(handlerName string) (interface{}, bool) {
 		return C2CMsgRejectHandler(), true
 	case "C2CMsgReceiveHandler": //用户请求开启机器人C2C主动推送
 		return C2CMsgReceiveHandler(), true
+		// --- [新增] 群成员变动 Handler 暴露 ---
+	case "GroupMemberAddEventHandler": //群成员增加
+		return GroupMemberAddEventHandler(), true
+	case "GroupMemberRemoveEventHandler": //群成员减少
+		return GroupMemberRemoveEventHandler(), true
 	default:
 		log.Printf("Unknown handler: %s\n", handlerName)
 		return nil, false

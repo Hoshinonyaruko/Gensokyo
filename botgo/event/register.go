@@ -33,7 +33,7 @@ var DefaultHandlers struct {
 	Interaction InteractionEventHandler
 
 	GroupATMessage  GroupATMessageEventHandler
-	GroupMessage  GroupMessageEventHandler
+	GroupMessage    GroupMessageEventHandler
 	C2CMessage      C2CMessageEventHandler
 	GroupAddbot     GroupAddRobotEventHandler
 	GroupDelbot     GroupDelRobotEventHandler
@@ -45,6 +45,10 @@ var DefaultHandlers struct {
 	FriendDel     FriendDelEventHandler
 	C2CMsgReject  C2CMsgRejectHandler
 	C2CMsgReceive C2CMsgReceiveHandler
+
+	// --- [新增] 群成员变动事件 ---
+	GroupMemberAdd    GroupMemberAddEventHandler
+	GroupMemberRemove GroupMemberRemoveEventHandler
 }
 
 // ReadyHandler 可以处理 ws 的 ready 事件
@@ -147,6 +151,13 @@ type C2CMsgRejectHandler func(event *dto.WSPayload, data *dto.WSC2CMsgRejectData
 // C2CMsgReceiveHandler 用户接受机器人C2C消息事件 handler (C2C_MSG_RECEIVE)
 type C2CMsgReceiveHandler func(event *dto.WSPayload, data *dto.WSC2CMsgReceiveData) error
 
+// --- [新增] 群成员变动事件 ---
+// GroupMemberAddEventHandler 群成员增加事件 handler
+type GroupMemberAddEventHandler func(event *dto.WSPayload, data *dto.WSGroupMemberAddData) error
+
+// GroupMemberRemoveEventHandler 群成员减少事件 handler
+type GroupMemberRemoveEventHandler func(event *dto.WSPayload, data *dto.WSGroupMemberRemoveData) error
+
 // *******************************************************************
 
 // RegisterHandlers 注册事件回调，并返回 intent 用于 websocket 的鉴权
@@ -187,6 +198,14 @@ func RegisterHandlers(handlers ...interface{}) dto.Intent {
 			DefaultHandlers.C2CMsgReject = handle
 		case C2CMsgReceiveHandler:
 			DefaultHandlers.C2CMsgReceive = handle
+
+			// --- [新增] 群成员变动事件注册与 Intent 收集 ---
+		case GroupMemberAddEventHandler:
+			DefaultHandlers.GroupMemberAdd = handle
+			i = i | dto.EventToIntent(dto.EventGroupMemberAdd)
+		case GroupMemberRemoveEventHandler:
+			DefaultHandlers.GroupMemberRemove = handle
+			i = i | dto.EventToIntent(dto.EventGroupMemberRemove)
 		default:
 		}
 	}

@@ -55,6 +55,17 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 		platform = "qq"
 	}
 
+	// 1. 优先尝试解析消息自带的时间戳，解析失败则兜底使用当前时间
+	var msgTime int64
+	parsedTime, err := data.Timestamp.Time()
+	if err != nil {
+		// 如果格式不对或为空，兜底用当前时间
+		msgTime = time.Now().Unix()
+	} else {
+		// 转换成功，取秒级 Unix 时间戳
+		msgTime = parsedTime.Unix()
+	}
+
 	if !config.GetStringOb11() {
 		if config.GetIdmapPro() {
 			//将真实id转为int userid64
@@ -204,7 +215,7 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 				Level:  "0",
 			},
 			SubType: "normal",
-			Time:    time.Now().Unix(),
+			Time:    msgTime,
 		}
 		//增强配置
 		if !config.GetNativeOb11() {
@@ -227,24 +238,21 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 			//用向应用端(如果支持)发送echo,来确定客户端的send_msg对应的触发词原文
 			echo.AddMsgIDv3(AppIDString, echostr, messageText)
 		}
-		// 获取MasterID数组
-		masterIDs := config.GetMasterID()
+		// --- [修改开始] 优先使用官方下发的 MemberRole ---
+		if data.Author.MemberRole != "" {
+			groupMsg.Sender.Role = data.Author.MemberRole
+		} else {
+			groupMsg.Sender.Role = "member" // 默认保底
+		}
 
-		// 判断userid64是否在masterIDs数组里
-		isMaster := false
-		for _, id := range masterIDs {
+		// 获取MasterID数组，保留主人最高权限覆盖
+		for _, id := range config.GetMasterID() {
 			if strconv.FormatInt(userid64, 10) == id {
-				isMaster = true
+				groupMsg.Sender.Role = "owner"
 				break
 			}
 		}
-
-		// 根据isMaster的值为groupMsg的Sender赋值role字段
-		if isMaster {
-			groupMsg.Sender.Role = "owner"
-		} else {
-			groupMsg.Sender.Role = "member"
-		}
+		// --- [修改结束] ---
 		// 将当前s和appid和message进行映射
 		echo.AddMsgID(AppIDString, s, data.ID)
 		echo.AddMsgType(AppIDString, s, "group")
@@ -295,7 +303,7 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 				Level:  "0",
 			},
 			SubType:  "normal",
-			Time:     time.Now().Unix(),
+			Time:     msgTime,
 			Platform: platform,
 		}
 		// 增强配置
@@ -317,28 +325,26 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 			//用向应用端(如果支持)发送echo,来确定客户端的send_msg对应的触发词原文
 			echo.AddMsgIDv3(AppIDString, echostr, messageText)
 		}
-		// 获取MasterID数组
-		masterIDs := config.GetMasterID()
+		// --- [修改开始] 优先使用官方下发的 MemberRole ---
+		if data.Author.MemberRole != "" {
+			groupMsgS.Sender.Role = data.Author.MemberRole
+		} else {
+			groupMsgS.Sender.Role = "member" // 默认保底
+		}
 
-		// 判断userid64是否在masterIDs数组里
-		isMaster := false
-		for _, id := range masterIDs {
+		// 获取MasterID数组，保留主人最高权限覆盖
+		for _, id := range config.GetMasterID() {
 			if strconv.FormatInt(userid64, 10) == id {
-				isMaster = true
+				groupMsgS.Sender.Role = "owner"
 				break
 			}
 		}
-		// 根据isMaster的值为groupMsg的Sender赋值role字段
-		if isMaster {
-			groupMsgS.Sender.Role = "owner"
-		} else {
-			groupMsgS.Sender.Role = "member"
-		}
+		// --- [修改结束] ---
 		// 将当前s和appid和message进行映射
 		echo.AddMsgID(AppIDString, s, data.ID)
 		echo.AddMsgType(AppIDString, s, "group")
 		//储存当前群或频道号的类型
-		go idmap.WriteConfigv2(data.GroupID, "type", "group")
+		//go idmap.WriteConfigv2(data.GroupID, "type", "group")
 		//懒message_id池
 		echo.AddLazyMessageId(data.GroupID, data.ID, time.Now())
 		//懒message_id池

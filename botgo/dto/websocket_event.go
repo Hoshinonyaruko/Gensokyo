@@ -50,6 +50,10 @@ const (
 	EventFriendDel     EventType = "FRIEND_DEL"
 	EventC2CMsgReject  EventType = "C2C_MSG_REJECT"
 	EventC2CMsgReceive EventType = "C2C_MSG_RECEIVE"
+
+	// --- [新增] 群成员变动事件 ---
+	EventGroupMemberAdd    EventType = "GROUP_MEMBER_ADD"
+	EventGroupMemberRemove EventType = "GROUP_MEMBER_REMOVE"
 )
 
 // intentEventMap 不同 intent 对应的事件定义
@@ -69,6 +73,12 @@ var intentEventMap = map[Intent][]EventType{
 		EventGroupMsgReject, EventGroupMsgReceive, // 补全群消息开关事件
 		EventFriendAdd, EventFriendDel, // [新增] 好友添加/删除
 		EventC2CMsgReject, EventC2CMsgReceive, // [新增] C2C消息开关拒绝/接收
+	},
+
+	// --- [新增] 独立挂载群事件 Intent (位移24) ---
+	IntentGroupEvents: {
+		EventGroupMemberAdd,
+		EventGroupMemberRemove,
 	},
 
 	IntentGuildMessageReactions: {EventMessageReactionAdd, EventMessageReactionRemove},

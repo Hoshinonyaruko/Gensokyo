@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -18,80 +19,217 @@ import (
 )
 
 type WebSocketClient struct {
-	conn           *websocket.Conn
-	api            openapi.OpenAPI
-	apiv2          openapi.OpenAPI
-	botID          uint64
-	urlStr         string
-	cancel         context.CancelFunc
+	conn   *websocket.Conn
+	connMu sync.RWMutex
+
+	api    openapi.OpenAPI
+	apiv2  openapi.OpenAPI
+	botID  uint64
+	urlStr string
+
+	cancel   context.CancelFunc
+	cancelMu sync.Mutex
+
+	reconnectMu    sync.Mutex
 	isReconnecting bool
-	sendFailures   []map[string]interface{} // 存储失败的消息
-	writeCh        chan writeRequest        // 写请求通道
-	closeCh        chan struct{}            // 用于关闭的通道
+
+	sendFailures   [][]byte
+	sendFailuresMu sync.Mutex
+
+	writeCh chan writeRequest
+	closeCh chan struct{}
+
+	closeOnce sync.Once
 }
 
 type writeRequest struct {
 	messageType int
 	data        []byte
+	errCh       chan error
 }
 
-// SendMessage 发送消息，将写请求发送到写 Goroutine
+func (client *WebSocketClient) getConn() *websocket.Conn {
+	client.connMu.RLock()
+	defer client.connMu.RUnlock()
+	return client.conn
+}
+
+func (client *WebSocketClient) swapConn(conn *websocket.Conn) *websocket.Conn {
+	client.connMu.Lock()
+	defer client.connMu.Unlock()
+
+	oldConn := client.conn
+	client.conn = conn
+	return oldConn
+}
+
+func (client *WebSocketClient) setCancel(cancel context.CancelFunc) {
+	client.cancelMu.Lock()
+	defer client.cancelMu.Unlock()
+	client.cancel = cancel
+}
+
+func (client *WebSocketClient) cancelCurrent() {
+	client.cancelMu.Lock()
+	cancel := client.cancel
+	client.cancel = nil
+	client.cancelMu.Unlock()
+
+	if cancel != nil {
+		cancel()
+	}
+}
+
+func (client *WebSocketClient) isClosed() bool {
+	select {
+	case <-client.closeCh:
+		return true
+	default:
+		return false
+	}
+}
+
+const (
+	wsWriteTimeout     = 10 * time.Second
+	sendEnqueueTimeout = 3 * time.Second
+	maxSendFailures    = 1000
+)
+
 func (client *WebSocketClient) SendMessage(message map[string]interface{}) error {
-	// 序列化消息
 	msgBytes, err := json.Marshal(message)
 	if err != nil {
 		log.Println("Error marshalling message:", err)
 		return err
 	}
 
-	// 创建专用通道，用于接收写操作的结果
-	client.writeCh <- writeRequest{
-		messageType: websocket.TextMessage,
-		data:        msgBytes,
+	return client.sendRaw(websocket.TextMessage, msgBytes)
+}
+
+func (client *WebSocketClient) sendRaw(messageType int, data []byte) error {
+	if client == nil {
+		return fmt.Errorf("websocket client is nil")
 	}
 
-	// 等待写操作完成，并返回结果
-	return nil
+	errCh := make(chan error, 1)
+	req := writeRequest{
+		messageType: messageType,
+		data:        data,
+		errCh:       errCh,
+	}
+
+	select {
+	case <-client.closeCh:
+		return fmt.Errorf("websocket client closed")
+	case client.writeCh <- req:
+	case <-time.After(sendEnqueueTimeout):
+		return fmt.Errorf("websocket write queue timeout")
+	}
+
+	select {
+	case err := <-errCh:
+		return err
+	case <-client.closeCh:
+		return fmt.Errorf("websocket client closed")
+	case <-time.After(wsWriteTimeout + time.Second):
+		return fmt.Errorf("websocket write result timeout")
+	}
 }
 
 // Close 关闭 WebSocketClient，停止写 Goroutine
 func (client *WebSocketClient) Close() error {
-	close(client.closeCh)
-	close(client.writeCh)
-	client.conn.Close()
-	return nil
+	if client == nil {
+		return nil
+	}
+
+	var closeErr error
+
+	client.closeOnce.Do(func() {
+		client.cancelCurrent()
+
+		close(client.closeCh)
+
+		conn := client.swapConn(nil)
+		if conn != nil {
+			closeErr = conn.Close()
+		}
+	})
+
+	return closeErr
 }
 
-// startWriter 专用的写 Goroutine
 func (client *WebSocketClient) startWriter() {
 	for {
 		select {
-		case req := <-client.writeCh:
-			// 执行写操作
-			err := client.conn.WriteMessage(req.messageType, req.data)
-			if err != nil {
-				log.Println("Error sending message:", err)
-				if !config.GetDisableErrorChan() {
-					client.sendFailures = append(client.sendFailures, map[string]interface{}{"message": req.data}) // 记录失败的消息
-				}
-			}
 		case <-client.closeCh:
 			return
+
+		case req := <-client.writeCh:
+			if client.isClosed() {
+				if req.errCh != nil {
+					select {
+					case req.errCh <- fmt.Errorf("websocket client closed"):
+					default:
+					}
+				}
+				return
+			}
+
+			err := client.writeRawNow(req.messageType, req.data)
+
+			if err != nil {
+				log.Println("Error sending message:", err)
+				client.recordSendFailure(req.data)
+
+				if !client.isClosed() {
+					go client.Reconnect()
+				}
+			}
+
+			if req.errCh != nil {
+				select {
+				case req.errCh <- err:
+				default:
+				}
+			}
 		}
 	}
 }
 
+func (client *WebSocketClient) writeRawNow(messageType int, data []byte) error {
+	conn := client.getConn()
+	if conn == nil {
+		return fmt.Errorf("websocket connection is nil")
+	}
+
+	if wsWriteTimeout > 0 {
+		_ = conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
+		defer conn.SetWriteDeadline(time.Time{})
+	}
+
+	return conn.WriteMessage(messageType, data)
+}
+
 // 处理onebotv11应用端发来的信息
 func (client *WebSocketClient) handleIncomingMessages(cancel context.CancelFunc) {
+	conn := client.getConn()
+	if conn == nil {
+		mylog.Println("WebSocket connection is nil, reconnecting")
+		if cancel != nil {
+			cancel()
+		}
+		go client.Reconnect()
+		return
+	}
+
 	for {
-		_, msg, err := client.conn.ReadMessage()
+		_, msg, err := conn.ReadMessage()
 		if err != nil {
 			mylog.Println("WebSocket connection closed:", err)
-			cancel() // 取消心跳 goroutine
-			if !client.isReconnecting {
-				go client.Reconnect()
+			if cancel != nil {
+				cancel()
 			}
-			return // 退出循环，不再尝试读取消息
+			go client.Reconnect()
+			return
 		}
 
 		go client.recvMessage(msg)
@@ -100,7 +238,31 @@ func (client *WebSocketClient) handleIncomingMessages(cancel context.CancelFunc)
 
 // 断线重连
 func (client *WebSocketClient) Reconnect() {
+	if client == nil || client.isClosed() {
+		return
+	}
+
+	client.reconnectMu.Lock()
+	if client.isReconnecting {
+		client.reconnectMu.Unlock()
+		return
+	}
 	client.isReconnecting = true
+	client.reconnectMu.Unlock()
+
+	defer func() {
+		client.reconnectMu.Lock()
+		client.isReconnecting = false
+		client.reconnectMu.Unlock()
+	}()
+
+	// 先停止旧心跳，并断开旧连接，避免重连期间旧 goroutine 继续写旧连接。
+	client.cancelCurrent()
+
+	oldConn := client.swapConn(nil)
+	if oldConn != nil {
+		_ = oldConn.Close()
+	}
 
 	addresses := config.GetWsAddress()
 	tokens := config.GetWsToken()
@@ -139,24 +301,43 @@ func (client *WebSocketClient) Reconnect() {
 
 	maxRetryAttempts := config.GetReconnecTimes()
 	retryCount := 0
+
 	for {
+		if client.isClosed() {
+			return
+		}
+
 		mylog.Println("Dialing URL:", client.urlStr)
 		conn, _, err = dialer.Dial(client.urlStr, headers)
-		if err != nil {
-			retryCount++
-			if retryCount > maxRetryAttempts {
-				mylog.Printf("Exceeded maximum retry attempts for WebSocket[%v]: %v\n", client.urlStr, err)
-				return
-			}
-			mylog.Printf("Failed to connect to WebSocket[%v]: %v, retrying in 5 seconds...\n", client.urlStr, err)
-			time.Sleep(5 * time.Second) // sleep for 5 seconds before retrying
-		} else {
-			mylog.Printf("Successfully connected to %s.\n", client.urlStr) // 输出连接成功提示
-			break                                                          // successfully connected, break the loop
+		if err == nil {
+			mylog.Printf("Successfully connected to %s.\n", client.urlStr)
+			break
+		}
+
+		retryCount++
+		if retryCount > maxRetryAttempts {
+			mylog.Printf("Exceeded maximum retry attempts for WebSocket[%v]: %v\n", client.urlStr, err)
+			return
+		}
+
+		mylog.Printf("Failed to connect to WebSocket[%v]: %v, retrying in 5 seconds...\n", client.urlStr, err)
+
+		select {
+		case <-client.closeCh:
+			return
+		case <-time.After(5 * time.Second):
 		}
 	}
-	// 复用现有的client完成重连
-	client.conn = conn
+
+	if client.isClosed() {
+		if conn != nil {
+			_ = conn.Close()
+		}
+		return
+	}
+
+	// 复用现有的 client 完成重连。
+	client.swapConn(conn)
 
 	// 再次发送元事件
 	message := map[string]interface{}{
@@ -169,42 +350,92 @@ func (client *WebSocketClient) Reconnect() {
 
 	mylog.Printf("Message: %+v\n", message)
 
-	err = client.SendMessage(message)
-	if err != nil {
-		// handle error
-		mylog.Printf("Error sending message: %v\n", err)
+	if err := client.SendMessage(message); err != nil {
+		mylog.Printf("Error sending reconnect lifecycle message: %v\n", err)
+
+		badConn := client.swapConn(nil)
+		if badConn != nil {
+			_ = badConn.Close()
+		}
+
+		go func() {
+			select {
+			case <-client.closeCh:
+				return
+			case <-time.After(2 * time.Second):
+				client.Reconnect()
+			}
+		}()
+
+		return
 	}
 
-	//退出老的sendHeartbeat和handleIncomingMessages
-	client.cancel()
+	if client.isClosed() {
+		oldConn := client.swapConn(nil)
+		if oldConn != nil {
+			_ = oldConn.Close()
+		}
+		return
+	}
 
-	// Starting goroutine for heartbeats and another for listening to messages
 	ctx, cancel := context.WithCancel(context.Background())
 
-	client.cancel = cancel
+	client.setCancel(cancel)
 	heartbeatinterval := config.GetHeartBeatInterval()
 	go client.sendHeartbeat(ctx, client.botID, heartbeatinterval)
 	go client.handleIncomingMessages(cancel)
-
-	defer func() {
-		client.isReconnecting = false
-	}()
 
 	mylog.Printf("Successfully reconnected to WebSocket.")
 
 }
 
-// 处理发送失败的消息
+func (client *WebSocketClient) recordSendFailure(data []byte) {
+	if config.GetDisableErrorChan() {
+		return
+	}
+
+	copied := append([]byte(nil), data...)
+
+	client.sendFailuresMu.Lock()
+	defer client.sendFailuresMu.Unlock()
+
+	if len(client.sendFailures) >= maxSendFailures {
+		copy(client.sendFailures, client.sendFailures[1:])
+		client.sendFailures[len(client.sendFailures)-1] = copied
+		return
+	}
+
+	client.sendFailures = append(client.sendFailures, copied)
+}
+
+func (client *WebSocketClient) drainSendFailures() [][]byte {
+	client.sendFailuresMu.Lock()
+	defer client.sendFailuresMu.Unlock()
+
+	if len(client.sendFailures) == 0 {
+		return nil
+	}
+
+	failures := client.sendFailures
+	client.sendFailures = nil
+	return failures
+}
+
 func (client *WebSocketClient) processFailedMessages() {
-	for _, failedMessage := range client.sendFailures {
-		// 尝试重新发送消息
-		err := client.SendMessage(failedMessage)
-		if err != nil {
-			mylog.Printf("Error resending message: %v\n", err)
+	failures := client.drainSendFailures()
+	if len(failures) == 0 {
+		return
+	}
+
+	for _, data := range failures {
+		if len(data) == 0 {
+			continue
+		}
+
+		if err := client.sendRaw(websocket.TextMessage, data); err != nil {
+			mylog.Printf("Error resending websocket message: %v\n", err)
 		}
 	}
-	// 清空失败消息列表
-	client.sendFailures = []map[string]interface{}{}
 }
 
 // 处理信息,调用腾讯api
@@ -239,11 +470,18 @@ func TruncateMessage(message callapi.ActionMessage, maxLength int) string {
 
 // 发送心跳包
 func (client *WebSocketClient) sendHeartbeat(ctx context.Context, botID uint64, heartbeatinterval int) {
+	if heartbeatinterval <= 0 {
+		heartbeatinterval = 5
+	}
+
+	ticker := time.NewTicker(time.Duration(heartbeatinterval) * time.Second)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.After(time.Duration(heartbeatinterval) * time.Second):
+		case <-ticker.C:
 			messageReceived, messageSent, lastMessageTime, err := botstats.GetStats()
 			if err != nil {
 				mylog.Printf("心跳错误,获取机器人发信状态错误:%v", err)
@@ -273,7 +511,9 @@ func (client *WebSocketClient) sendHeartbeat(ctx context.Context, botID uint64, 
 				},
 				"interval": 5000, // 以毫秒为单位
 			}
-			client.SendMessage(message)
+			if err := client.SendMessage(message); err != nil {
+				mylog.Printf("Error sending heartbeat: %v", err)
+			}
 			// 重发失败的消息
 			client.processFailedMessages()
 		}
@@ -340,8 +580,8 @@ func NewWebSocketClient(urlStr string, botID uint64, api openapi.OpenAPI, apiv2 
 		apiv2:        apiv2,
 		botID:        botID,
 		urlStr:       urlStr,
-		sendFailures: []map[string]interface{}{},
-		writeCh:      make(chan writeRequest, 5000), // 缓冲区大小可以根据需求调整
+		sendFailures: [][]byte{},
+		writeCh:      make(chan writeRequest, 5000),
 		closeCh:      make(chan struct{}),
 	}
 	go client.startWriter() // 启动写 Goroutine
@@ -357,16 +597,16 @@ func NewWebSocketClient(urlStr string, botID uint64, api openapi.OpenAPI, apiv2 
 
 	mylog.Printf("Message: %+v\n", message)
 
-	err = client.SendMessage(message)
-	if err != nil {
-		// handle error
-		mylog.Printf("Error sending message: %v\n", err)
+	if err := client.SendMessage(message); err != nil {
+		mylog.Printf("Error sending initial lifecycle message: %v\n", err)
+		_ = client.Close()
+		return nil, err
 	}
 
 	// Starting goroutine for heartbeats and another for listening to messages
 	ctx, cancel := context.WithCancel(context.Background())
 
-	client.cancel = cancel
+	client.setCancel(cancel)
 	heartbeatinterval := config.GetHeartBeatInterval()
 	go client.sendHeartbeat(ctx, botID, heartbeatinterval)
 	go client.handleIncomingMessages(cancel)
