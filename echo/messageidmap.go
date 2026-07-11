@@ -229,14 +229,14 @@ func GetMessageTypeByGroupidv2(appID string, GroupID interface{}) string { //2
 	return GetMsgTypeByKey(key)
 }
 
-// GetLazyC2CMessagesId 获取指定 QQ C2C 私聊用户最近 1 小时内的 message_id。
+// GetLazyC2CMessagesId 获取指定 QQ C2C 私聊用户最近 58 分钟内的 message_id。
 // 该函数仅用于 QQ 官方群私聊/C2C，不用于群聊和频道私信。
 func GetLazyC2CMessagesId(userID string) string {
 	store := initInstance()
 
-	// 腾讯目前将 C2C 私聊 message_id 的有效范围放宽到 1 小时。
-	now := time.Now()
-	oneHourAgo := now.Add(-time.Hour)
+	// 腾讯 C2C message_id 官方有效期按 1 小时计算。
+	// 本地保留 2 分钟安全余量，避免网络延迟、上传媒体等操作导致临界过期。
+	cutoffTime := time.Now().Add(-58 * time.Minute)
 
 	// 私聊 lazy 池使用 userID 作为 key。
 	value, ok := store.records.Load(userID)
@@ -249,39 +249,58 @@ func GetLazyC2CMessagesId(userID string) string {
 		return generateDefaultMessageID(userID)
 	}
 
-	var selectedRecord *messageRecord
-	var validRecords []messageRecord
+	validRecords := make([]messageRecord, 0, len(records))
 
-	// 保留最近 1 小时的记录。
-	// 选择规则维持现有 GetLazyMessagesId 行为：
-	// 优先选择尚未使用且时间最近的 message_id。
+	// selectedIndex：
+	// 最近且尚未使用过的 message_id。
+	selectedIndex := -1
+
+	// latestIndex：
+	// 最近的任意 message_id。
+	// 当所有 ID 都已经使用过时，从最近的 ID 开始第二次使用。
+	latestIndex := -1
+
 	for i := range records {
 		record := records[i]
 
-		if record.timestamp.After(oneHourAgo) {
-			validRecords = append(validRecords, record)
+		if !record.timestamp.After(cutoffTime) {
+			continue
+		}
 
-			if record.usageCount == 0 {
-				if selectedRecord == nil ||
-					record.timestamp.After(selectedRecord.timestamp) {
-					selectedRecord = &validRecords[len(validRecords)-1]
-				}
-			} else if selectedRecord == nil {
-				selectedRecord = &validRecords[len(validRecords)-1]
+		validRecords = append(validRecords, record)
+		currentIndex := len(validRecords) - 1
+
+		// 始终记录时间最近的有效 message_id。
+		if latestIndex == -1 ||
+			validRecords[currentIndex].timestamp.After(validRecords[latestIndex].timestamp) {
+			latestIndex = currentIndex
+		}
+
+		// 优先记录时间最近且从未使用过的 message_id。
+		if validRecords[currentIndex].usageCount == 0 {
+			if selectedIndex == -1 ||
+				validRecords[currentIndex].timestamp.After(validRecords[selectedIndex].timestamp) {
+				selectedIndex = currentIndex
 			}
 		}
 	}
 
-	if selectedRecord != nil {
-		selectedRecord.usageCount++
+	// 没有未使用过的 ID，说明所有有效 ID 都至少使用过一次。
+	// 此时选择时间最近的 ID，从它开始第二次使用。
+	if selectedIndex == -1 {
+		selectedIndex = latestIndex
 	}
 
-	// 清除超过 1 小时的 C2C message_id。
+	if selectedIndex >= 0 {
+		validRecords[selectedIndex].usageCount++
+
+		// 同时清理超过 58 分钟的过期记录。
+		store.records.Store(userID, validRecords)
+
+		return validRecords[selectedIndex].messageID
+	}
+
+	// 没有任何有效记录时，保存清理结果并退化为主动消息 ID。
 	store.records.Store(userID, validRecords)
-
-	if selectedRecord != nil {
-		return selectedRecord.messageID
-	}
-
 	return generateDefaultMessageID(userID)
 }
