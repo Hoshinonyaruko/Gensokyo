@@ -228,3 +228,60 @@ func GetMessageTypeByGroupidv2(appID string, GroupID interface{}) string { //2
 	key := appID + "_" + GroupIDStr
 	return GetMsgTypeByKey(key)
 }
+
+// GetLazyC2CMessagesId 获取指定 QQ C2C 私聊用户最近 1 小时内的 message_id。
+// 该函数仅用于 QQ 官方群私聊/C2C，不用于群聊和频道私信。
+func GetLazyC2CMessagesId(userID string) string {
+	store := initInstance()
+
+	// 腾讯目前将 C2C 私聊 message_id 的有效范围放宽到 1 小时。
+	now := time.Now()
+	oneHourAgo := now.Add(-time.Hour)
+
+	// 私聊 lazy 池使用 userID 作为 key。
+	value, ok := store.records.Load(userID)
+	if !ok {
+		return generateDefaultMessageID(userID)
+	}
+
+	records, ok := value.([]messageRecord)
+	if !ok || len(records) == 0 {
+		return generateDefaultMessageID(userID)
+	}
+
+	var selectedRecord *messageRecord
+	var validRecords []messageRecord
+
+	// 保留最近 1 小时的记录。
+	// 选择规则维持现有 GetLazyMessagesId 行为：
+	// 优先选择尚未使用且时间最近的 message_id。
+	for i := range records {
+		record := records[i]
+
+		if record.timestamp.After(oneHourAgo) {
+			validRecords = append(validRecords, record)
+
+			if record.usageCount == 0 {
+				if selectedRecord == nil ||
+					record.timestamp.After(selectedRecord.timestamp) {
+					selectedRecord = &validRecords[len(validRecords)-1]
+				}
+			} else if selectedRecord == nil {
+				selectedRecord = &validRecords[len(validRecords)-1]
+			}
+		}
+	}
+
+	if selectedRecord != nil {
+		selectedRecord.usageCount++
+	}
+
+	// 清除超过 1 小时的 C2C message_id。
+	store.records.Store(userID, validRecords)
+
+	if selectedRecord != nil {
+		return selectedRecord.messageID
+	}
+
+	return generateDefaultMessageID(userID)
+}

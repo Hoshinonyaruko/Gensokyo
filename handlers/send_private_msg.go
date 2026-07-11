@@ -147,7 +147,7 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 		var eventID string
 		if config.GetLazyMessageId() {
 			//由于实现了Params的自定义unmarshell 所以可以类型安全的断言为string
-			messageID = echo.GetLazyMessagesId(UserID)
+			messageID = echo.GetLazyC2CMessagesId(UserID)
 			mylog.Printf("GetLazyMessagesId: %v", messageID)
 		}
 		if messageID == "" {

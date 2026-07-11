@@ -102,10 +102,46 @@ func (client *WebSocketClient) SendMessage(message map[string]interface{}) error
 		return err
 	}
 
+	// 高并发热路径：只负责投递到写队列，不等待真实网络写入完成。
 	return client.sendRaw(websocket.TextMessage, msgBytes)
 }
 
+// SendMessageSync 只给 lifecycle / 初始化 / 关键控制消息使用。
+// 它会等待写协程返回真实写入结果，不建议用于高并发业务消息。
+func (client *WebSocketClient) SendMessageSync(message map[string]interface{}) error {
+	msgBytes, err := json.Marshal(message)
+	if err != nil {
+		log.Println("Error marshalling message:", err)
+		return err
+	}
+
+	return client.sendRawSync(websocket.TextMessage, msgBytes)
+}
+
+// sendRaw 是 fire-and-forget：投递成功就返回。
 func (client *WebSocketClient) sendRaw(messageType int, data []byte) error {
+	if client == nil {
+		return fmt.Errorf("websocket client is nil")
+	}
+
+	req := writeRequest{
+		messageType: messageType,
+		data:        data,
+		errCh:       nil,
+	}
+
+	select {
+	case <-client.closeCh:
+		return fmt.Errorf("websocket client closed")
+	case client.writeCh <- req:
+		return nil
+	case <-time.After(sendEnqueueTimeout):
+		return fmt.Errorf("websocket write queue timeout")
+	}
+}
+
+// sendRawSync 是同步等待版本，只给低频关键消息用。
+func (client *WebSocketClient) sendRawSync(messageType int, data []byte) error {
 	if client == nil {
 		return fmt.Errorf("websocket client is nil")
 	}
@@ -350,7 +386,7 @@ func (client *WebSocketClient) Reconnect() {
 
 	mylog.Printf("Message: %+v\n", message)
 
-	if err := client.SendMessage(message); err != nil {
+	if err := client.SendMessageSync(message); err != nil {
 		mylog.Printf("Error sending reconnect lifecycle message: %v\n", err)
 
 		badConn := client.swapConn(nil)
@@ -597,7 +633,7 @@ func NewWebSocketClient(urlStr string, botID uint64, api openapi.OpenAPI, apiv2 
 
 	mylog.Printf("Message: %+v\n", message)
 
-	if err := client.SendMessage(message); err != nil {
+	if err := client.SendMessageSync(message); err != nil {
 		mylog.Printf("Error sending initial lifecycle message: %v\n", err)
 		_ = client.Close()
 		return nil, err
