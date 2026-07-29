@@ -145,7 +145,7 @@ func UploadBase64ImageToServer(base64Image string, apiv2 openapi.OpenAPI) (strin
 		return "", 0, 0, err
 	}
 
-	height, width, err := GetImageDimensions(picURL)
+	width, height, err := GetImageDimensions(picURL)
 	if err != nil {
 		mylog.Printf("获取图片宽高出错")
 	}
@@ -177,7 +177,7 @@ func originalUploadBehavior(base64Image string) (string, error) {
 	// 原有的UploadBase64ImageToServer函数的实现
 	protocol := "http"
 	serverPort := config.GetPortValue()
-	if serverPort == "443" ||config.GetForceSsl(){
+	if serverPort == "443" || config.GetForceSsl() {
 		protocol = "https"
 	}
 
@@ -194,7 +194,7 @@ func originalUploadBehavior(base64Image string) (string, error) {
 	}
 
 	serverDir := config.GetServer_dir()
-	if serverPort == "443" ||config.GetForceSsl(){
+	if serverPort == "443" || config.GetForceSsl() {
 		protocol = "http"
 		serverPort = config.GetHttpPortAfterSsl()
 	}
@@ -227,7 +227,7 @@ func UploadBehaviorV3(base64Image string) (string, int, int, error) {
 	} else {
 		protocol := "http"
 		serverPort := config.GetPortValue()
-		if serverPort == "443" ||config.GetForceSsl(){
+		if serverPort == "443" || config.GetForceSsl() {
 			protocol = "https"
 		}
 
@@ -241,7 +241,7 @@ func UploadBehaviorV3(base64Image string) (string, int, int, error) {
 			}
 			return resp, width, height, nil
 		} else {
-			if serverPort == "443" ||config.GetForceSsl(){
+			if serverPort == "443" || config.GetForceSsl() {
 				protocol = "http"
 				serverPort = config.GetHttpPortAfterSsl()
 			}
@@ -261,7 +261,7 @@ func originalUploadBehaviorRecord(base64Image string) (string, error) {
 	// 根据serverPort确定协议
 	protocol := "http"
 	serverPort := config.GetPortValue()
-	if serverPort == "443" ||config.GetForceSsl(){
+	if serverPort == "443" || config.GetForceSsl() {
 		protocol = "https"
 	}
 
@@ -278,7 +278,7 @@ func originalUploadBehaviorRecord(base64Image string) (string, error) {
 
 	serverDir := config.GetServer_dir()
 	// 当端口是443时，使用HTTP和444端口
-	if serverPort == "443" ||config.GetForceSsl(){
+	if serverPort == "443" || config.GetForceSsl() {
 		protocol = "http"
 		serverPort = config.GetHttpPortAfterSsl()
 	}

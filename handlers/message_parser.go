@@ -1759,7 +1759,7 @@ func parseQQMuiscMDData(musicid string) (*dto.Markdown, *keyboard.MessageKeyboar
 	CustomTemplateID = config.GetCustomTemplateID()
 	if CustomTemplateID != "" {
 		if PictureUrl != "" {
-			height, width, err := images.GetImageDimensions(PictureUrl)
+			width, height, err := images.GetImageDimensions(PictureUrl)
 			if err != nil {
 				mylog.Printf("获取图片宽高出错")
 			}

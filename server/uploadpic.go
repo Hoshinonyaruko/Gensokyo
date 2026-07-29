@@ -212,7 +212,7 @@ func UploadBase64ImageHandlerV3(rateLimiter *RateLimiter, apiv1 openapi.OpenAPI)
 		imageURL := fmt.Sprintf("https://gchat.qpic.cn/qmeetpic/0/0-0-%s/0", md5String)
 
 		// 获取图片宽高
-		height, width, err := images.GetImageDimensions(imageURL)
+		width, height, err := images.GetImageDimensions(imageURL)
 		if err != nil {
 			mylog.Printf("获取图片宽高出错: %v", err)
 			return
