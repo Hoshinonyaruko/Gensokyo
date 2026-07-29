@@ -143,17 +143,32 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		// EventID
 		var eventID string
 		if config.GetLazyMessageId() {
-			//由于实现了Params的自定义unmarshell 所以可以类型安全的断言为string
-			messageID = echo.GetLazyMessagesId(message.Params.GroupID.(string))
-			mylog.Printf("GetLazyMessagesId: %v", messageID)
-			//如果应用端传递了user_id 就让at不要顺序乱套
-			if message.Params.UserID != nil && message.Params.UserID.(string) != "" && message.Params.UserID.(string) != "0" {
-				messageID = echo.GetLazyMessagesIdv2(message.Params.GroupID.(string), message.Params.UserID.(string))
-				mylog.Printf("GetLazyMessagesIdv2: %v", messageID)
+			groupID := message.Params.GroupID.(string)
+
+			// 如果应用端传递了 user_id，
+			// 优先从 groupID + userID 精确池中获取。
+			if message.Params.UserID != nil &&
+				message.Params.UserID.(string) != "" &&
+				message.Params.UserID.(string) != "0" {
+
+				userID := message.Params.UserID.(string)
+
+				messageID = echo.GetLazyMessagesIdv2(
+					groupID,
+					userID,
+				)
+				mylog.Printf(
+					"GetLazyMessagesIdv2: %v",
+					messageID,
+				)
 			} else {
-				//如果应用端没有传递userid 那就用群号模式的lazyid 但是不保证顺序是对的
-				messageID = echo.GetLazyMessagesId(message.Params.GroupID.(string))
-				mylog.Printf("GetLazyMessagesIdv1: %v", messageID)
+				// 没有 user_id 时，才使用群维度 lazy 池。
+				// 每次发送只能获取一次，不能预先获取后再次覆盖。
+				messageID = echo.GetLazyGroupMessagesId(groupID)
+				mylog.Printf(
+					"GetLazyGroupMessagesId: %v",
+					messageID,
+				)
 			}
 			//2000是群主动 此时不能被动转主动
 			//仅在开启lazy_message_id时，有信息主动转被动特性，即，SSM
@@ -2140,7 +2155,7 @@ func auto_md(message callapi.ActionMessage, messageText string, richMediaMessage
 			imgURL := richMediaMessage.URL
 			// 处理来自nt图床的链接
 			imgURL = processImgUrl(imgURL)
-			height, width, err := images.GetImageDimensions(imgURL)
+			width, height, err := images.GetImageDimensions(imgURL)
 			if err != nil {
 				height = 480
 				width = 480

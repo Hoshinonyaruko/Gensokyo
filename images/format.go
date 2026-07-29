@@ -122,7 +122,7 @@ func getJpegDimensions(url string) (int, int, error) {
 				// 使用binary.BigEndian.Uint16将字节转换为uint16
 				height := binary.BigEndian.Uint16(heightBytes)
 				width := binary.BigEndian.Uint16(widthBytes)
-				return int(height), int(width), nil
+				return int(width), int(height), nil
 			} else {
 				time.Sleep(5 * time.Millisecond)
 				lengthBytes := make([]byte, 2)

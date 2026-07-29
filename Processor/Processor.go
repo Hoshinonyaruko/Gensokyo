@@ -1159,7 +1159,7 @@ func generateMdByConfig() (md *dto.Markdown, kb *keyboard.MessageKeyboard) {
 	if !config.GetNativeMD() {
 		//组合 mdParams
 		if imgURL != "" {
-			height, width, err := images.GetImageDimensions(imgURL)
+			width, height, err := images.GetImageDimensions(imgURL)
 			if err != nil {
 				mylog.Printf("获取图片宽高出错")
 			}
@@ -1185,7 +1185,7 @@ func generateMdByConfig() (md *dto.Markdown, kb *keyboard.MessageKeyboard) {
 		// 使用原生Markdown格式
 		var content string
 		if imgURL != "" {
-			height, width, err := images.GetImageDimensions(imgURL)
+			width, height, err := images.GetImageDimensions(imgURL)
 			if err != nil {
 				mylog.Printf("获取图片宽高出错")
 			}

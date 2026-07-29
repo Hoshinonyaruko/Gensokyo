@@ -11,14 +11,48 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 )
 
+const (
+	// QQ 群聊中，同一个 message_id 最多用于回复 5 次。
+	lazyGroupMessageIDMaxUses = 5
+
+	// QQ C2C 私聊中，同一个 message_id 最多用于回复 4 次。
+	lazyC2CMessageIDMaxUses = 4
+
+	// 群聊 message_id 本地有效窗口。
+	lazyGroupMessageIDWindow = 4 * time.Minute
+
+	// C2C message_id 官方有效期按 1 小时计算，
+	// 本地继续保留 2 分钟安全余量。
+	lazyC2CMessageIDWindow = 58 * time.Minute
+
+	// usageCount 至少要覆盖最长的 58 分钟有效期。
+	// 多保留几分钟，避免临界清理导致次数被重置。
+	lazyUsageRetention = 65 * time.Minute
+
+	lazyUsageCleanupInterval = time.Minute
+)
+
 type messageRecord struct {
-	messageID  string
-	timestamp  time.Time
-	usageCount int // 新增字段，记录使用次数，默认为0
+	messageID string
+	timestamp time.Time
 }
 
 type messageStore struct {
-	records sync.Map // 使用 sync.Map 代替普通 map
+	records sync.Map
+
+	// sync.Map 只能保证单次 Load/Store 安全，
+	// 不能保证 Load -> 选择 -> 增加次数 -> Store 整体原子。
+	mu sync.Mutex
+
+	// 必须以 messageID 为维度统一计数。
+	// 同一个 messageID 即使同时出现在 groupID 和 groupID.userID 池中，
+	// 也只能共享同一个使用次数。
+	usageCounts map[string]int
+
+	// 用于定期清理已经过期的次数记录。
+	usageTouchedAt map[string]time.Time
+
+	lastUsageCleanup time.Time
 }
 
 var instance *messageStore
@@ -27,171 +61,313 @@ var once sync.Once
 // 惰性初始化
 func initInstance() *messageStore {
 	once.Do(func() {
-		instance = &messageStore{}
+		instance = &messageStore{
+			usageCounts:    make(map[string]int),
+			usageTouchedAt: make(map[string]time.Time),
+		}
 	})
 	return instance
 }
 
-// AddLazyMessageId 添加 message_id 和它的时间戳到指定群号
+// AddLazyMessageId 添加 message_id。
+// 这个入口同时用于频道、群聊兼容池以及 QQ C2C，
+// 所以按照最长的 C2C 有效窗口清理记录。
 func AddLazyMessageId(groupID, messageID string, timestamp time.Time) {
 	store := initInstance()
-
-	// 初始化 messageRecord
-	record := messageRecord{
-		messageID:  messageID,
-		timestamp:  timestamp,
-		usageCount: 0, // 默认使用次数为 0
-	}
-
-	// 从 sync.Map 获取现有记录
-	value, ok := store.records.Load(groupID)
-	if ok {
-		// 如果已有记录，追加新记录
-		records := value.([]messageRecord)
-		store.records.Store(groupID, append(records, record))
-	} else {
-		// 如果没有记录，初始化新记录
-		store.records.Store(groupID, []messageRecord{record})
-	}
+	store.addLazyMessageID(
+		groupID,
+		messageID,
+		timestamp,
+		lazyC2CMessageIDWindow,
+	)
 }
 
-// AddLazyMessageIdv2 添加 message_id 和它的时间戳到指定群号
-func AddLazyMessageIdv2(groupID, userID, messageID string, timestamp time.Time) {
+// AddLazyMessageIdv2 添加 groupID + userID 精确匹配的群聊 message_id。
+func AddLazyMessageIdv2(
+	groupID,
+	userID,
+	messageID string,
+	timestamp time.Time,
+) {
 	store := initInstance()
 
-	// 组合键
 	key := groupID + "." + userID
-
-	// 初始化 messageRecord，并设置 usageCount 为 0
-	record := messageRecord{
-		messageID:  messageID,
-		timestamp:  timestamp,
-		usageCount: 0, // 默认使用次数为0
-	}
-
-	// 通过 sync.Map 读取现有数据
-	value, ok := store.records.Load(key)
-	if ok {
-		// 如果已存在，追加新记录
-		existingRecords := value.([]messageRecord)
-		store.records.Store(key, append(existingRecords, record))
-	} else {
-		// 如果不存在，初始化记录
-		store.records.Store(key, []messageRecord{record})
-	}
+	store.addLazyMessageID(
+		key,
+		messageID,
+		timestamp,
+		lazyGroupMessageIDWindow,
+	)
 }
 
-// GetLazyMessagesId 获取指定群号中最近 4 分钟内的 message_id
-func GetLazyMessagesId(groupID string) string {
-	store := initInstance()
+// addLazyMessageID 原子地添加记录，并避免重复 message_id 重置次数。
+func (store *messageStore) addLazyMessageID(
+	key,
+	messageID string,
+	timestamp time.Time,
+	retention time.Duration,
+) {
+	if key == "" || messageID == "" {
+		return
+	}
 
-	// 获取当前时间和时间窗口
 	now := time.Now()
-	fourMinutesAgo := now.Add(-4 * time.Minute)
-
-	// 从 sync.Map 获取记录
-	value, ok := store.records.Load(groupID)
-	if !ok {
-		return generateDefaultMessageID(groupID)
+	if timestamp.IsZero() {
+		timestamp = now
 	}
 
-	// 类型断言并筛选最近 4 分钟的消息
-	records, ok := value.([]messageRecord)
-	if !ok || len(records) == 0 {
-		return generateDefaultMessageID(groupID)
-	}
+	store.mu.Lock()
+	defer store.mu.Unlock()
 
-	var selectedRecord *messageRecord
-	var validRecords []messageRecord
+	store.cleanupUsageLocked(now)
 
-	// 筛选最近 4 分钟的消息，同时找出使用次数为0且时间最近的记录
-	for i := range records {
-		record := records[i]
-		if record.timestamp.After(fourMinutesAgo) {
-			// 添加到有效记录中
-			validRecords = append(validRecords, record)
+	var records []messageRecord
 
-			// 优先选择 usageCount == 0 且时间最近的记录
-			if record.usageCount == 0 {
-				if selectedRecord == nil || record.timestamp.After(selectedRecord.timestamp) {
-					selectedRecord = &validRecords[len(validRecords)-1] // 指向新增的有效记录
+	if value, ok := store.records.Load(key); ok {
+		if existingRecords, typeOK := value.([]messageRecord); typeOK {
+			records = make(
+				[]messageRecord,
+				0,
+				len(existingRecords)+1,
+			)
+
+			cutoffTime := now.Add(-retention)
+			messageIDExists := false
+
+			for _, record := range existingRecords {
+				// 顺便清理此池中的过期记录。
+				if !record.timestamp.After(cutoffTime) {
+					continue
 				}
-			} else if selectedRecord == nil {
-				// 如果没有 usageCount == 0 的，选择时间最近的
-				selectedRecord = &validRecords[len(validRecords)-1]
+
+				if record.messageID == messageID {
+					// 防止同一个事件被重复上报后，
+					// 添加出多条相同记录或重置使用次数。
+					if messageIDExists {
+						continue
+					}
+					messageIDExists = true
+				}
+
+				records = append(records, record)
+			}
+
+			if !messageIDExists {
+				records = append(records, messageRecord{
+					messageID: messageID,
+					timestamp: timestamp,
+				})
 			}
 		}
 	}
 
-	// 如果找到合适的记录，更新其 usageCount
-	if selectedRecord != nil {
-		selectedRecord.usageCount++
+	if records == nil {
+		records = []messageRecord{
+			{
+				messageID: messageID,
+				timestamp: timestamp,
+			},
+		}
 	}
 
-	// 更新有效记录到 sync.Map（仅更新一次）
-	store.records.Store(groupID, validRecords)
+	store.records.Store(key, records)
 
-	// 返回选中的 messageID 或生成默认消息ID
-	if selectedRecord != nil {
-		return selectedRecord.messageID
+	// 不修改 usageCounts。
+	// 如果同一个 messageID 已经使用过，重新 Add 也不能重置次数。
+	store.usageTouchedAt[messageID] = now
+}
+
+// acquireLazyMessageID 从指定池中原子地选择并占用一个 message_id。
+//
+// maxUses > 0：
+//
+//	选择时间最新且 usageCount < maxUses 的记录。
+//
+// preferUnused == true：
+//
+//	保留旧版频道逻辑，优先选择从未使用过的最新记录；
+//	全部使用过后，再选择时间最新的记录。
+func (store *messageStore) acquireLazyMessageID(
+	key string,
+	validWindow time.Duration,
+	maxUses int,
+	preferUnused bool,
+) (string, bool) {
+	now := time.Now()
+	cutoffTime := now.Add(-validWindow)
+
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	store.cleanupUsageLocked(now)
+
+	value, ok := store.records.Load(key)
+	if !ok {
+		return "", false
+	}
+
+	records, ok := value.([]messageRecord)
+	if !ok || len(records) == 0 {
+		store.records.Delete(key)
+		return "", false
+	}
+
+	validRecords := make([]messageRecord, 0, len(records))
+
+	// 有次数上限时使用 selectedIndex。
+	selectedIndex := -1
+
+	// 兼容旧版无硬上限选择方式。
+	latestIndex := -1
+	latestUnusedIndex := -1
+
+	for _, record := range records {
+		if !record.timestamp.After(cutoffTime) {
+			continue
+		}
+
+		validRecords = append(validRecords, record)
+		currentIndex := len(validRecords) - 1
+		usageCount := store.usageCounts[record.messageID]
+
+		if maxUses > 0 {
+			// 次数已经用完，不能再作为候选。
+			if usageCount >= maxUses {
+				continue
+			}
+
+			// 群聊和 C2C：
+			// 始终选择时间最新、且仍有剩余次数的 message_id。
+			if selectedIndex == -1 ||
+				validRecords[currentIndex].timestamp.After(
+					validRecords[selectedIndex].timestamp,
+				) {
+				selectedIndex = currentIndex
+			}
+
+			continue
+		}
+
+		// 以下为旧版频道兼容逻辑。
+		if latestIndex == -1 ||
+			validRecords[currentIndex].timestamp.After(
+				validRecords[latestIndex].timestamp,
+			) {
+			latestIndex = currentIndex
+		}
+
+		if usageCount == 0 {
+			if latestUnusedIndex == -1 ||
+				validRecords[currentIndex].timestamp.After(
+					validRecords[latestUnusedIndex].timestamp,
+				) {
+				latestUnusedIndex = currentIndex
+			}
+		}
+	}
+
+	// 同时保存清理过期记录后的池。
+	if len(validRecords) == 0 {
+		store.records.Delete(key)
+	} else {
+		store.records.Store(key, validRecords)
+	}
+
+	if maxUses <= 0 {
+		if preferUnused && latestUnusedIndex >= 0 {
+			selectedIndex = latestUnusedIndex
+		} else {
+			selectedIndex = latestIndex
+		}
+	}
+
+	if selectedIndex < 0 {
+		// 有有效记录，但全部达到次数上限。
+		return "", false
+	}
+
+	messageID := validRecords[selectedIndex].messageID
+
+	// 在返回之前先占用一次。
+	// 选择和增加次数处于同一把锁内，避免两个并发请求同时拿到第 5 次。
+	store.usageCounts[messageID]++
+	store.usageTouchedAt[messageID] = now
+
+	return messageID, true
+}
+
+func (store *messageStore) cleanupUsageLocked(now time.Time) {
+	if !store.lastUsageCleanup.IsZero() &&
+		now.Sub(store.lastUsageCleanup) < lazyUsageCleanupInterval {
+		return
+	}
+
+	cutoffTime := now.Add(-lazyUsageRetention)
+
+	for messageID, touchedAt := range store.usageTouchedAt {
+		if touchedAt.After(cutoffTime) {
+			continue
+		}
+
+		delete(store.usageTouchedAt, messageID)
+		delete(store.usageCounts, messageID)
+	}
+
+	store.lastUsageCleanup = now
+}
+
+// GetLazyMessagesId 保留旧版频道 lazy message_id 的选择规则。
+// QQ 群聊应使用 GetLazyGroupMessagesId。
+func GetLazyMessagesId(groupID string) string {
+	store := initInstance()
+
+	messageID, ok := store.acquireLazyMessageID(
+		groupID,
+		lazyGroupMessageIDWindow,
+		0,
+		true,
+	)
+	if ok {
+		return messageID
 	}
 
 	return generateDefaultMessageID(groupID)
 }
 
+// GetLazyGroupMessagesId 获取群维度最新且仍有剩余次数的 message_id。
+// 同一个 message_id 最多占用 5 次。
+func GetLazyGroupMessagesId(groupID string) string {
+	store := initInstance()
+
+	messageID, ok := store.acquireLazyMessageID(
+		groupID,
+		lazyGroupMessageIDWindow,
+		lazyGroupMessageIDMaxUses,
+		false,
+	)
+	if ok {
+		return messageID
+	}
+
+	return generateDefaultMessageID(groupID)
+}
+
+// GetLazyMessagesIdv2 获取指定群、指定用户最近产生的可用 message_id。
+// 同一个 message_id 最多占用 5 次。
 func GetLazyMessagesIdv2(groupID, userID string) string {
 	store := initInstance()
-	now := time.Now() // 统一时间基准
-	fourMinutesAgo := now.Add(-4 * time.Minute)
 	key := groupID + "." + userID
 
-	// 获取记录
-	value, ok := store.records.Load(key)
-	if !ok {
-		// 如果没有找到记录，生成默认消息ID
-		return generateDefaultMessageID(groupID)
+	messageID, ok := store.acquireLazyMessageID(
+		key,
+		lazyGroupMessageIDWindow,
+		lazyGroupMessageIDMaxUses,
+		false,
+	)
+	if ok {
+		return messageID
 	}
 
-	// 类型断言并检查记录是否为空
-	records, ok := value.([]messageRecord)
-	if !ok || len(records) == 0 {
-		return generateDefaultMessageID(groupID)
-	}
-
-	// 筛选最近 4 分钟的记录并找最优记录，同时清理过期记录
-	var selectedRecord *messageRecord
-	var validRecords []messageRecord
-
-	for i := range records {
-		record := records[i]
-		if record.timestamp.After(fourMinutesAgo) {
-			// 保留有效记录
-			validRecords = append(validRecords, record)
-
-			// 优先选择 usageCount == 0 且时间最近的
-			if record.usageCount == 0 {
-				if selectedRecord == nil || record.timestamp.After(selectedRecord.timestamp) {
-					selectedRecord = &validRecords[len(validRecords)-1] // 指向新增的有效记录
-				}
-			} else if selectedRecord == nil {
-				// 如果没有 usageCount == 0 的，选择时间最近的
-				selectedRecord = &validRecords[len(validRecords)-1] // 指向新增的有效记录
-			}
-		}
-	}
-
-	// 如果找到合适的记录，更新其 usageCount
-	if selectedRecord != nil {
-		selectedRecord.usageCount++ // 更新选中记录的 usageCount
-	}
-
-	// 更新有效记录到 sync.Map（仅更新一次）
-	store.records.Store(key, validRecords)
-
-	// 返回选中的 messageID 或生成默认消息ID
-	if selectedRecord != nil {
-		return selectedRecord.messageID
-	}
 	return generateDefaultMessageID(groupID)
 }
 
@@ -229,78 +405,20 @@ func GetMessageTypeByGroupidv2(appID string, GroupID interface{}) string { //2
 	return GetMsgTypeByKey(key)
 }
 
-// GetLazyC2CMessagesId 获取指定 QQ C2C 私聊用户最近 58 分钟内的 message_id。
-// 该函数仅用于 QQ 官方群私聊/C2C，不用于群聊和频道私信。
+// GetLazyC2CMessagesId 获取 QQ C2C 私聊用户最近 58 分钟内的可用 message_id。
+// 同一个 message_id 最多占用 4 次。
 func GetLazyC2CMessagesId(userID string) string {
 	store := initInstance()
 
-	// 腾讯 C2C message_id 官方有效期按 1 小时计算。
-	// 本地保留 2 分钟安全余量，避免网络延迟、上传媒体等操作导致临界过期。
-	cutoffTime := time.Now().Add(-58 * time.Minute)
-
-	// 私聊 lazy 池使用 userID 作为 key。
-	value, ok := store.records.Load(userID)
-	if !ok {
-		return generateDefaultMessageID(userID)
+	messageID, ok := store.acquireLazyMessageID(
+		userID,
+		lazyC2CMessageIDWindow,
+		lazyC2CMessageIDMaxUses,
+		false,
+	)
+	if ok {
+		return messageID
 	}
 
-	records, ok := value.([]messageRecord)
-	if !ok || len(records) == 0 {
-		return generateDefaultMessageID(userID)
-	}
-
-	validRecords := make([]messageRecord, 0, len(records))
-
-	// selectedIndex：
-	// 最近且尚未使用过的 message_id。
-	selectedIndex := -1
-
-	// latestIndex：
-	// 最近的任意 message_id。
-	// 当所有 ID 都已经使用过时，从最近的 ID 开始第二次使用。
-	latestIndex := -1
-
-	for i := range records {
-		record := records[i]
-
-		if !record.timestamp.After(cutoffTime) {
-			continue
-		}
-
-		validRecords = append(validRecords, record)
-		currentIndex := len(validRecords) - 1
-
-		// 始终记录时间最近的有效 message_id。
-		if latestIndex == -1 ||
-			validRecords[currentIndex].timestamp.After(validRecords[latestIndex].timestamp) {
-			latestIndex = currentIndex
-		}
-
-		// 优先记录时间最近且从未使用过的 message_id。
-		if validRecords[currentIndex].usageCount == 0 {
-			if selectedIndex == -1 ||
-				validRecords[currentIndex].timestamp.After(validRecords[selectedIndex].timestamp) {
-				selectedIndex = currentIndex
-			}
-		}
-	}
-
-	// 没有未使用过的 ID，说明所有有效 ID 都至少使用过一次。
-	// 此时选择时间最近的 ID，从它开始第二次使用。
-	if selectedIndex == -1 {
-		selectedIndex = latestIndex
-	}
-
-	if selectedIndex >= 0 {
-		validRecords[selectedIndex].usageCount++
-
-		// 同时清理超过 58 分钟的过期记录。
-		store.records.Store(userID, validRecords)
-
-		return validRecords[selectedIndex].messageID
-	}
-
-	// 没有任何有效记录时，保存清理结果并退化为主动消息 ID。
-	store.records.Store(userID, validRecords)
 	return generateDefaultMessageID(userID)
 }
