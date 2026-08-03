@@ -128,6 +128,10 @@ type MediaResponse struct {
 	//file_info
 	FileInfo string `json:"file_info"`
 	TTL      int    `json:"ttl"`
+
+	// srv_send_msg=true 时返回的消息ID
+	ID string `json:"id,omitempty"`
+
 	//返回的ret 超过主动限制会返回22009
 	Ret int `json:"ret,omitempty"`
 }

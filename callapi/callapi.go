@@ -76,8 +76,9 @@ type ParamsContent struct {
 	Message   interface{} `json:"message,omitempty"`    // 这里使用interface{}因为它可能是多种类型
 	Messages  interface{} `json:"messages,omitempty"`   // 坑爹转发信息
 	UserID    interface{} `json:"user_id,omitempty"`    // 这里使用interface{}因为它可能是多种类型
-	Duration  int         `json:"duration,omitempty"`   // 可选的整数
-	Enable    bool        `json:"enable,omitempty"`     // 可选的布尔值
+	URL       string      `json:"url,omitempty"`
+	Duration  int         `json:"duration,omitempty"` // 可选的整数
+	Enable    bool        `json:"enable,omitempty"`   // 可选的布尔值
 	// handle quick operation
 	Context      Context   `json:"context,omitempty"`       // context 字段
 	Operation    Operation `json:"operation,omitempty"`     // operation 字段
