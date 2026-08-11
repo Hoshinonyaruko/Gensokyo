@@ -42,12 +42,17 @@ type GroupInfoNotice struct {
 	PostType   string `json:"post_type"`
 	NoticeType string `json:"notice_type"`
 
+	Status  string `json:"status"`
+	RetCode int    `json:"retcode"`
+
 	GroupID        string   `json:"group_id"`
 	GroupName      string   `json:"group_name"`
 	GroupMemo      string   `json:"group_memo"`
 	GroupClassText string   `json:"group_class_text"`
 	GroupTags      []string `json:"group_tags"`
 	MemberCount    int      `json:"member_count"`
+
+	ErrorMsg string `json:"error_msg,omitempty"`
 
 	Time   int64       `json:"time"`
 	SelfID int64       `json:"self_id"`
@@ -116,6 +121,37 @@ func HandleGetGroupInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 					groupID,
 					err,
 				)
+
+				failedNotice := GroupInfoNotice{
+					PostType:   "notice",
+					NoticeType: "group_info_resp",
+
+					Status:  "failed",
+					RetCode: 100,
+
+					GroupID: groupID,
+
+					ErrorMsg: err.Error(),
+
+					Time:   time.Now().Unix(),
+					SelfID: int64(config.GetAppID()),
+					Echo:   message.Echo,
+				}
+
+				outputMap := structToMap(failedNotice)
+
+				mylog.Printf(
+					"Pushing GroupInfo failed Notice: %+v\n",
+					outputMap,
+				)
+
+				sendErr := client.SendMessage(outputMap)
+				if sendErr != nil {
+					mylog.Printf(
+						"error sending group info failed notice via wsclient: %v",
+						sendErr,
+					)
+				}
 
 				return "{}", nil
 			}
