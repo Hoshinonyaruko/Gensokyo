@@ -30,6 +30,7 @@ const (
 	fourmMessagesURI  uri = "/channels/{channel_id}/threads"
 	groupMessagesURI  uri = "/v2/groups/{group_id}/messages"
 	groupRichMediaURI uri = "/v2/groups/{group_id}/files"
+	groupInfoURI uri = "/v2/groups/{group_openid}/info"
 
 	c2cMessagesURI  uri = "/v2/users/{user_id}/messages"
 	c2cRichMediaURI uri = "/v2/users/{user_id}/files"

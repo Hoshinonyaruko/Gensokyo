@@ -24,6 +24,7 @@ type OpenAPI interface {
 	MessageAPI
 	DirectMessageAPI
 	GuildAPI
+	GroupAPI
 	ChannelAPI
 	AudioAPI
 	RoleAPI
@@ -101,6 +102,12 @@ type GuildAPI interface {
 	DeleteGuildMember(ctx context.Context, guildID, userID string, opts ...dto.MemberDeleteOption) error
 	// 频道禁言
 	GuildMute(ctx context.Context, guildID string, mute *dto.UpdateGuildMute) error
+}
+
+// GroupAPI QQ群相关接口
+type GroupAPI interface {
+	// GetGroupInfo 获取群基本信息
+	GetGroupInfo(ctx context.Context, groupOpenID string) (*dto.GroupInfo, error)
 }
 
 // ChannelAPI 频道相关接口

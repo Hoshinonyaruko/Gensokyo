@@ -38,6 +38,22 @@ type GroupInfo struct {
 	MaxMemberCount  int32  `json:"max_member_count"`
 }
 
+type GroupInfoNotice struct {
+	PostType   string `json:"post_type"`
+	NoticeType string `json:"notice_type"`
+
+	GroupID        string   `json:"group_id"`
+	GroupName      string   `json:"group_name"`
+	GroupMemo      string   `json:"group_memo"`
+	GroupClassText string   `json:"group_class_text"`
+	GroupTags      []string `json:"group_tags"`
+	MemberCount    int      `json:"member_count"`
+
+	Time   int64       `json:"time"`
+	SelfID int64       `json:"self_id"`
+	Echo   interface{} `json:"echo,omitempty"`
+}
+
 func ConvertGuildToGroupInfo(guild *dto.Guild, GroupId string, message callapi.ActionMessage) *OnebotGroupInfo {
 	// 使用idmap.StoreIDv2映射GroupId到一个int64的值
 	groupid64, err := idmap.StoreIDv2(GroupId)
@@ -81,6 +97,63 @@ func ConvertGuildToGroupInfo(guild *dto.Guild, GroupId string, message callapi.A
 
 func HandleGetGroupInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
 	params := message.Params
+	// beta520:
+	// StringOB11 + QQ开放平台32字符群OpenID
+	// 直接调用腾讯群基本信息API，并通过自定义Notice推送结果。
+	// 不经过idmap，不转换int64，不影响原有频道get_group_info逻辑。
+	if config.GetStringOb11() {
+		groupID, ok := params.GroupID.(string)
+
+		if ok && len(groupID) == 32 {
+			resultData, err := apiv2.GetGroupInfo(
+				context.Background(),
+				groupID,
+			)
+
+			if err != nil {
+				mylog.Printf(
+					"GetGroupInfo failed, group_openid=%s, err=%v",
+					groupID,
+					err,
+				)
+
+				return "{}", nil
+			}
+
+			fakeNotice := GroupInfoNotice{
+				PostType:   "notice",
+				NoticeType: "group_info",
+
+				GroupID:        resultData.GroupOpenID,
+				GroupName:      resultData.GroupName,
+				GroupMemo:      resultData.GroupFingerMemo,
+				GroupClassText: resultData.GroupClassText,
+				GroupTags:      resultData.GroupTags,
+				MemberCount:    resultData.GroupMemberNum,
+
+				Time:   time.Now().Unix(),
+				SelfID: int64(config.GetAppID()),
+				Echo:   message.Echo,
+			}
+
+			outputMap := structToMap(fakeNotice)
+
+			mylog.Printf(
+				"Pushing GroupInfo Notice: %+v\n",
+				outputMap,
+			)
+
+			err = client.SendMessage(outputMap)
+			if err != nil {
+				mylog.Printf(
+					"error sending group info notice via wsclient: %v",
+					err,
+				)
+			}
+
+			return "{}", nil
+		}
+	}
 	// 使用 message.Echo 作为key来获取消息类型
 	var msgType string
 	var groupInfo *OnebotGroupInfo
