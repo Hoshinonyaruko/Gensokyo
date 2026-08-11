@@ -102,7 +102,7 @@ func ConvertGuildToGroupInfo(guild *dto.Guild, GroupId string, message callapi.A
 
 func HandleGetGroupInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openapi.OpenAPI, message callapi.ActionMessage) (string, error) {
 	params := message.Params
-	// beta520:
+
 	// StringOB11 + QQ开放平台32字符群OpenID
 	// 直接调用腾讯群基本信息API，并通过自定义Notice推送结果。
 	// 不经过idmap，不转换int64，不影响原有频道get_group_info逻辑。
@@ -158,7 +158,10 @@ func HandleGetGroupInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 
 			fakeNotice := GroupInfoNotice{
 				PostType:   "notice",
-				NoticeType: "group_info",
+				NoticeType: "group_info_resp",
+
+				Status:  "ok",
+				RetCode: 0,
 
 				GroupID:        resultData.GroupOpenID,
 				GroupName:      resultData.GroupName,
