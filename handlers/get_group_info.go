@@ -45,7 +45,8 @@ type GroupInfoNotice struct {
 	Status  string `json:"status"`
 	RetCode int    `json:"retcode"`
 
-	GroupID        string   `json:"group_id"`
+	GroupID        int64    `json:"group_id,omitempty"`
+	RealGroupID    string   `json:"real_group_id,omitempty"`
 	GroupName      string   `json:"group_name"`
 	GroupMemo      string   `json:"group_memo"`
 	GroupClassText string   `json:"group_class_text"`
@@ -129,7 +130,7 @@ func HandleGetGroupInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 					Status:  "failed",
 					RetCode: 100,
 
-					GroupID: groupID,
+					RealGroupID: groupID,
 
 					ErrorMsg: err.Error(),
 
@@ -163,7 +164,7 @@ func HandleGetGroupInfo(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				Status:  "ok",
 				RetCode: 0,
 
-				GroupID:        resultData.GroupOpenID,
+				RealGroupID:    resultData.GroupOpenID,
 				GroupName:      resultData.GroupName,
 				GroupMemo:      resultData.GroupFingerMemo,
 				GroupClassText: resultData.GroupClassText,
