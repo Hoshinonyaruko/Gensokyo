@@ -109,6 +109,28 @@ func (t *Token) EnsureAccessToken(
 	)
 }
 
+// RefreshAccessTokenIfStale 用于腾讯明确拒绝当前AccessToken时同步刷新。
+//
+// staleToken 是刚刚被腾讯拒绝的Token。
+// 如果等待refreshLock期间已有其他goroutine刷新了Token，
+// 则不会重复请求AccessToken接口。
+func (t *Token) RefreshAccessTokenIfStale(
+	ctx context.Context,
+	staleToken string,
+) error {
+
+	_, err := t.authToken.refreshAccessToken(
+		ctx,
+		t.tokenURL,
+		fmt.Sprint(t.appID),
+		t.clientSecret,
+		true,
+		staleToken,
+	)
+
+	return err
+}
+
 // GetAccessToken 取得测试鉴权Token
 // func (t *Token) GetAccessToken() string {
 // 	// 固定的token值

@@ -73,20 +73,31 @@ func (atoken *AuthTokenInfo) isTokenValid(buffer time.Duration) bool {
 	)
 }
 
-// refreshAccessToken 真正执行 Token 刷新。
-// force=false 时，在拿到刷新锁后会再次检查，避免并发重复刷新。
 func (atoken *AuthTokenInfo) refreshAccessToken(
 	ctx context.Context,
 	tokenURL string,
 	appID string,
 	clientSecret string,
 	force bool,
+	staleToken ...string,
 ) (AccessTokenInfo, error) {
 
 	atoken.refreshLock.Lock()
 	defer atoken.refreshLock.Unlock()
 
-	// 其他 goroutine 可能已经完成刷新。
+	// 如果调用方带来了“刚刚被腾讯拒绝的旧Token”，
+	// 先检查是否已有其他goroutine完成了刷新。
+	// 如果当前Token已经变化，则不重复刷新，直接使用新的Token。
+	if len(staleToken) > 0 && staleToken[0] != "" {
+		currentToken := atoken.getAuthToken()
+
+		if currentToken.Token != "" &&
+			currentToken.Token != staleToken[0] {
+			return currentToken, nil
+		}
+	}
+
+	// 普通非强制刷新时，再按照本地有效期判断。
 	if !force && atoken.isTokenValid(60*time.Second) {
 		return atoken.getAuthToken(), nil
 	}
