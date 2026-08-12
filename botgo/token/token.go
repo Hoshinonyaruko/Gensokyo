@@ -91,9 +91,23 @@ func (t *Token) GetString_old() string {
 	return fmt.Sprintf("%v.%s", t.appID, t.token)
 }
 
-// GetAccessToken 取得鉴权Token
 func (t *Token) GetAccessToken() string {
 	return t.authToken.getAuthToken().Token
+}
+
+// DebugQueryAccessToken 仅用于临时诊断。
+// 直接请求腾讯Token接口，但不写回本地Token。
+// 返回的 ExpiresIn 是腾讯接口本次原样返回的 expires_in，不是本地计算值。
+func (t *Token) DebugQueryAccessToken(
+	ctx context.Context,
+) (AccessTokenInfo, error) {
+
+	return queryAccessToken(
+		ctx,
+		t.tokenURL,
+		fmt.Sprint(t.appID),
+		t.clientSecret,
+	)
 }
 
 // EnsureAccessToken 确保 AccessToken 至少还有60秒有效期。
