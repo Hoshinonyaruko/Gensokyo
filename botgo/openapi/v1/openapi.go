@@ -92,12 +92,21 @@ func (o *openAPI) setupClient() {
 		).
 		OnBeforeRequest(
 			func(c *resty.Client, r *resty.Request) error {
-				// 设置授权方案为 "QQBot"
+				// 每次请求前确保Token至少还有60秒有效期。
+				if err := o.token.EnsureAccessToken(
+					r.Context(),
+				); err != nil {
+					return fmt.Errorf(
+						"ensure access token failed: %w",
+						err,
+					)
+				}
+		
 				c.SetAuthScheme("QQBot")
-				//c.SetAuthScheme("Bot")
-				//c.SetAuthToken(o.token.GetString_old())
-				//t.GetAccessToken() 是群的
-				c.SetAuthToken(o.token.GetAccessToken())
+				c.SetAuthToken(
+					o.token.GetAccessToken(),
+				)
+		
 				return nil
 			},
 		).

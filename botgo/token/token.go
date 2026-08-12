@@ -96,6 +96,19 @@ func (t *Token) GetAccessToken() string {
 	return t.authToken.getAuthToken().Token
 }
 
+// EnsureAccessToken 确保 AccessToken 至少还有60秒有效期。
+// 如果即将过期，则同步刷新。
+func (t *Token) EnsureAccessToken(
+	ctx context.Context,
+) error {
+	return t.authToken.EnsureAccessToken(
+		ctx,
+		t.tokenURL,
+		fmt.Sprint(t.appID),
+		t.clientSecret,
+	)
+}
+
 // GetAccessToken 取得测试鉴权Token
 // func (t *Token) GetAccessToken() string {
 // 	// 固定的token值

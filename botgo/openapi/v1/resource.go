@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-const domain = "api.sgroup.qq.com"
+const domain = "api.bot.qq.com"
 const sandBoxDomain = "sandbox.api.sgroup.qq.com"
 
 const scheme = "https"

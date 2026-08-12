@@ -17,12 +17,13 @@ import (
 
 // getAccessTokenURL 取得AccessToken的地址
 // https://bots.qq.com/app/getAppAccessToken
-var getAccessTokenURL = "https://bots.qq.com/app/getAppAccessToken"
+var getAccessTokenURL = "https://api.bot.qq.com/app/getAppAccessToken"
 
 // AuthTokenInfo 动态鉴权Token信息
 type AuthTokenInfo struct {
 	accessToken  AccessTokenInfo
 	lock         *sync.RWMutex
+	refreshLock  *sync.Mutex
 	forceUpToken chan interface{}
 	once         sync.Once
 }
@@ -38,6 +39,7 @@ type AccessTokenInfo struct {
 func NewAuthTokenInfo() *AuthTokenInfo {
 	return &AuthTokenInfo{
 		lock:         &sync.RWMutex{},
+		refreshLock:  &sync.Mutex{},
 		forceUpToken: make(chan interface{}, 10),
 	}
 }
@@ -52,51 +54,248 @@ func (atoken *AuthTokenInfo) ForceUpToken(ctx context.Context, reason string) er
 	return nil
 }
 
-// StartRefreshAccessToken 启动获取AccessToken的后台刷新
-// 该函数首先会立即查询一次AccessToken，并保存。
-// 然后它将在后台启动一个goroutine，定期（根据token的有效期）刷新AccessToken。
-func (atoken *AuthTokenInfo) StartRefreshAccessToken(ctx context.Context, tokenURL, appID, clientSecrent string) (err error) {
-	// 首先，立即获取一次AccessToken
-	tokenInfo, err := queryAccessToken(ctx, tokenURL, appID, clientSecrent)
-	if err != nil {
-		log.Errorf("无法获取AccessToken: %v", err)
-		//return err
-	}
-	atoken.setAuthToken(tokenInfo)
-	log.Info("获取到的token是: %s\n", tokenInfo.Token) // 输出获取到的token
+// isTokenValid 判断当前 AccessToken 在预留 buffer 后是否仍然有效。
+func (atoken *AuthTokenInfo) isTokenValid(buffer time.Duration) bool {
+	tokenInfo := atoken.getAuthToken()
 
-	// 获取token的有效期（通常以秒为单位）
-	tokenTTL := tokenInfo.ExpiresIn
-	// 使用sync.Once保证仅启动一个goroutine进行定时刷新
+	if tokenInfo.Token == "" ||
+		tokenInfo.ExpiresIn <= 0 ||
+		tokenInfo.UpTime.IsZero() {
+		return false
+	}
+
+	expireAt := tokenInfo.UpTime.Add(
+		time.Duration(tokenInfo.ExpiresIn) * time.Second,
+	)
+
+	return time.Now().Before(
+		expireAt.Add(-buffer),
+	)
+}
+
+// refreshAccessToken 真正执行 Token 刷新。
+// force=false 时，在拿到刷新锁后会再次检查，避免并发重复刷新。
+func (atoken *AuthTokenInfo) refreshAccessToken(
+	ctx context.Context,
+	tokenURL string,
+	appID string,
+	clientSecret string,
+	force bool,
+) (AccessTokenInfo, error) {
+
+	atoken.refreshLock.Lock()
+	defer atoken.refreshLock.Unlock()
+
+	// 其他 goroutine 可能已经完成刷新。
+	if !force && atoken.isTokenValid(60*time.Second) {
+		return atoken.getAuthToken(), nil
+	}
+
+	// 与 Elaina 的节奏一致：
+	// 最多尝试3次，第一次失败等3秒，第二次失败等6秒。
+	retryDelays := []time.Duration{
+		3 * time.Second,
+		6 * time.Second,
+	}
+
+	var lastErr error
+
+	for attempt := 0; attempt < 3; attempt++ {
+		tokenInfo, err := queryAccessToken(
+			ctx,
+			tokenURL,
+			appID,
+			clientSecret,
+		)
+
+		if err == nil &&
+			tokenInfo.Token != "" &&
+			tokenInfo.ExpiresIn > 0 {
+
+			atoken.setAuthToken(tokenInfo)
+
+			// 不输出真正的 Token。
+			log.Infof(
+				"AccessToken刷新成功, expires_in=%d",
+				tokenInfo.ExpiresIn,
+			)
+
+			return tokenInfo, nil
+		}
+
+		if err == nil {
+			err = fmt.Errorf(
+				"invalid AccessToken response: token_empty=%t expires_in=%d",
+				tokenInfo.Token == "",
+				tokenInfo.ExpiresIn,
+			)
+		}
+
+		lastErr = err
+
+		log.Errorf(
+			"AccessToken刷新失败 attempt=%d/3 err=%v",
+			attempt+1,
+			err,
+		)
+
+		if attempt < len(retryDelays) {
+			select {
+			case <-time.After(retryDelays[attempt]):
+
+			case <-ctx.Done():
+				return AccessTokenInfo{}, ctx.Err()
+			}
+		}
+	}
+
+	return AccessTokenInfo{}, lastErr
+}
+
+// EnsureAccessToken 确保当前 Token 至少还有60秒有效期。
+// 每次 OpenAPI 请求前调用。
+// 这对应 Elaina TokenManager.get_token() 的行为。
+func (atoken *AuthTokenInfo) EnsureAccessToken(
+	ctx context.Context,
+	tokenURL string,
+	appID string,
+	clientSecret string,
+) error {
+
+	if atoken.isTokenValid(60 * time.Second) {
+		return nil
+	}
+
+	_, err := atoken.refreshAccessToken(
+		ctx,
+		tokenURL,
+		appID,
+		clientSecret,
+		false,
+	)
+
+	return err
+}
+
+// StartRefreshAccessToken 启动 AccessToken 管理。
+// 1. 启动时立即获取。
+// 2. 后台提前60秒刷新。
+// 3. 刷新失败后最多立即尝试3次。
+// 4. 仍失败则30秒后继续尝试。
+// 5. OpenAPI 请求前还会通过 EnsureAccessToken 再做一次保险。
+func (atoken *AuthTokenInfo) StartRefreshAccessToken(
+	ctx context.Context,
+	tokenURL string,
+	appID string,
+	clientSecret string,
+) error {
+
+	// 启动时立即获取一次。
+	_, initialErr := atoken.refreshAccessToken(
+		ctx,
+		tokenURL,
+		appID,
+		clientSecret,
+		true,
+	)
+
+	if initialErr != nil {
+		log.Errorf(
+			"初始化AccessToken失败: %v",
+			initialErr,
+		)
+	}
+
 	atoken.once.Do(func() {
-		go func() { // 启动一个新的goroutine
+		go func() {
 			for {
-				// 如果tokenTTL为0或负数，将其设置为15
-				if tokenTTL <= 0 {
-					tokenTTL = 15
+				tokenInfo := atoken.getAuthToken()
+
+				// 默认30秒后再检查。
+				// 如果当前有有效 Token，则计算提前60秒刷新的时间点。
+				waitDuration := 30 * time.Second
+
+				if tokenInfo.Token != "" &&
+					tokenInfo.ExpiresIn > 0 &&
+					!tokenInfo.UpTime.IsZero() {
+
+					expireAt := tokenInfo.UpTime.Add(
+						time.Duration(tokenInfo.ExpiresIn) *
+							time.Second,
+					)
+
+					refreshAt := expireAt.Add(
+						-60 * time.Second,
+					)
+
+					waitDuration = time.Until(refreshAt)
+
+					// 与 Elaina 思路一致：
+					// 即使已经进入刷新窗口，也最多等30秒重新刷新，
+					// 避免高频空转。
+					if waitDuration < 30*time.Second {
+						waitDuration = 30 * time.Second
+					}
 				}
+
+				timer := time.NewTimer(waitDuration)
+
 				select {
-				case <-time.NewTimer(time.Duration(tokenTTL) * time.Second).C: // 当token过期时
-				case upToken := <-atoken.forceUpToken: // 接收强制更新token的信号
-					log.Warnf("recv uptoken info:%v", upToken)
-				case <-ctx.Done(): // 当上下文结束时，退出goroutine
-					log.Warnf("recv ctx:%v exit refreshAccessToken", ctx.Err())
+				case <-timer.C:
+					// 到达自动刷新时间。
+
+				case upToken := <-atoken.forceUpToken:
+					if !timer.Stop() {
+						select {
+						case <-timer.C:
+						default:
+						}
+					}
+
+					log.Warnf(
+						"recv uptoken info:%v",
+						upToken,
+					)
+
+				case <-ctx.Done():
+					if !timer.Stop() {
+						select {
+						case <-timer.C:
+						default:
+						}
+					}
+
+					log.Warnf(
+						"recv ctx:%v exit refreshAccessToken",
+						ctx.Err(),
+					)
+
 					return
 				}
-				// 查询并获取新的AccessToken
-				tokenInfo, err := queryAccessToken(ctx, tokenURL, appID, clientSecrent)
-				if err == nil {
-					atoken.setAuthToken(tokenInfo)
-					log.Info("获取到的token是: %s\n", tokenInfo.Token) // 输出获取到的token
-					tokenTTL = tokenInfo.ExpiresIn
-				} else {
-					log.Errorf("queryAccessToken err:%v", err)
-					log.Errorf("请在config.yml或网页控制台的默认机器人中设置正确的appid和密钥信息")
+
+				_, err := atoken.refreshAccessToken(
+					ctx,
+					tokenURL,
+					appID,
+					clientSecret,
+					true,
+				)
+
+				if err != nil {
+					log.Errorf(
+						"后台AccessToken刷新失败: %v",
+						err,
+					)
+
+					// 不需要额外 sleep。
+					// 因为旧 Token 的刷新时间已经过去，
+					// 下一轮 waitDuration 自动会变成30秒。
 				}
 			}
 		}()
 	})
-	return
+
+	return initialErr
 }
 
 // 测试用
