@@ -152,9 +152,11 @@ func (atoken *AuthTokenInfo) refreshAccessToken(
 	return AccessTokenInfo{}, lastErr
 }
 
-// EnsureAccessToken 确保当前 Token 至少还有60秒有效期。
-// 每次 OpenAPI 请求前调用。
-// 这对应 Elaina TokenManager.get_token() 的行为。
+// EnsureAccessToken 用于 OpenAPI 请求前检查 Token。
+// 有可用旧 Token 时，不阻塞业务请求：
+// 即使 Token 已进入刷新窗口，也继续使用当前 Token，
+// 同时通知后台刷新协程尽快刷新。
+// 只有完全没有 Token 时，才同步获取一次。
 func (atoken *AuthTokenInfo) EnsureAccessToken(
 	ctx context.Context,
 	tokenURL string,
@@ -162,19 +164,36 @@ func (atoken *AuthTokenInfo) EnsureAccessToken(
 	clientSecret string,
 ) error {
 
+	tokenInfo := atoken.getAuthToken()
+
+	// 完全没有旧 Token 时无法降级，只能同步获取。
+	if tokenInfo.Token == "" {
+		_, err := atoken.refreshAccessToken(
+			ctx,
+			tokenURL,
+			appID,
+			clientSecret,
+			false,
+		)
+		return err
+	}
+
+	// 当前 Token 还有至少60秒有效期，直接使用。
 	if atoken.isTokenValid(60 * time.Second) {
 		return nil
 	}
 
-	_, err := atoken.refreshAccessToken(
-		ctx,
-		tokenURL,
-		appID,
-		clientSecret,
-		false,
-	)
+	// 已进入刷新窗口。
+	// 不阻塞当前 OpenAPI 请求，继续使用已有 Token。
+	// 仅通知后台刷新协程尽快刷新。
+	select {
+	case atoken.forceUpToken <- "OpenAPI请求发现AccessToken进入刷新窗口":
+	default:
+		// 刷新通知队列已有任务时直接忽略，
+		// 避免业务请求因为通知刷新而阻塞。
+	}
 
-	return err
+	return nil
 }
 
 // StartRefreshAccessToken 启动 AccessToken 管理。
