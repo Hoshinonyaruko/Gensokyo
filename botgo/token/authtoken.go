@@ -406,29 +406,53 @@ func queryAccessToken(ctx context.Context, tokenURL, appID, clientSecret string)
 	var req *http.Request
 	var err error
 
-	//自定义地址使用get,无需参数
+	// 自定义地址使用GET，无需参数。
 	if configURL != "" {
-		req, err = http.NewRequestWithContext(ctx, http.MethodGet, configURL, nil)
+		req, err = http.NewRequestWithContext(
+			ctx,
+			http.MethodGet,
+			configURL,
+			nil,
+		)
+		if err != nil {
+			return AccessTokenInfo{}, err
+		}
 	} else {
-		// 默认ac地址使用post
+		// 默认AccessToken地址使用POST。
 		reqBody := queryTokenReq{
 			AppID:        appID,
 			ClientSecret: clientSecret,
 		}
+
 		reqData, err := json.Marshal(reqBody)
 		if err != nil {
 			return AccessTokenInfo{}, err
 		}
 
-		req, err = http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, bytes.NewReader(reqData))
+		req, err = http.NewRequestWithContext(
+			ctx,
+			http.MethodPost,
+			tokenURL,
+			bytes.NewReader(reqData),
+		)
 		if err != nil {
 			return AccessTokenInfo{}, err
 		}
-		req.Header.Set("Content-Type", "application/json")
+
+		req.Header.Set(
+			"Content-Type",
+			"application/json",
+		)
 	}
 
 	// Perform the HTTP request.
-	resp, err := http.DefaultClient.Do(req)
+	// Token 获取必须有明确超时，否则同步 EnsureAccessToken 时
+	// 可能导致所有 OpenAPI 请求一起等待。
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return AccessTokenInfo{}, err
 	}
