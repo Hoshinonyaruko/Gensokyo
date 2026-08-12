@@ -2,10 +2,10 @@ package v2
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/tencent-connect/botgo/dto"
-	"github.com/tencent-connect/botgo/log"
 )
 
 func (o *openAPIv2) GetGroupInfo(
@@ -13,8 +13,8 @@ func (o *openAPIv2) GetGroupInfo(
 	groupOpenID string,
 ) (*dto.GroupInfo, error) {
 
-	// 记录本次请求真正使用之前的Token。
-	// 如果腾讯返回100016，需要知道到底是哪一个Token被拒绝。
+	// 记录调用前的Token。
+	// 如果腾讯返回100016，用于判断刷新后Token是否已经被其他goroutine替换。
 	staleToken := o.token.GetAccessToken()
 
 	// 第一次正常请求。
@@ -33,23 +33,23 @@ func (o *openAPIv2) GetGroupInfo(
 		return nil, err
 	}
 
-	log.Warnf(
-		"GetGroupInfo收到100016，立即刷新AccessToken并重试一次, group_openid=%s",
+	fmt.Printf(
+		"[GetGroupInfo] 收到100016，立即刷新AccessToken并重试一次, group_openid=%s, err=%v\n",
 		groupOpenID,
+		err,
 	)
 
 	// 同步刷新。
-	//
-	// 如果并发情况下其他goroutine已经把staleToken换掉，
-	// RefreshAccessTokenIfStale会直接使用别人取得的新Token，
+	// 如果等待refreshLock期间已有其他goroutine完成刷新，
+	// RefreshAccessTokenIfStale会直接使用已经刷新的Token，
 	// 不会再次重复刷新。
 	if refreshErr := o.token.RefreshAccessTokenIfStale(
 		ctx,
 		staleToken,
 	); refreshErr != nil {
 
-		log.Errorf(
-			"GetGroupInfo收到100016后刷新AccessToken失败, group_openid=%s, err=%v",
+		fmt.Printf(
+			"[GetGroupInfo] 收到100016后刷新AccessToken失败, group_openid=%s, err=%v\n",
 			groupOpenID,
 			refreshErr,
 		)
@@ -64,11 +64,17 @@ func (o *openAPIv2) GetGroupInfo(
 		Get(o.getURL(groupInfoURI))
 
 	if err != nil {
+		fmt.Printf(
+			"[GetGroupInfo] 100016刷新后重试仍失败, group_openid=%s, err=%v\n",
+			groupOpenID,
+			err,
+		)
+
 		return nil, err
 	}
 
-	log.Infof(
-		"GetGroupInfo收到100016后刷新AccessToken重试成功, group_openid=%s",
+	fmt.Printf(
+		"[GetGroupInfo] 100016刷新后重试成功, group_openid=%s\n",
 		groupOpenID,
 	)
 

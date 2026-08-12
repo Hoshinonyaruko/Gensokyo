@@ -87,12 +87,16 @@ func (atoken *AuthTokenInfo) refreshAccessToken(
 
 	// 如果调用方带来了“刚刚被腾讯拒绝的旧Token”，
 	// 先检查是否已有其他goroutine完成了刷新。
-	// 如果当前Token已经变化，则不重复刷新，直接使用新的Token。
 	if len(staleToken) > 0 && staleToken[0] != "" {
 		currentToken := atoken.getAuthToken()
 
 		if currentToken.Token != "" &&
 			currentToken.Token != staleToken[0] {
+
+			fmt.Printf(
+				"[AccessToken] staleToken已经被其他goroutine替换，本次不重复刷新\n",
+			)
+
 			return currentToken, nil
 		}
 	}
@@ -102,8 +106,11 @@ func (atoken *AuthTokenInfo) refreshAccessToken(
 		return atoken.getAuthToken(), nil
 	}
 
-	// 与 Elaina 的节奏一致：
-	// 最多尝试3次，第一次失败等3秒，第二次失败等6秒。
+	// 在真正请求新Token之前记录旧Token。
+	oldTokenInfo := atoken.getAuthToken()
+
+	// 最多尝试3次：
+	// 第一次失败等3秒，第二次失败等6秒。
 	retryDelays := []time.Duration{
 		3 * time.Second,
 		6 * time.Second,
@@ -112,6 +119,13 @@ func (atoken *AuthTokenInfo) refreshAccessToken(
 	var lastErr error
 
 	for attempt := 0; attempt < 3; attempt++ {
+
+		fmt.Printf(
+			"[AccessToken] 开始刷新, attempt=%d/3, force=%t\n",
+			attempt+1,
+			force,
+		)
+
 		tokenInfo, err := queryAccessToken(
 			ctx,
 			tokenURL,
@@ -123,9 +137,19 @@ func (atoken *AuthTokenInfo) refreshAccessToken(
 			tokenInfo.Token != "" &&
 			tokenInfo.ExpiresIn > 0 {
 
+			tokenChanged := oldTokenInfo.Token != tokenInfo.Token
+
 			atoken.setAuthToken(tokenInfo)
 
-			// 不输出真正的 Token。
+			// stdout诊断，不受Gensokyo日志等级限制。
+			// 不输出真正Token。
+			fmt.Printf(
+				"[AccessToken] 刷新成功, expires_in=%d, token_changed=%t\n",
+				tokenInfo.ExpiresIn,
+				tokenChanged,
+			)
+
+			// 原有日志继续保留。
 			log.Infof(
 				"AccessToken刷新成功, expires_in=%d",
 				tokenInfo.ExpiresIn,
@@ -144,6 +168,14 @@ func (atoken *AuthTokenInfo) refreshAccessToken(
 
 		lastErr = err
 
+		// stdout诊断。
+		fmt.Printf(
+			"[AccessToken] 刷新失败, attempt=%d/3, err=%v\n",
+			attempt+1,
+			err,
+		)
+
+		// 原有日志继续保留。
 		log.Errorf(
 			"AccessToken刷新失败 attempt=%d/3 err=%v",
 			attempt+1,
@@ -155,10 +187,20 @@ func (atoken *AuthTokenInfo) refreshAccessToken(
 			case <-time.After(retryDelays[attempt]):
 
 			case <-ctx.Done():
+				fmt.Printf(
+					"[AccessToken] 刷新等待期间Context结束, err=%v\n",
+					ctx.Err(),
+				)
+
 				return AccessTokenInfo{}, ctx.Err()
 			}
 		}
 	}
+
+	fmt.Printf(
+		"[AccessToken] 连续3次刷新均失败, err=%v\n",
+		lastErr,
+	)
 
 	return AccessTokenInfo{}, lastErr
 }
