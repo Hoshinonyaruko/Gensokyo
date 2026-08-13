@@ -8,6 +8,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
+	"github.com/hoshinonyaruko/gensokyo/unioncache"
 	"github.com/tencent-connect/botgo/dto"
 )
 
@@ -60,6 +61,30 @@ func (p *Processors) ProcessGroupDelBot(data *dto.GroupAddBotEvent) error {
 	} else {
 		selfid64 = int64(p.Settings.AppID)
 	}
+
+	// UnionID 模式下，被踢事件必须取得统一用户ID后才允许上报。
+	// 缓存未命中时只跳过 OneBot group_decrease 上报。
+	realUserID := data.OpMemberOpenID
+	canReportGroupEvent := true
+
+	if config.GetUnionID() {
+		unionID, ok := unioncache.Union(
+			data.OpMemberOpenID,
+		)
+		if !ok || unionID == "" {
+			canReportGroupEvent = false
+
+			mylog.Printf(
+				"GroupDelBot UnionID缓存未命中，跳过事件上报: appid=%d user_openid=%s group_openid=%s",
+				p.Settings.AppID,
+				data.OpMemberOpenID,
+				data.GroupOpenID,
+			)
+		} else {
+			realUserID = unionID
+		}
+	}
+
 	Notice = GroupNoticeEvent{
 		GroupID:    GroupID64,
 		NoticeType: "group_decrease",
@@ -72,11 +97,19 @@ func (p *Processors) ProcessGroupDelBot(data *dto.GroupAddBotEvent) error {
 	}
 	//增强配置
 	if !config.GetNativeOb11() {
-		Notice.RealUserID = data.OpMemberOpenID
+		Notice.RealUserID = realUserID
 		Notice.RealGroupID = data.GroupOpenID
 	}
-	groupMsgMap := structToMap(Notice)
-	//上报信息到onebotv11应用端(正反ws)
-	go p.BroadcastMessageToAll(groupMsgMap, p.Apiv2, data)
+	if canReportGroupEvent {
+		groupMsgMap := structToMap(Notice)
+
+		// 上报 group_decrease 事件到 OneBot v11 应用端。
+		go p.BroadcastMessageToAll(
+			groupMsgMap,
+			p.Apiv2,
+			data,
+		)
+	}
+
 	return nil
 }
