@@ -107,8 +107,8 @@ func (p *Processors) ProcessGroupAddBot(data *dto.GroupAddBotEvent) error {
 		selfid64 = int64(p.Settings.AppID)
 	}
 
-	// UnionID 模式下，群事件必须取得统一用户ID后才允许上报。
-	// 缓存未命中时只跳过 OneBot 事件上报，不影响本函数后续其他逻辑。
+	// UnionID 模式下优先使用统一用户ID。
+	// 缓存未命中时退回腾讯原始 OpMemberOpenID，不影响事件正常上报。
 	realUserID := data.OpMemberOpenID
 	canReportGroupEvent := true
 
@@ -116,17 +116,15 @@ func (p *Processors) ProcessGroupAddBot(data *dto.GroupAddBotEvent) error {
 		unionID, ok := unioncache.Union(
 			data.OpMemberOpenID,
 		)
-		if !ok || unionID == "" {
-			canReportGroupEvent = false
-
+		if ok && unionID != "" {
+			realUserID = unionID
+		} else {
 			mylog.Printf(
-				"GroupAddBot UnionID缓存未命中，跳过事件上报: appid=%d user_openid=%s group_openid=%s",
+				"GroupAddBot UnionID缓存未命中，回退OpMemberOpenID继续上报: appid=%d user_openid=%s group_openid=%s",
 				p.Settings.AppID,
 				data.OpMemberOpenID,
 				data.GroupOpenID,
 			)
-		} else {
-			realUserID = unionID
 		}
 	}
 
