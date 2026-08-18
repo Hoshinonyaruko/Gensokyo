@@ -38,6 +38,8 @@ type OpenAPI interface {
 	WebhookAPI
 	InteractionAPI
 	MessageSettingAPI
+	MenuAPI
+	PanelAPI
 }
 
 // Base 基础能力接口
@@ -50,6 +52,52 @@ type Base interface {
 	Transport(ctx context.Context, method, url string, body interface{}) ([]byte, error)
 	// TraceID 返回上一次请求的 trace id
 	TraceID() string
+}
+
+// MenuAPI QQ机器人全局自定义菜单接口.
+type MenuAPI interface {
+	// GetGlobalMenu 获取当前生效的全局自定义菜单.
+	GetGlobalMenu(ctx context.Context) (*dto.Menu, error)
+
+	// UpdateGlobalMenu 全量更新全局自定义菜单.
+	// menu == nil 时请求体为 {}，用于清空当前全局菜单.
+	UpdateGlobalMenu(ctx context.Context, menu *dto.Menu) error
+}
+
+// PanelAPI QQ机器人指令面板接口.
+type PanelAPI interface {
+	// ListPanels 分页查询指定场景的指令面板.
+	// scope: c2c/group/channel/dm.
+	// cursor 为空时表示第一页，limit <= 0 时使用平台默认值.
+	ListPanels(
+		ctx context.Context,
+		scope string,
+		cursor string,
+		limit int,
+	) (*dto.PanelsResponse, error)
+
+	// CreatePanel 创建指令面板.
+	CreatePanel(
+		ctx context.Context,
+		value *dto.PanelToCreate,
+	) (*dto.PanelCreateResponse, error)
+
+	// GetPanel 获取指定指令面板详情.
+	GetPanel(ctx context.Context, panelID string) (*dto.PanelRecord, error)
+
+	// UpdatePanel 全量更新指定指令面板的 panel 内容.
+	// 此接口不修改 user_openids/group_openids.
+	UpdatePanel(ctx context.Context, panelID string, panel *dto.Panel) error
+
+	// DeletePanel 删除指定指令面板.
+	DeletePanel(ctx context.Context, panelID string) error
+
+	// UpdatePanelTargets 增加或删除 specific 指令面板的关联对象.
+	UpdatePanelTargets(
+		ctx context.Context,
+		panelID string,
+		value *dto.PanelTargetToUpdate,
+	) error
 }
 
 // WebsocketAPI websocket 接入地址

@@ -26,6 +26,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/Processor"
 	"github.com/hoshinonyaruko/gensokyo/acnode"
 	"github.com/hoshinonyaruko/gensokyo/botstats"
+	"github.com/hoshinonyaruko/gensokyo/commandpanel"
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/handlers"
@@ -411,6 +412,47 @@ func main() {
 		r.Use(gin.Recovery()) // 添加恢复中间件，但不添加日志中间件
 		hr = gin.New()
 		hr.Use(gin.Recovery())
+	}
+	// ----------------------------------------------------
+	// Command Panel 管理 API
+	// ----------------------------------------------------
+	//
+	// 使用现有主 Gin Engine，不创建第二套 HTTP Server。
+	// HTTPHandler 内部会限制 /cmd/api 只能由 loopback 访问。
+	if conf.Settings.AppID != 12345 && apiV2 != nil {
+		cmdStorage, err := commandpanel.NewStorage()
+		if err != nil {
+			log.Fatalf(
+				"initialize command panel storage: %v",
+				err,
+			)
+		}
+
+		cmdManager := commandpanel.NewManager(
+			apiV2,
+		)
+
+		currentAppID := fmt.Sprintf(
+			"%d",
+			conf.Settings.AppID,
+		)
+
+		if err := commandpanel.RegisterHTTPRoutes(
+			r,
+			cmdManager,
+			cmdStorage,
+			currentAppID,
+		); err != nil {
+			log.Fatalf(
+				"register command panel http routes: %v",
+				err,
+			)
+		}
+
+		mylog.Printf(
+			"Command Panel 管理接口已注册: /cmd/api (localhost-only), AppID=%s",
+			currentAppID,
+		)
 	}
 	if !conf.Settings.LotusGrpc {
 		r.GET("/getid", server.GetIDHandler)
