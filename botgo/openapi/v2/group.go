@@ -301,3 +301,40 @@ func isAccessTokenExpiredError(err error) bool {
 			"access_token is expired",
 		)
 }
+
+// GetGroupMuteState 获取QQ群当前禁言状态。
+func (o *openAPIv2) GetGroupMuteState(
+	ctx context.Context,
+	groupOpenID string,
+) (*dto.GroupMuteState, error) {
+
+	resp, err := o.request(ctx).
+		SetResult(dto.GroupMuteState{}).
+		SetPathParam("group_openid", groupOpenID).
+		Get(o.getURL(groupRestrictChatSettingURI))
+
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Result().(*dto.GroupMuteState), nil
+}
+
+// SetGroupMemberMute 设置QQ群单个成员的禁言状态。
+func (o *openAPIv2) SetGroupMemberMute(
+	ctx context.Context,
+	groupOpenID string,
+	mute *dto.SetGroupMemberMute,
+) error {
+
+	_, err := o.request(ctx).
+		SetPathParam("group_openid", groupOpenID).
+		SetBody(mute).
+		Post(o.getURL(groupRestrictChatSettingURI))
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

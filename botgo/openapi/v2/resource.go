@@ -30,7 +30,10 @@ const (
 	fourmMessagesURI  uri = "/channels/{channel_id}/threads"
 	groupMessagesURI  uri = "/v2/groups/{group_id}/messages"
 	groupRichMediaURI uri = "/v2/groups/{group_id}/files"
-	groupInfoURI uri = "/v2/groups/{group_openid}/info"
+	groupInfoURI      uri = "/v2/groups/{group_openid}/info"
+
+	// QQ群禁言状态查询及成员禁言设置
+	groupRestrictChatSettingURI uri = "/v2/groups/{group_openid}/restrict_chat_setting"
 
 	c2cMessagesURI  uri = "/v2/users/{user_id}/messages"
 	c2cRichMediaURI uri = "/v2/users/{user_id}/files"
@@ -89,13 +92,13 @@ const (
 	settingGuideURI   uri = "/channels/{channel_id}/settingguide"
 	dmSettingGuideURI uri = "/dms/{guild_id}/settingguide"
 
-		// 自定义菜单
-		globalMenuURI uri = "/v2/menu"
+	// 自定义菜单
+	globalMenuURI uri = "/v2/menu"
 
-		// 指令面板
-		panelsURI      uri = "/v2/panels"
-		panelURI       uri = "/v2/panels/{panel_id}"
-		panelTargetURI uri = "/v2/panels/{panel_id}/target"
+	// 指令面板
+	panelsURI      uri = "/v2/panels"
+	panelURI       uri = "/v2/panels/{panel_id}"
+	panelTargetURI uri = "/v2/panels/{panel_id}/target"
 )
 
 // getURL 获取接口地址，会处理沙箱环境判断

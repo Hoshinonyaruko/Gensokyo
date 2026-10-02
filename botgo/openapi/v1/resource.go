@@ -30,7 +30,10 @@ const (
 	fourmMessagesURI  uri = "/channels/{channel_id}/threads"
 	groupMessagesURI  uri = "/v2/groups/{group_id}/messages"
 	groupRichMediaURI uri = "/v2/groups/{group_id}/files"
-	groupInfoURI uri = "/v2/groups/{group_openid}/info"
+	groupInfoURI      uri = "/v2/groups/{group_openid}/info"
+
+	// QQ群禁言状态查询及成员禁言设置
+	groupRestrictChatSettingURI uri = "/v2/groups/{group_openid}/restrict_chat_setting"
 
 	c2cMessagesURI  uri = "/v2/users/{user_id}/messages"
 	c2cRichMediaURI uri = "/v2/users/{user_id}/files"

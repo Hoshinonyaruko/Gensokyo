@@ -156,6 +156,12 @@ type GuildAPI interface {
 type GroupAPI interface {
 	// GetGroupInfo 获取群基本信息
 	GetGroupInfo(ctx context.Context, groupOpenID string) (*dto.GroupInfo, error)
+
+	// GetGroupMuteState 获取QQ群当前禁言状态
+	GetGroupMuteState(ctx context.Context, groupOpenID string) (*dto.GroupMuteState, error)
+
+	// SetGroupMemberMute 设置QQ群单个成员禁言状态
+	SetGroupMemberMute(ctx context.Context, groupOpenID string, mute *dto.SetGroupMemberMute) error
 }
 
 // ChannelAPI 频道相关接口
