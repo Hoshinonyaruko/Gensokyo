@@ -7,6 +7,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
+	"github.com/hoshinonyaruko/gensokyo/unioncache"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/openapi"
 )
@@ -48,12 +49,49 @@ func SetGroupBan(
 		return "", nil
 	}
 
-	// user_id 在该模式下直接就是腾讯 member_openid。
+	// user_id 在普通模式下就是腾讯原始 member_openid。
+	//
+	// UnionID 模式下，OneBot 上报给应用端的 user_id 是 union_openid。
+	// 调用腾讯群禁言接口前，需要通过消息阶段建立的双向缓存，
+	// 将 union_openid 反查回原始 member_openid。
 	userID, ok := message.Params.UserID.(string)
-	if !ok || len(userID) != 32 {
+	if !ok || userID == "" {
 		mylog.Printf(
-			"set_group_ban: user_id 必须是32位字符串, user_id=%v",
+			"set_group_ban: user_id 必须是非空字符串, user_id=%v",
 			message.Params.UserID,
+		)
+		return "", nil
+	}
+
+	if config.GetUnionID() {
+		unionID := userID
+
+		rawUserID, found := unioncache.ID(unionID)
+		if !found || rawUserID == "" {
+			mylog.Printf(
+				"set_group_ban: UnionID反查原始member_openid失败, union_id=%s group_openid=%s",
+				unionID,
+				groupID,
+			)
+			return "", nil
+		}
+
+		userID = rawUserID
+
+		mylog.Printf(
+			"set_group_ban: UnionID反查成功, union_id=%s member_openid=%s group_openid=%s",
+			unionID,
+			userID,
+			groupID,
+		)
+	}
+
+	// 最终传给腾讯接口的一定必须是原始 member_openid。
+	if len(userID) != 32 {
+		mylog.Printf(
+			"set_group_ban: 转换后的user_id不是32位member_openid, user_id=%s group_openid=%s",
+			userID,
+			groupID,
 		)
 		return "", nil
 	}
